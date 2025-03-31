@@ -151,7 +151,6 @@
             background: rgba(0,0,0,0.5);
             z-index: 999;
         }
-        /* Loading Modal Styles */
         .loading-modal {
             display: none;
             position: fixed;
@@ -774,7 +773,7 @@
         async function fetchEngagements() {
             showLoadingModal();
             try {
-                if (debounceTimeout) clearTimeout(debounceTimeout);  // Fixed typo: "deb Routimeout" to "debounceTimeout"
+                if (debounceTimeout) clearTimeout(debounceTimeout);
                 debounceTimeout = setTimeout(async () => {
                     const response = await fetch(`${BASE_URL}/engagements/?tags=pci&limit=1000000`);
                     const data = await response.json();
@@ -838,7 +837,7 @@
             return Math.floor(diffTime / (1000 * 60 * 60 * 24));
         }
 
-        function calculateAgingClosed(created, updated) {  // Fixed typo: "цены" removed
+        function calculateAgingClosed(created, updated) {
             const createdDate = new Date(created.split("T")[0]);
             const updatedDate = updated ? new Date(updated.split("T")[0]) : createdDate;
             const diffTime = updatedDate - createdDate;
@@ -1081,7 +1080,7 @@
         }
 
         async function showReassignmentModal() {
-            reassignmentTraces = [...openTraces];
+            reassignmentTraces = openTraces.map(t => ({ ...t, selected: false })); // Initialize all as unselected
             renderReassignmentTable(1);
             showModal("reassignmentModal");
         }
@@ -1100,6 +1099,9 @@
                        (!rule || t.commit_hash === rule) &&
                        (!product || t.product == product) &&
                        (!created || createdDate === created);
+            }).map(t => {
+                const existing = reassignmentTraces.find(rt => rt.id === t.id);
+                return { ...t, selected: existing ? existing.selected : false };
             });
 
             const tableBody = document.getElementById("reassignmentTableBody");
@@ -1113,7 +1115,7 @@
                 const row = document.createElement("tr");
                 row.dataset.id = t.id;
                 row.innerHTML = `
-                    <td><input type="checkbox" class="rowCheckbox" onchange="updateReassignButton()"></td>
+                    <td><input type="checkbox" class="rowCheckbox" ${t.selected ? 'checked' : ''} onchange="updateRowSelection(${t.id}, this.checked)"></td>
                     <td>${t.id}</td>
                     <td>${t.name}</td>
                     <td>${getAssignedToName(t.lead)}</td>
@@ -1127,23 +1129,32 @@
             currentPageReassignment = page;
             renderPagination('reassignment');
             document.getElementById("reassignmentTotalCount").textContent = `Total Traces: ${reassignmentTraces.length}`;
+            updateReassignButton();
+        }
+
+        function updateRowSelection(id, isChecked) {
+            const traceIndex = reassignmentTraces.findIndex(t => t.id === id);
+            if (traceIndex !== -1) {
+                reassignmentTraces[traceIndex].selected = isChecked;
+            }
+            updateReassignButton();
         }
 
         function toggleSelectAll() {
             const selectAll = document.getElementById("selectAll");
-            document.querySelectorAll(".rowCheckbox").forEach(cb => cb.checked = selectAll.checked);
-            updateReassignButton();
+            reassignmentTraces.forEach(t => t.selected = selectAll.checked);
+            renderReassignmentTable(currentPageReassignment);
         }
 
         function updateReassignButton() {
-            const checkedCount = document.querySelectorAll(".rowCheckbox:checked").length;
+            const checkedCount = reassignmentTraces.filter(t => t.selected).length;
             document.getElementById("reassignButtonContainer").style.display = checkedCount > 0 ? "block" : "none";
         }
 
         function showReassignConfirmModal() {
             const modal = document.getElementById("reassignConfirmModal");
             const reassignToUser = document.getElementById("reassignToUser");
-            reassignToUser.innerHTML = '<option value="">Select User to Reassign To</option>' +  // Fixed typo: "reassigntoUser" to "reassignToUser"
+            reassignToUser.innerHTML = '<option value="">Select User to Reassign To</option>' + 
                 usersList.map(u => `<option value="${u.id}">${u.first_name} ${u.last_name}</option>`).join('');
             document.getElementById("divideAmongUsers").value = '';
             document.getElementById("userCheckboxContainer").style.display = "none";
@@ -1171,9 +1182,7 @@
             showLoadingModal();
             const selectedUserId = document.getElementById("reassignToUser").value;
             const divideAmongUsers = parseInt(document.getElementById("divideAmongUsers").value) || 0;
-            const selectedTraces = Array.from(document.querySelectorAll(".rowCheckbox:checked")).map(cb => 
-                reassignmentTraces.find(t => t.id == cb.closest('tr').dataset.id)
-            );
+            const selectedTraces = reassignmentTraces.filter(t => t.selected);
 
             if (!selectedUserId && divideAmongUsers <= 0) {
                 showAlert("Please select a user or specify number of users!", "danger");
@@ -1326,7 +1335,7 @@
         }
 
         async function showBulkUpdateModal() {
-            bulkUpdateTraces = [...openTraces];
+            bulkUpdateTraces = openTraces.map(t => ({ ...t, selected: false })); // Initialize all as unselected
             renderBulkUpdateTable(1);
             showModal("bulkUpdateModal");
         }
@@ -1345,6 +1354,9 @@
                        (!rule || t.commit_hash === rule) &&
                        (!product || t.product == product) &&
                        (!created || createdDate === created);
+            }).map(t => {
+                const existing = bulkUpdateTraces.find(bt => bt.id === t.id);
+                return { ...t, selected: existing ? existing.selected : false };
             });
 
             const tableBody = document.getElementById("bulkUpdateTableBody");
@@ -1358,7 +1370,7 @@
                 const row = document.createElement("tr");
                 row.dataset.id = t.id;
                 row.innerHTML = `
-                    <td><input type="checkbox" class="bulkRowCheckbox" onchange="updateBulkUpdateButton()"></td>
+                    <td><input type="checkbox" class="bulkRowCheckbox" ${t.selected ? 'checked' : ''} onchange="updateBulkRowSelection(${t.id}, this.checked)"></td>
                     <td>${t.id}</td>
                     <td>${t.created.split("T")[0]}</td>
                     <td>${t.name}</td>
@@ -1374,16 +1386,25 @@
             currentPageBulkUpdate = page;
             renderPagination('bulkUpdate');
             document.getElementById("bulkUpdateTotalCount").textContent = `Total Traces: ${bulkUpdateTraces.length}`;
+            updateBulkUpdateButton();
+        }
+
+        function updateBulkRowSelection(id, isChecked) {
+            const traceIndex = bulkUpdateTraces.findIndex(t => t.id === id);
+            if (traceIndex !== -1) {
+                bulkUpdateTraces[traceIndex].selected = isChecked;
+            }
+            updateBulkUpdateButton();
         }
 
         function toggleBulkSelectAll() {
             const selectAll = document.getElementById("bulkSelectAll");
-            document.querySelectorAll(".bulkRowCheckbox").forEach(cb => cb.checked = selectAll.checked);
-            updateBulkUpdateButton();
+            bulkUpdateTraces.forEach(t => t.selected = selectAll.checked);
+            renderBulkUpdateTable(currentPageBulkUpdate);
         }
 
         function updateBulkUpdateButton() {
-            const checkedCount = document.querySelectorAll(".bulkRowCheckbox:checked").length;
+            const checkedCount = bulkUpdateTraces.filter(t => t.selected).length;
             document.getElementById("bulkUpdateButtonContainer").style.display = checkedCount > 0 ? "block" : "none";
         }
 
@@ -1400,9 +1421,7 @@
                 return;
             }
 
-            const selectedTraces = Array.from(document.querySelectorAll(".bulkRowCheckbox:checked")).map(cb => 
-                bulkUpdateTraces.find(t => t.id == cb.closest('tr').dataset.id)
-            );
+            const selectedTraces = bulkUpdateTraces.filter(t => t.selected);
 
             try {
                 for (const trace of selectedTraces) {
@@ -1438,13 +1457,10 @@
                 return;
             }
 
-            const selectedTraces = Array.from(document.querySelectorAll(".bulkRowCheckbox:checked")).map(cb => 
-                bulkUpdateTraces.findIndex(t => t.id == cb.closest('tr').dataset.id)
-            );
+            const selectedTraces = bulkUpdateTraces.filter(t => t.selected);
 
             try {
-                for (const traceIndex of selectedTraces) {
-                    const trace = bulkUpdateTraces[traceIndex];
+                for (const trace of selectedTraces) {
                     const updateResponse = await fetch(`${BASE_URL}/engagements/${trace.id}/`, {
                         method: "PUT",
                         headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
