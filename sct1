@@ -49,18 +49,24 @@ async function createEngagements() {
                 existingNames.add(name.toLowerCase()); // Add to prevent duplicates in this batch
 
                 // Step 2: Create tests for the engagement
-                const testTitles = ["sql", "css", "bhj"];
-                for (const title of testTitles) {
+                const tests = [
+                    { title: "sql", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+                    { title: "css", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+                    { title: "bhj", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+                    { title: "reporting", tags: ["reporting"], scan_type: "mcr_jira", test_type: 207 }
+                ];
+
+                for (const test of tests) {
                     const testPayload = {
-                        title: title,
-                        tags: ["risk_register"],
-                        scan_type: "risk_register",
+                        title: test.title,
+                        tags: test.tags,
+                        scan_type: test.scan_type,
                         target_start: today,
                         target_end: today,
-                        commit_hash: "NA",
-                        branch_tag: "NA",
+                        commit_hash: test.title === "reporting" ? "" : "NA", // Blank for reporting, NA for others
+                        branch_tag: test.title === "reporting" ? "" : "NA", // Blank for reporting, NA for others
                         lead: engagementData.lead, // Fetch lead from the created engagement
-                        test_type: 206,
+                        test_type: test.test_type,
                         environment: 10,
                         engagement: engagementData.id // Link to the newly created engagement
                     };
@@ -77,11 +83,11 @@ async function createEngagements() {
                         });
 
                         if (!testResponse.ok) {
-                            console.error(`Failed to create test '${title}' for engagement ${name}`);
+                            console.error(`Failed to create test '${test.title}' for engagement ${name}`);
                             // Optionally add to errors if you want to track test creation failures separately
                         }
                     } catch (testError) {
-                        console.error(`Error creating test '${title}' for engagement ${name}:`, testError);
+                        console.error(`Error creating test '${test.title}' for engagement ${name}:`, testError);
                     }
                 }
             } else {
