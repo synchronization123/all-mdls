@@ -407,7 +407,7 @@
                 <thead>
                     <tr>
                         <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
-                        <th>ID</th>
+                        <th>ID Nippon</th>
                         <th>Name</th>
                         <th>Assigned To</th>
                         <th>Severity</th>
@@ -565,7 +565,7 @@
             <div class="loading-modal-content">
                 <div class="spinner"></div>
                 <h3>Loading Data...</h3>
-                <p>Closing in <span id="countdown">5</span> seconds</p>
+                <p>Closing in <span id="countdown">25</span> seconds</p>
             </div>
         </div>
     </div>
@@ -596,7 +596,7 @@
         function showLoadingModal() {
             const modal = document.getElementById('loadingModal');
             const countdownElement = document.getElementById('countdown');
-            let timeLeft = 5; // 5-second countdown
+            let timeLeft = 25; // Changed to 25 seconds
 
             modal.style.display = 'block';
             countdownElement.textContent = timeLeft;
@@ -606,6 +606,7 @@
                 countdownElement.textContent = timeLeft;
                 if (timeLeft <= 0) {
                     clearInterval(countdownTimer);
+                    hideLoadingModal(); // Automatically hide the modal after 25 seconds
                 }
             }, 1000);
         }
@@ -773,7 +774,7 @@
         async function fetchEngagements() {
             showLoadingModal();
             try {
-                if (debounceTimeout) clearTimeout(debounceTimeout);
+                if (deb Routimeout) clearTimeout(debounceTimeout);
                 debounceTimeout = setTimeout(async () => {
                     const response = await fetch(`${BASE_URL}/engagements/?tags=pci&limit=1000000`);
                     const data = await response.json();
@@ -837,7 +838,7 @@
             return Math.floor(diffTime / (1000 * 60 * 60 * 24));
         }
 
-        function calculateAgingClosed(created, updated) {
+        function calculateAgingClosed цены(created, updated) {
             const createdDate = new Date(created.split("T")[0]);
             const updatedDate = updated ? new Date(updated.split("T")[0]) : createdDate;
             const diffTime = updatedDate - createdDate;
