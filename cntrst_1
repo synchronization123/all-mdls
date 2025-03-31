@@ -164,19 +164,6 @@
         .page-item:hover, .page-item.active { background: var(--bs-blue); color: white; }
         textarea { width: 100%; padding: 8px; border: none; border-radius: 8px; background: #f0f4f8; resize: vertical; }
         .total-count { font-size: 1.1rem; color: var(--bs-dark); margin-bottom: 10px; font-weight: 500; }
-        .word-wrap-rule { 
-            max-width: 150px; 
-            word-break: break-word; 
-            white-space: pre-wrap;
-        }
-        .word-wrap-rule::after {
-            content: "\A";
-            white-space: pre;
-        }
-        .word-wrap-rule span:nth-child(4n)::after {
-            content: "\A";
-            white-space: pre;
-        }
         .tab-container { display: flex; gap: 10px; margin-bottom: 20px; }
         .tab { 
             padding: 10px 20px; 
@@ -195,6 +182,9 @@
         .tab-content.active { 
             display: block; 
         }
+        .virtual-table { max-height: 400px; overflow-y: auto; position: relative; }
+        .virtual-table tbody { display: block; }
+        .virtual-table tr { display: table; width: 100%; table-layout: fixed; }
     </style>
 </head>
 <body>
@@ -212,7 +202,7 @@
             <button class="btn btn-primary btn-sm" onclick="showReassignmentModal()">Reassignment</button>
             <button class="btn btn-primary btn-sm" onclick="showBulkUpdateModal()">Bulk Update</button>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="fetchEngagements()">🔄 Refresh</button>
+        <button class="btn btn-primary btn-sm" onclick="fetchAllData()">🔄 Refresh</button>
         <span class="csrf-label" style="color: #ffffff;">CSRF Token: <strong id="csrfToken">Fetching...</strong></span>
     </div>
 
@@ -226,50 +216,52 @@
     <div id="open-tab" class="tab-content active">
         <div class="row mb-2">
             <div class="col-md-3">
-                <select id="assignedToFilterOpen" class="form-select" onchange="fetchEngagements(1, 'open')">
+                <select id="assignedToFilterOpen" class="form-select" onchange="applyFilters('open')">
                     <option value="">Filter by Assigned To</option>
                 </select>
                 <button class="btn btn-secondary btn-sm mt-2" onclick="showSummaryModal('open')">View Summary</button>
                 <button class="btn btn-secondary btn-sm mt-2" onclick="showCompletedModal('closed')">Closed</button>
             </div>
             <div class="col-md-3">
-                <select id="severityFilterOpen" multiple class="form-select" onchange="fetchEngagements(1, 'open')"></select>
+                <select id="severityFilterOpen" multiple class="form-select" onchange="applyFilters('open')"></select>
             </div>
             <div class="col-md-3">
-                <select id="ruleFilterOpen" multiple class="form-select" onchange="fetchEngagements(1, 'open')"></select>
+                <select id="ruleFilterOpen" multiple class="form-select" onchange="applyFilters('open')"></select>
             </div>
             <div class="col-md-3">
-                <select id="productFilterOpen" multiple class="form-select" onchange="fetchEngagements(1, 'open')"></select>
+                <select id="productFilterOpen" multiple class="form-select" onchange="applyFilters('open')"></select>
             </div>
             <div class="col-md-3">
-                <input type="text" id="nameSearchOpen" class="form-control" placeholder="Search by name..." oninput="fetchEngagements(1, 'open')">
+                <input type="text" id="nameSearchOpen" class="form-control" placeholder="Search by name..." oninput="applyFilters('open')">
             </div>
             <div class="col-md-3">
-                <input type="date" id="createdFilterOpen" class="form-control" onchange="fetchEngagements(1, 'open')">
+                <input type="date" id="createdFilterOpen" class="form-control" onchange="applyFilters('open')">
             </div>
             <div class="col-md-3 text-end">
                 <button class="btn btn-secondary btn-sm" onclick="clearFilters('open')">↺ Clear Filters</button>
             </div>
         </div>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Created</th>
-                    <th>Aging (Days)</th>
-                    <th>Name</th>
-                    <th>Assigned To</th>
-                    <th>Severity</th>
-                    <th>Rule</th>
-                    <th>Product</th>
-                    <th>Comments</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody id="openTracesTable"></tbody>
-        </table>
+        <div class="virtual-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Created</th>
+                        <th>Aging (Days)</th>
+                        <th>Name</th>
+                        <th>Assigned To</th>
+                        <th>Severity</th>
+                        <th>Rule</th>
+                        <th>Product</th>
+                        <th>Comments</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="openTracesTable"></tbody>
+            </table>
+        </div>
 
         <div class="pagination" id="openPagination"></div>
     </div>
@@ -277,50 +269,52 @@
     <div id="closed-tab" class="tab-content">
         <div class="row mb-2">
             <div class="col-md-3">
-                <select id="assignedToFilterClosed" class="form-select" onchange="fetchEngagements(1, 'closed')">
+                <select id="assignedToFilterClosed" class="form-select" onchange="applyFilters('closed')">
                     <option value="">Filter by Assigned To</option>
                 </select>
                 <button class="btn btn-secondary btn-sm mt-2" onclick="showSummaryModal('closed')">View Summary</button>
                 <button class="btn btn-secondary btn-sm mt-2" onclick="showCompletedModal('closed')">Closed</button>
             </div>
             <div class="col-md-3">
-                <select id="severityFilterClosed" multiple class="form-select" onchange="fetchEngagements(1, 'closed')"></select>
+                <select id="severityFilterClosed" multiple class="form-select" onchange="applyFilters('closed')"></select>
             </div>
             <div class="col-md-3">
-                <select id="ruleFilterClosed" multiple class="form-select" onchange="fetchEngagements(1, 'closed')"></select>
+                <select id="ruleFilterClosed" multiple class="form-select" onchange="applyFilters('closed')"></select>
             </div>
             <div class="col-md-3">
-                <select id="productFilterClosed" multiple class="form-select" onchange="fetchEngagements(1, 'closed')"></select>
+                <select id="productFilterClosed" multiple class="form-select" onchange="applyFilters('closed')"></select>
             </div>
             <div class="col-md-3">
-                <input type="text" id="nameSearchClosed" class="form-control" placeholder="Search by name..." oninput="fetchEngagements(1, 'closed')">
+                <input type="text" id="nameSearchClosed" class="form-control" placeholder="Search by name..." oninput="applyFilters('closed')">
             </div>
             <div class="col-md-3">
-                <input type="date" id="createdFilterClosed" class="form-control" onchange="fetchEngagements(1, 'closed')">
+                <input type="date" id="createdFilterClosed" class="form-control" onchange="applyFilters('closed')">
             </div>
             <div class="col-md-3 text-end">
                 <button class="btn btn-secondary btn-sm" onclick="clearFilters('closed')">↺ Clear Filters</button>
             </div>
         </div>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Created</th>
-                    <th>Aging (Days)</th>
-                    <th>Name</th>
-                    <th>Assigned To</th>
-                    <th>Severity</th>
-                    <th>Rule</th>
-                    <th>Product</th>
-                    <th>Comments</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody id="closedTracesTable"></tbody>
-        </table>
+        <div class="virtual-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Created</th>
+                        <th>Aging (Days)</th>
+                        <th>Name</th>
+                        <th>Assigned To</th>
+                        <th>Severity</th>
+                        <th>Rule</th>
+                        <th>Product</th>
+                        <th>Comments</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="closedTracesTable"></tbody>
+            </table>
+        </div>
 
         <div class="pagination" id="closedPagination"></div>
     </div>
@@ -334,35 +328,37 @@
         <div class="total-count" id="reassignmentTotalCount">Total Traces: 0</div>
         <div class="row mb-2">
             <div class="col-md-3">
-                <select id="reassignAssignedToFilter" class="form-select" onchange="renderReassignmentTable(1)"></select>
+                <select id="reassignAssignedToFilter" class="form-select" onchange="applyFilters('reassignment')"></select>
             </div>
             <div class="col-md-3">
-                <select id="reassignSeverityFilter" multiple class="form-select" onchange="renderReassignmentTable(1)"></select>
+                <select id="reassignSeverityFilter" multiple class="form-select" onchange="applyFilters('reassignment')"></select>
             </div>
             <div class="col-md-3">
-                <select id="reassignRuleFilter" multiple class="form-select" onchange="renderReassignmentTable(1)"></select>
+                <select id="reassignRuleFilter" multiple class="form-select" onchange="applyFilters('reassignment')"></select>
             </div>
             <div class="col-md-3">
-                <select id="reassignProductFilter" multiple class="form-select" onchange="renderReassignmentTable(1)"></select>
+                <select id="reassignProductFilter" multiple class="form-select" onchange="applyFilters('reassignment')"></select>
             </div>
             <div class="col-md-3">
-                <input type="date" id="reassignCreatedFilter" class="form-control" onchange="renderReassignmentTable(1)">
+                <input type="date" id="reassignCreatedFilter" class="form-control" onchange="applyFilters('reassignment')">
             </div>
         </div>
-        <table id="reassignmentTable">
-            <thead>
-                <tr>
-                    <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Assigned To</th>
-                    <th>Severity</th>
-                    <th>Rule</th>
-                    <th>Product</th>
-                </tr>
-            </thead>
-            <tbody id="reassignmentTableBody"></tbody>
-        </table>
+        <div class="virtual-table">
+            <table id="reassignmentTable">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Assigned To</th>
+                        <th>Severity</th>
+                        <th>Rule</th>
+                        <th>Product</th>
+                    </tr>
+                </thead>
+                <tbody id="reassignmentTableBody"></tbody>
+            </table>
+        </div>
         <div class="pagination" id="reassignmentPagination"></div>
         <div id="reassignButtonContainer" style="display: none;" class="mt-2">
             <button class="btn btn-primary" onclick="showReassignConfirmModal()">Reassign</button>
@@ -420,15 +416,17 @@
                 <input type="date" id="completedCreatedFilter" class="form-control" onchange="renderClosedTable()">
             </div>
         </div>
-        <table id="completedTable">
-            <thead>
-                <tr>
-                    <th>Date Closed</th>
-                    <th>Count</th>
-                </tr>
-            </thead>
-            <tbody id="completedTableBody"></tbody>
-        </table>
+        <div class="virtual-table">
+            <table id="completedTable">
+                <thead>
+                    <tr>
+                        <th>Date Closed</th>
+                        <th>Count</th>
+                    </tr>
+                </thead>
+                <tbody id="completedTableBody"></tbody>
+            </table>
+        </div>
         <div class="pagination" id="completedPagination"></div>
         <button class="btn btn-secondary mt-2" onclick="closeModal('completedModal')">Close</button>
     </div>
@@ -439,37 +437,39 @@
         <div class="total-count" id="bulkUpdateTotalCount">Total Traces: 0</div>
         <div class="row mb-2">
             <div class="col-md-3">
-                <select id="bulkAssignedToFilter" class="form-select" onchange="renderBulkUpdateTable(1)"></select>
+                <select id="bulkAssignedToFilter" class="form-select" onchange="applyFilters('bulkUpdate')"></select>
             </div>
             <div class="col-md-3">
-                <select id="bulkSeverityFilter" multiple class="form-select" onchange="renderBulkUpdateTable(1)"></select>
+                <select id="bulkSeverityFilter" multiple class="form-select" onchange="applyFilters('bulkUpdate')"></select>
             </div>
             <div class="col-md-3">
-                <select id="bulkRuleFilter" multiple class="form-select" onchange="renderBulkUpdateTable(1)"></select>
+                <select id="bulkRuleFilter" multiple class="form-select" onchange="applyFilters('bulkUpdate')"></select>
             </div>
             <div class="col-md-3">
-                <select id="bulkProductFilter" multiple class="form-select" onchange="renderBulkUpdateTable(1)"></select>
+                <select id="bulkProductFilter" multiple class="form-select" onchange="applyFilters('bulkUpdate')"></select>
             </div>
             <div class="col-md-3">
-                <input type="date" id="bulkCreatedFilter" class="form-control" onchange="renderBulkUpdateTable(1)">
+                <input type="date" id="bulkCreatedFilter" class="form-control" onchange="applyFilters('bulkUpdate')">
             </div>
         </div>
-        <table id="bulkUpdateTable">
-            <thead>
-                <tr>
-                    <th><input type="checkbox" id="bulkSelectAll" onclick="toggleBulkSelectAll()"></th>
-                    <th>ID</th>
-                    <th>Created</th>
-                    <th>Name</th>
-                    <th>Assigned To</th>
-                    <th>Severity</th>
-                    <th>Rule</th>
-                    <th>Product</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="bulkUpdateTableBody"></tbody>
-        </table>
+        <div class="virtual-table">
+            <table id="bulkUpdateTable">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="bulkSelectAll" onclick="toggleBulkSelectAll()"></th>
+                        <th>ID</th>
+                        <th>Created</th>
+                        <th>Name</th>
+                        <th>Assigned To</th>
+                        <th>Severity</th>
+                        <th>Rule</th>
+                        <th>Product</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="bulkUpdateTableBody"></tbody>
+            </table>
+        </div>
         <div class="pagination" id="bulkUpdatePagination"></div>
         <div id="bulkUpdateButtonContainer" style="display: none;" class="mt-2">
             <button class="btn btn-primary" onclick="showBulkUpdateConfirmModal()">Bulk Update</button>
@@ -504,8 +504,8 @@
     let csrfToken = '';
     let usersList = [];
     let productsList = [];
-    let debounceTimeout;
-    const ROWS_PER_PAGE = 10; // Increased for better usability
+    let allTraces = [];
+    const ROWS_PER_PAGE = 20;
     let currentPageOpen = 1;
     let currentPageClosed = 1;
     let currentPageReassignment = 1;
@@ -513,6 +513,8 @@
     let currentPageCompleted = 1;
     let totalOpenTraces = 0;
     let totalClosedTraces = 0;
+    let totalReassignmentTraces = 0;
+    let totalBulkUpdateTraces = 0;
     let activeTab = 'open';
     let modalStack = [];
     let choicesInstances = {};
@@ -553,6 +555,21 @@
         }
     }
 
+    async function fetchAllData() {
+        try {
+            const response = await fetch(`${BASE_URL}/engagements/?tags=pci&limit=1000`);
+            const data = await response.json();
+            allTraces = data.results || [];
+            totalOpenTraces = allTraces.filter(t => t.active).length;
+            totalClosedTraces = allTraces.filter(t => !t.active).length;
+            initializeFilters();
+            applyFilters(activeTab);
+        } catch (error) {
+            console.error("Error fetching all traces:", error);
+            showAlert("Error fetching data!", "danger");
+        }
+    }
+
     function showAlert(message, type) {
         const alertBox = document.getElementById("alertBox");
         alertBox.className = `alert alert-${type}`;
@@ -567,8 +584,7 @@
         document.querySelector(`.tab-container .tab[onclick="switchTab('${tab}')"]`).classList.add('active');
         document.getElementById(`${tab}-tab`).classList.add('active');
         activeTab = tab;
-        fetchEngagements(1, tab);
-        updateTotalCount();
+        applyFilters(tab);
     }
 
     function updateTotalCount() {
@@ -576,9 +592,9 @@
         document.getElementById("totalCount").textContent = `Total Traces: ${count}`;
     }
 
-    function initializeMultiSelect(tab) {
+    function initializeMultiSelect(prefix) {
         ['severityFilter', 'ruleFilter', 'productFilter'].forEach(filter => {
-            const elementId = `${filter}${tab.charAt(0).toUpperCase() + tab.slice(1)}`;
+            const elementId = `${filter}${prefix}`;
             if (!choicesInstances[elementId]) {
                 choicesInstances[elementId] = new Choices(`#${elementId}`, {
                     removeItemButton: true,
@@ -590,104 +606,93 @@
         });
     }
 
-    async function populateFilters(tab) {
-        const assignedToFilter = document.getElementById(`assignedToFilter${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
-        const response = await fetch(`${BASE_URL}/engagements/?tags=pci&active=${tab === 'open'}&limit=1`);
-        const data = await response.json();
-        const total = data.count;
+    function initializeFilters() {
+        const prefixes = ['Open', 'Closed', 'Reassign', 'Bulk'];
+        prefixes.forEach(prefix => {
+            initializeMultiSelect(prefix);
+            const assignedToFilter = document.getElementById(`assignedToFilter${prefix}`);
+            assignedToFilter.innerHTML = '<option value="">Filter by Assigned To</option>' + 
+                usersList.map(u => `<option value="${u.id}">${u.first_name} ${u.last_name}</option>`).join('');
 
-        assignedToFilter.innerHTML = '<option value="">Filter by Assigned To</option>' + 
-            usersList.map(u => `<option value="${u.id}">${u.first_name} ${u.last_name}</option>`).join('');
+            const severities = [...new Set(allTraces.map(t => t.branch_tag || 'N/A'))].sort();
+            const rules = [...new Set(allTraces.map(t => t.commit_hash || 'N/A'))].sort();
+            const products = productsList.map(p => ({ value: p.id, label: p.name }));
 
-        const fetchOptions = async (endpoint, key) => {
-            const res = await fetch(`${BASE_URL}${endpoint}`);
-            const data = await res.json();
-            return [...new Set(data.results.map(item => item[key] || 'N/A'))].sort();
-        };
-
-        const severities = await fetchOptions('/engagements/?tags=pci', 'branch_tag');
-        const rules = await fetchOptions('/engagements/?tags=pci', 'commit_hash');
-        const products = productsList.map(p => ({ value: p.id, label: p.name }));
-
-        choicesInstances[`severityFilter${tab.charAt(0).toUpperCase() + tab.slice(1)}`].setChoices(
-            severities.map(s => ({ value: s, label: s })), 'value', 'label', true
-        );
-        choicesInstances[`ruleFilter${tab.charAt(0).toUpperCase() + tab.slice(1)}`].setChoices(
-            rules.map(r => ({ value: r, label: r })), 'value', 'label', true
-        );
-        choicesInstances[`productFilter${tab.charAt(0).toUpperCase() + tab.slice(1)}`].setChoices(
-            products, 'value', 'label', true
-        );
-
-        if (tab === 'open') totalOpenTraces = total;
-        else totalClosedTraces = total;
+            choicesInstances[`severityFilter${prefix}`].setChoices(
+                severities.map(s => ({ value: s, label: s })), 'value', 'label', true
+            );
+            choicesInstances[`ruleFilter${prefix}`].setChoices(
+                rules.map(r => ({ value: r, label: r })), 'value', 'label', true
+            );
+            choicesInstances[`productFilter${prefix}`].setChoices(
+                products, 'value', 'label', true
+            );
+        });
     }
 
     function clearFilters(tab) {
-        const prefix = tab === 'open' ? 'Open' : 'Closed';
+        const prefix = tab === 'open' ? 'Open' : tab === 'closed' ? 'Closed' : tab === 'reassignment' ? 'Reassign' : 'Bulk';
         document.getElementById(`assignedToFilter${prefix}`).value = "";
         choicesInstances[`severityFilter${prefix}`].removeActiveItems();
         choicesInstances[`ruleFilter${prefix}`].removeActiveItems();
         choicesInstances[`productFilter${prefix}`].removeActiveItems();
-        document.getElementById(`nameSearch${prefix}`).value = "";
-        document.getElementById(`createdFilter${prefix}`).value = "";
-        fetchEngagements(1, tab);
+        document.getElementById(`nameSearch${prefix}`)?.value = "";
+        document.getElementById(`createdFilter${prefix}`)?.value = "";
+        applyFilters(tab);
     }
 
-    async function fetchEngagements(page = 1, tab = activeTab) {
-        try {
-            if (debounceTimeout) clearTimeout(debounceTimeout);
-            debounceTimeout = setTimeout(async () => {
-                const prefix = tab === 'open' ? 'Open' : 'Closed';
-                const assignedTo = document.getElementById(`assignedToFilter${prefix}`).value;
-                const severities = choicesInstances[`severityFilter${prefix}`].getValue(true);
-                const rules = choicesInstances[`ruleFilter${prefix}`].getValue(true);
-                const products = choicesInstances[`productFilter${prefix}`].getValue(true);
-                const nameSearch = document.getElementById(`nameSearch${prefix}`).value.toLowerCase().trim();
-                const created = document.getElementById(`createdFilter${prefix}`).value;
+    function applyFilters(tab, page = 1) {
+        const prefix = tab === 'open' ? 'Open' : tab === 'closed' ? 'Closed' : tab === 'reassignment' ? 'Reassign' : 'Bulk';
+        const assignedTo = document.getElementById(`assignedToFilter${prefix}`).value;
+        const severities = choicesInstances[`severityFilter${prefix}`].getValue(true);
+        const rules = choicesInstances[`ruleFilter${prefix}`].getValue(true);
+        const products = choicesInstances[`productFilter${prefix}`].getValue(true);
+        const nameSearch = document.getElementById(`nameSearch${prefix}`)?.value.toLowerCase().trim() || '';
+        const created = document.getElementById(`createdFilter${prefix}`)?.value;
 
-                let url = `${BASE_URL}/engagements/?tags=pci&active=${tab === 'open'}&limit=${ROWS_PER_PAGE}&offset=${(page - 1) * ROWS_PER_PAGE}`;
-                if (assignedTo) url += `&lead=${assignedTo}`;
-                if (severities.length) url += `&branch_tag__in=${severities.join(',')}`;
-                if (rules.length) url += `&commit_hash__in=${rules.join(',')}`;
-                if (products.length) url += `&product__in=${products.join(',')}`;
-                if (nameSearch) url += `&name__icontains=${encodeURIComponent(nameSearch)}`;
-                if (created) url += `&created__date=${created}`;
+        let filteredTraces = allTraces.filter(t => {
+            const isActive = tab === 'open' || tab === 'reassignment' || tab === 'bulkUpdate' ? t.active : !t.active;
+            return isActive &&
+                (!assignedTo || t.lead == assignedTo) &&
+                (severities.length === 0 || severities.includes(t.branch_tag || 'N/A')) &&
+                (rules.length === 0 || rules.includes(t.commit_hash || 'N/A')) &&
+                (products.length === 0 || products.includes(String(t.product))) &&
+                (!nameSearch || t.name.toLowerCase().includes(nameSearch)) &&
+                (!created || t.created.split("T")[0] === created);
+        });
 
-                const response = await fetch(url);
-                const data = await response.json();
-                const traces = data.results || [];
-                totalOpenTraces = tab === 'open' ? data.count : totalOpenTraces;
-                totalClosedTraces = tab === 'closed' ? data.count : totalClosedTraces;
-
-                if (tab === 'open') {
-                    currentPageOpen = page;
-                    renderTableOpen(traces);
-                } else {
-                    currentPageClosed = page;
-                    renderTableClosed(traces);
-                }
-                updateTotalCount();
-                renderPagination(tab, data.count);
-            }, 500); // Increased debounce time for better performance
-        } catch (error) {
-            console.error("Error fetching traces:", error);
-            showAlert("Error fetching traces!", "danger");
+        if (tab === 'open') {
+            totalOpenTraces = filteredTraces.length;
+            currentPageOpen = page;
+            renderTableOpen(filteredTraces, page);
+        } else if (tab === 'closed') {
+            totalClosedTraces = filteredTraces.length;
+            currentPageClosed = page;
+            renderTableClosed(filteredTraces, page);
+        } else if (tab === 'reassignment') {
+            totalReassignmentTraces = filteredTraces.length;
+            currentPageReassignment = page;
+            renderReassignmentTable(filteredTraces, page);
+        } else if (tab === 'bulkUpdate') {
+            totalBulkUpdateTraces = filteredTraces.length;
+            currentPageBulkUpdate = page;
+            renderBulkUpdateTable(filteredTraces, page);
         }
+
+        updateTotalCount();
+        renderPagination(tab, filteredTraces.length);
     }
 
     function calculateAgingOpen(created) {
         const today = new Date();
         const createdDate = new Date(created.split("T")[0]);
-        const diffTime = today - createdDate;
-        return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        return Math.floor((today - createdDate) / (1000 * 60 * 60 * 24));
     }
 
     function calculateAgingClosed(created, updated) {
         const createdDate = new Date(created.split("T")[0]);
         const updatedDate = updated ? new Date(updated.split("T")[0]) : createdDate;
-        const diffTime = updatedDate - createdDate;
-        return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        return Math.floor((updatedDate - createdDate) / (1000 * 60 * 60 * 24));
     }
 
     function getProductName(productId) {
@@ -697,13 +702,16 @@
 
     function getAssignedToName(leadId) {
         const user = usersList.find(u => u.id == leadId);
-        return user ? `${user.first_name} ${user.last_name}` : 'Unassigned';
+        return user ? `${user.first_name} ${u.last_name}` : 'Unassigned';
     }
 
-    function renderTableOpen(traces) {
+    function renderTableOpen(traces, page) {
         const tableBody = document.getElementById("openTracesTable");
+        const start = (page - 1) * ROWS_PER_PAGE;
+        const end = start + ROWS_PER_PAGE;
+        const paginatedTraces = traces.slice(start, end);
         tableBody.innerHTML = "";
-        traces.forEach(t => {
+        paginatedTraces.forEach(t => {
             const row = document.createElement("tr");
             row.dataset.id = t.id;
             row.innerHTML = `
@@ -730,10 +738,13 @@
         });
     }
 
-    function renderTableClosed(traces) {
+    function renderTableClosed(traces, page) {
         const tableBody = document.getElementById("closedTracesTable");
+        const start = (page - 1) * ROWS_PER_PAGE;
+        const end = start + ROWS_PER_PAGE;
+        const paginatedTraces = traces.slice(start, end);
         tableBody.innerHTML = "";
-        traces.forEach(t => {
+        paginatedTraces.forEach(t => {
             const row = document.createElement("tr");
             row.dataset.id = t.id;
             row.innerHTML = `
@@ -795,10 +806,7 @@
         else if (tab === 'reassignment') currentPageReassignment = page;
         else if (tab === 'bulkUpdate') currentPageBulkUpdate = page;
         else if (tab === 'completed') currentPageCompleted = page;
-        if (tab === 'open' || tab === 'closed') fetchEngagements(page, tab);
-        else if (tab === 'reassignment') renderReassignmentTable(page);
-        else if (tab === 'bulkUpdate') renderBulkUpdateTable(page);
-        else if (tab === 'completed') renderClosedTable();
+        applyFilters(tab, page);
     }
 
     function createStatusDropdown(selectedValue) {
@@ -812,11 +820,7 @@
         const description = row.querySelector(".description").value;
         const status = row.querySelector("select").value;
 
-        const payload = {
-            id, name, description, status, branch_tag: null, commit_hash: null, lead: null,
-            active: true, product: null, target_start: null, target_end: null
-        };
-
+        const payload = { id, name, description, status, active: true };
         try {
             const response = await fetch(`${BASE_URL}/engagements/${id}/`, {
                 method: "PUT",
@@ -824,8 +828,11 @@
                 body: JSON.stringify(payload),
                 credentials: "include"
             });
-            if (!response.ok) showAlert("Failed to update trace!", "danger");
-            fetchEngagements(currentPageOpen, 'open');
+            if (!response.ok) throw new Error("Failed to update trace");
+            const updatedTrace = await response.json();
+            const index = allTraces.findIndex(t => t.id === id);
+            allTraces[index] = updatedTrace;
+            applyFilters('open');
         } catch (error) {
             console.error("Error updating trace:", error);
             showAlert("Error updating trace!", "danger");
@@ -841,7 +848,11 @@
             });
             if (response.ok) {
                 showAlert(`${name} closed successfully`, "success");
-                fetchEngagements(currentPageOpen, 'open');
+                const index = allTraces.findIndex(t => t.id === id);
+                allTraces[index].active = false;
+                totalOpenTraces--;
+                totalClosedTraces++;
+                applyFilters('open');
             } else {
                 showAlert("Failed to close trace!", "danger");
             }
@@ -860,7 +871,11 @@
             });
             if (response.ok) {
                 showAlert(`${name} reopened successfully`, "success");
-                fetchEngagements(currentPageClosed, 'closed');
+                const index = allTraces.findIndex(t => t.id === id);
+                allTraces[index].active = true;
+                totalOpenTraces++;
+                totalClosedTraces--;
+                applyFilters('closed');
             } else {
                 showAlert("Failed to reopen trace!", "danger");
             }
@@ -892,22 +907,17 @@
         }
     }
 
-    async function showReassignmentModal() {
-        const response = await fetch(`${BASE_URL}/engagements/?tags=pci&active=true&limit=${ROWS_PER_PAGE}&offset=0`);
-        const data = await response.json();
-        reassignmentTraces = data.results || [];
-        renderReassignmentTable(1);
+    function showReassignmentModal() {
+        applyFilters('reassignment');
         showModal("reassignmentModal");
     }
 
-    function renderReassignmentTable(page) {
-        // This is a simplified version; ideally, fetch filtered data from server
+    function renderReassignmentTable(traces, page) {
         const tableBody = document.getElementById("reassignmentTableBody");
-        tableBody.innerHTML = "";
         const start = (page - 1) * ROWS_PER_PAGE;
         const end = start + ROWS_PER_PAGE;
-        const paginatedTraces = reassignmentTraces.slice(start, end);
-
+        const paginatedTraces = traces.slice(start, end);
+        tableBody.innerHTML = "";
         paginatedTraces.forEach(t => {
             const row = document.createElement("tr");
             row.dataset.id = t.id;
@@ -922,10 +932,7 @@
             `;
             tableBody.appendChild(row);
         });
-
-        currentPageReassignment = page;
-        renderPagination('reassignment', reassignmentTraces.length);
-        document.getElementById("reassignmentTotalCount").textContent = `Total Traces: ${reassignmentTraces.length}`;
+        document.getElementById("reassignmentTotalCount").textContent = `Total Traces: ${traces.length}`;
     }
 
     function toggleSelectAll() {
@@ -940,7 +947,6 @@
     }
 
     function showReassignConfirmModal() {
-        const modal = document.getElementById("reassignConfirmModal");
         const reassignToUser = document.getElementById("reassignToUser");
         reassignToUser.innerHTML = '<option value="">Select User to Reassign To</option>' + 
             usersList.map(u => `<option value="${u.id}">${u.first_name} ${u.last_name}</option>`).join('');
@@ -970,7 +976,7 @@
         const selectedUserId = document.getElementById("reassignToUser").value;
         const divideAmongUsers = parseInt(document.getElementById("divideAmongUsers").value) || 0;
         const selectedTraces = Array.from(document.querySelectorAll(".rowCheckbox:checked")).map(cb => 
-            reassignmentTraces.find(t => t.id == cb.closest('tr').dataset.id)
+            parseInt(cb.closest('tr').dataset.id)
         );
 
         if (!selectedUserId && divideAmongUsers <= 0) {
@@ -985,26 +991,26 @@
                     showAlert(`Please select exactly ${divideAmongUsers} users!`, "danger");
                     return;
                 }
-                const testsPerUser = Math.floor(selectedTraces.length / divideAmongUsers);
-                const extraTests = selectedTraces.length % divideAmongUsers;
-                let testIndex = 0;
+                const tracesPerUser = Math.floor(selectedTraces.length / divideAmongUsers);
+                const extraTraces = selectedTraces.length % divideAmongUsers;
+                let traceIndex = 0;
                 for (let i = 0; i < divideAmongUsers; i++) {
-                    const userTests = selectedTraces.slice(testIndex, testIndex + testsPerUser + (i < extraTests ? 1 : 0));
+                    const userTraces = selectedTraces.slice(traceIndex, traceIndex + tracesPerUser + (i < extraTraces ? 1 : 0));
                     const userId = selectedUserIds[i];
-                    for (const test of userTests) {
-                        await reassignTrace(test.id, userId);
+                    for (const traceId of userTraces) {
+                        await reassignTrace(traceId, userId);
                     }
-                    testIndex += testsPerUser + (i < extraTests ? 1 : 0);
+                    traceIndex += tracesPerUser + (i < extraTraces ? 1 : 0);
                 }
             } else {
-                for (const test of selectedTraces) {
-                    await reassignTrace(test.id, selectedUserId);
+                for (const traceId of selectedTraces) {
+                    await reassignTrace(traceId, selectedUserId);
                 }
             }
             showAlert(`${selectedTraces.length} trace(s) reassigned!`, "success");
             closeModal("reassignConfirmModal");
-            renderReassignmentTable(currentPageReassignment);
-            fetchEngagements(currentPageOpen, 'open');
+            applyFilters('reassignment');
+            applyFilters('open');
         } catch (error) {
             console.error("Error reassigning traces:", error);
             showAlert("Error reassigning traces!", "danger");
@@ -1012,15 +1018,19 @@
     }
 
     async function reassignTrace(id, userId) {
-        const trace = reassignmentTraces.find(t => t.id === id);
-        const payload = { ...trace, lead: userId };
+        const payload = { lead: userId };
         const response = await fetch(`${BASE_URL}/engagements/${id}/`, {
-            method: "PUT",
+            method: "PATCH",
             headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
             body: JSON.stringify(payload),
             credentials: "include"
         });
-        if (!response.ok) throw new Error("Failed to reassign trace");
+        if (response.ok) {
+            const index = allTraces.findIndex(t => t.id === id);
+            allTraces[index].lead = userId;
+        } else {
+            throw new Error("Failed to reassign trace");
+        }
     }
 
     function showSummaryModal(tab) {
@@ -1029,20 +1039,18 @@
         showModal("summaryModal");
     }
 
-    async function renderSummaryContent(tab) {
+    function renderSummaryContent(tab) {
         const createdFilter = document.getElementById("summaryCreatedFilter").value;
-        let url = `${BASE_URL}/engagements/?tags=pci&active=${tab === 'open'}&limit=1000`;
-        if (createdFilter) url += `&created__date=${createdFilter}`;
-
-        const response = await fetch(url);
-        const data = await response.json();
-        const traces = data.results || [];
+        let filteredTraces = allTraces.filter(t => {
+            const isActive = tab === 'open' ? t.active : !t.active;
+            return isActive && (!createdFilter || t.created.split("T")[0] === createdFilter);
+        });
 
         const byRule = {};
         const bySeverity = {};
         const byProduct = {};
 
-        traces.forEach(t => {
+        filteredTraces.forEach(t => {
             byRule[t.commit_hash || 'N/A'] = (byRule[t.commit_hash || 'N/A'] || 0) + 1;
             bySeverity[t.branch_tag || 'N/A'] = (bySeverity[t.branch_tag || 'N/A'] || 0) + 1;
             byProduct[getProductName(t.product)] = (byProduct[getProductName(t.product)] || 0) + 1;
@@ -1055,10 +1063,10 @@
             <ul>${Object.entries(bySeverity).map(([severity, count]) => `<li>${severity}: ${count}</li>`).join('')}</ul>
             <h3>By Product</h3>
             <ul>${Object.entries(byProduct).map(([product, count]) => `<li>${product}: ${count}</li>`).join('')}</ul>
-            <p>Total: ${traces.length}</p>
+            <p>Total: ${filteredTraces.length}</p>
         `;
         document.getElementById("summaryContent").innerHTML = content;
-        document.getElementById("summaryTotalCount").textContent = `Total Traces: ${data.count}`;
+        document.getElementById("summaryTotalCount").textContent = `Total Traces: ${filteredTraces.length}`;
     }
 
     function showCompletedModal(tab) {
@@ -1069,30 +1077,30 @@
         showModal("completedModal");
     }
 
-    async function renderClosedTable() {
+    function renderClosedTable() {
         const date1 = document.getElementById("completedDate1").value;
         const date2 = document.getElementById("completedDate2").value;
         const createdFilter = document.getElementById("completedCreatedFilter").value;
 
-        let url = `${BASE_URL}/engagements/?tags=pci&active=false&limit=${ROWS_PER_PAGE}&offset=${(currentPageCompleted - 1) * ROWS_PER_PAGE}`;
-        if (date1) url += `&updated__gte=${date1}`;
-        if (date2) url += `&updated__lte=${date2}`;
-        if (createdFilter) url += `&created__date=${createdFilter}`;
-
-        const response = await fetch(url);
-        const data = await response.json();
-        const traces = data.results || [];
+        let filteredTraces = allTraces.filter(t => !t.active &&
+            (!date1 || (t.updated || t.created).split("T")[0] >= date1) &&
+            (!date2 || (t.updated || t.created).split("T")[0] <= date2) &&
+            (!createdFilter || t.created.split("T")[0] === createdFilter));
 
         const closedByDate = {};
-        traces.forEach(t => {
+        filteredTraces.forEach(t => {
             const date = (t.updated || t.created).split("T")[0];
             closedByDate[date] = (closedByDate[date] || 0) + 1;
         });
         const completedData = Object.entries(closedByDate).map(([date, count]) => ({ date, count })).sort((a, b) => new Date(b.date) - new Date(a.date));
 
+        const start = (currentPageCompleted - 1) * ROWS_PER_PAGE;
+        const end = start + ROWS_PER_PAGE;
+        const paginatedData = completedData.slice(start, end);
+
         const tableBody = document.getElementById("completedTableBody");
         tableBody.innerHTML = "";
-        completedData.forEach(d => {
+        paginatedData.forEach(d => {
             const row = document.createElement("tr");
             row.innerHTML = `
                 <td>${d.date}</td>
@@ -1101,25 +1109,21 @@
             tableBody.appendChild(row);
         });
 
-        renderPagination('completed', data.count);
-        document.getElementById("completedTotalCount").textContent = `Total Closed Traces: ${data.count}`;
+        renderPagination('completed', completedData.length);
+        document.getElementById("completedTotalCount").textContent = `Total Closed Traces: ${filteredTraces.length}`;
     }
 
-    async function showBulkUpdateModal() {
-        const response = await fetch(`${BASE_URL}/engagements/?tags=pci&active=true&limit=${ROWS_PER_PAGE}&offset=0`);
-        const data = await response.json();
-        bulkUpdateTraces = data.results || [];
-        renderBulkUpdateTable(1);
+    function showBulkUpdateModal() {
+        applyFilters('bulkUpdate');
         showModal("bulkUpdateModal");
     }
 
-    function renderBulkUpdateTable(page) {
+    function renderBulkUpdateTable(traces, page) {
         const tableBody = document.getElementById("bulkUpdateTableBody");
-        tableBody.innerHTML = "";
         const start = (page - 1) * ROWS_PER_PAGE;
         const end = start + ROWS_PER_PAGE;
-        const paginatedTraces = bulkUpdateTraces.slice(start, end);
-
+        const paginatedTraces = traces.slice(start, end);
+        tableBody.innerHTML = "";
         paginatedTraces.forEach(t => {
             const row = document.createElement("tr");
             row.dataset.id = t.id;
@@ -1136,10 +1140,7 @@
             `;
             tableBody.appendChild(row);
         });
-
-        currentPageBulkUpdate = page;
-        renderPagination('bulkUpdate', bulkUpdateTraces.length);
-        document.getElementById("bulkUpdateTotalCount").textContent = `Total Traces: ${bulkUpdateTraces.length}`;
+        document.getElementById("bulkUpdateTotalCount").textContent = `Total Traces: ${traces.length}`;
     }
 
     function toggleBulkSelectAll() {
@@ -1165,24 +1166,29 @@
         }
 
         const selectedTraces = Array.from(document.querySelectorAll(".bulkRowCheckbox:checked")).map(cb => 
-            bulkUpdateTraces.find(t => t.id == cb.closest('tr').dataset.id)
+            parseInt(cb.closest('tr').dataset.id)
         );
 
         try {
-            for (const trace of selectedTraces) {
-                const payload = { ...trace, status: selectedStatus };
-                const response = await fetch(`${BASE_URL}/engagements/${trace.id}/`, {
-                    method: "PUT",
+            for (const traceId of selectedTraces) {
+                const payload = { status: selectedStatus };
+                const response = await fetch(`${BASE_URL}/engagements/${traceId}/`, {
+                    method: "PATCH",
                     headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
                     body: JSON.stringify(payload),
                     credentials: "include"
                 });
-                if (!response.ok) throw new Error("Failed to update trace");
+                if (response.ok) {
+                    const index = allTraces.findIndex(t => t.id === traceId);
+                    allTraces[index].status = selectedStatus;
+                } else {
+                    throw new Error("Failed to update trace");
+                }
             }
             showAlert(`${selectedTraces.length} trace(s) updated!`, "success");
             closeModal("bulkUpdateConfirmModal");
-            renderBulkUpdateTable(currentPageBulkUpdate);
-            fetchEngagements(currentPageOpen, 'open');
+            applyFilters('bulkUpdate');
+            applyFilters('open');
         } catch (error) {
             console.error("Error updating traces:", error);
             showAlert("Error updating traces!", "danger");
@@ -1197,30 +1203,38 @@
         }
 
         const selectedTraces = Array.from(document.querySelectorAll(".bulkRowCheckbox:checked")).map(cb => 
-            bulkUpdateTraces.find(t => t.id == cb.closest('tr').dataset.id)
+            parseInt(cb.closest('tr').dataset.id)
         );
 
         try {
-            for (const trace of selectedTraces) {
-                const updateResponse = await fetch(`${BASE_URL}/engagements/${trace.id}/`, {
-                    method: "PUT",
+            for (const traceId of selectedTraces) {
+                const updateResponse = await fetch(`${BASE_URL}/engagements/${traceId}/`, {
+                    method: "PATCH",
                     headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
-                    body: JSON.stringify({ ...trace, status: selectedStatus }),
+                    body: JSON.stringify({ status: selectedStatus }),
                     credentials: "include"
                 });
                 if (!updateResponse.ok) throw new Error("Failed to update status");
 
-                const closeResponse = await fetch(`${BASE_URL}/engagements/${trace.id}/close/`, {
+                const closeResponse = await fetch(`${BASE_URL}/engagements/${traceId}/close/`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
                     credentials: "include"
                 });
-                if (!closeResponse.ok) throw new Error("Failed to close trace");
+                if (closeResponse.ok) {
+                    const index = allTraces.findIndex(t => t.id === traceId);
+                    allTraces[index].status = selectedStatus;
+                    allTraces[index].active = false;
+                    totalOpenTraces--;
+                    totalClosedTraces++;
+                } else {
+                    throw new Error("Failed to close trace");
+                }
             }
             showAlert(`${selectedTraces.length} trace(s) closed!`, "success");
             closeModal("bulkUpdateConfirmModal");
-            fetchEngagements(currentPageOpen, 'open');
-            renderBulkUpdateTable(currentPageBulkUpdate);
+            applyFilters('bulkUpdate');
+            applyFilters('open');
         } catch (error) {
             console.error("Error closing traces:", error);
             showAlert("Error closing traces!", "danger");
@@ -1231,11 +1245,7 @@
         await fetchCSRF();
         await fetchUsers();
         await fetchProducts();
-        initializeMultiSelect('open');
-        initializeMultiSelect('closed');
-        await populateFilters('open');
-        await populateFilters('closed');
-        await fetchEngagements(1, 'open');
+        await fetchAllData();
     })();
 </script>
 </body>
