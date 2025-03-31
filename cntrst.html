@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Contrast Traces Dashboard</title>
+   <style>
+    :root {
+        --bs-blue: #0d6efd;
+        --bs-success: #28a745;
+        --bs-warning: #ffc107;
+        --bs-danger: #dc3545;
+        --bs-gray-100: #f8f9fa;
+        --bs-gray-200: #e9ecef;
+        --bs-dark: #2c3e50;
+        --bs-light: #ffffff;
+        --highlight-green: #d4edda;
+    }
+    body {
+        background: linear-gradient(135deg, #6e48aa 0%, #9d50bb 100%);
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        width: 100vw;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .container {
+        background: var(--bs-light);
+        padding: 25px;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        width: 90vw; /* Adjusted from 90vw to leave space for sidebar */
+        height: 90vh;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        border: 1px solid rgba(255,255,255,0.1);
+        position: relative;
+        margin-left: 100px; /* Added margin to shift container right of sidebar */
+		}
+ .sidebar {
+        position: absolute;
+        left: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 80px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 1000;
+    }
+    .sidebar a {
+        color: white;
+        text-decoration: none;
+        font-size: 1.2rem;
+        padding: 10px;
+        border-radius: 8px;
+        text-align: center;
+        transition: all 0.3s;
+    }
+    .sidebar a:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+    }
+    .sidebar a.active {
+        background: rgba(255, 255, 255, 0.5); /* Slightly more opaque to indicate active state */
+        transform: translateY(-2px); /* Matches hover state for consistency */
+    }
+    h1, h2 { color: var(--bs-dark); font-weight: 600; }
+    .text-center { text-align: center; }
+    .mb-4 { margin-bottom: 1.5rem; }
+    .mb-2 { margin-bottom: 0.5rem; }
+    .d-flex { display: flex; }
+    .justify-content-between { justify-content: space-between; }
+    .row { display: flex; flex-wrap: wrap; gap: 15px; }
+    .col-md-3 { flex: 1; min-width: 150px; }
+    .text-end { text-align: end; }
+    .form-control, .form-select {
+        width: 100%;
+        padding: 8px;
+        border: none;
+        border-radius: 8px;
+        background: #f0f4f8;
+        font-size: 1rem;
+        transition: all 0.3s;
+    }
+    .form-control:focus, .form-select:focus {
+        outline: none;
+        box-shadow: 0 0 5px rgba(13, 110, 253, 0.5);
+        background: #fff;
+    }
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.3s;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    }
+    .btn:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+    .btn-primary { background: linear-gradient(45deg, var(--bs-blue), #5a9bff); color: white; }
+    .btn-secondary { background: linear-gradient(45deg, #6c757d, #95a5a6); color: white; }
+    .btn-success { background: linear-gradient(45deg, var(--bs-success), #5cb85c); color: white; }
+    .btn-danger { background: linear-gradient(45deg, var(--bs-danger), #ff6b6b); color: white; }
+    .btn-sm { padding: 6px 12px; font-size: 0.875rem; }
+    .btn:disabled { background: #cccccc; cursor: not-allowed; box-shadow: none; }
+    .alert {
+        position: absolute;
+        right: 25px;
+        top: 150px;
+        padding: 8px 15px;
+        border-radius: 8px;
+        display: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        z-index: 10;
+    }
+    .alert-success { background: linear-gradient(45deg, #d4edda, #e6f7e9); color: #155724; }
+    .alert-danger { background: linear-gradient(45deg, #f8d7da, #fce4e6); color: #721c24; }
+    .modal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        z-index: 1000;
+        max-width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        text-align: center;
+    }
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 999;
+    }
+    .large-modal { max-width: 95%; width: 95%; max-height: 85vh; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; border-radius: 10px; overflow: hidden; }
+    th, td { border: 1px solid #e0e0e0; padding: 10px; text-align: center; }
+    th { background: linear-gradient(45deg, var(--bs-gray-200), #f1f3f5); color: var(--bs-dark); font-weight: 600; }
+    td { background: #fafafa; transition: background 0.2s; }
+    tr:hover td { background: #f0f4f8; }
+    .form-select { background: #f0f4f8 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="5" viewBox="0 0 10 5"><path fill="%232c3e50" d="M0 0h10L5 5z"/></svg>') no-repeat right 8px center; }
+    .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+    .page-item { padding: 8px 14px; background: var(--bs-gray-100); border-radius: 5px; cursor: pointer; transition: all 0.3s; }
+    .page-item:hover, .page-item.active { background: var(--bs-blue); color: white; }
+    textarea { width: 100%; padding: 8px; border: none; border-radius: 8px; background: #f0f4f8; resize: vertical; }
+    .total-count { font-size: 1.1rem; color: var(--bs-dark); margin-bottom: 10px; font-weight: 500; }
+    .word-wrap-rule { 
+        max-width: 150px; 
+        word-break: break-word; 
+        white-space: pre-wrap;
+    }
+    .word-wrap-rule::after {
+        content: "\A";
+        white-space: pre;
+    }
+    .word-wrap-rule span:nth-child(4n)::after {
+        content: "\A";
+        white-space: pre;
+    }
+    .tab-container { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tab { 
+        padding: 10px 20px; 
+        background: var(--bs-gray-100); 
+        border-radius: 8px; 
+        cursor: pointer; 
+        transition: all 0.3s; 
+    }
+    .tab:hover, .tab.active { 
+        background: var(--bs-blue); 
+        color: white; 
+    }
+    .tab-content { 
+        display: none; 
+    }
+    .tab-content.active { 
+        display: block; 
+    }
+</style>
+</head>
+<body>
+<div class="sidebar">
+        <a href="sct.html">SCT</a>
+        <a href="vapt.html">VAPT</a>
+		<a href="https://demo.defectdojo.org/media/uploaded_files/e920030b-4fcf-42d2-8269-f75a6d364337.html">VAPT</a>
+    </div>
+	
+	
+    <div class="container">
+        <h1 class="text-center mb-4">Contrast Traces Dashboard</h1>
+
+        <div class="d-flex justify-content-between mb-2">
+            <div>
+                <button class="btn btn-primary btn-sm" onclick="showReassignmentModal()">Reassignment</button>
+                <button class="btn btn-primary btn-sm" onclick="showBulkUpdateModal()">Bulk Update</button>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="fetchEngagements()">🔄 Refresh</button>
+            <span class="csrf-label" style="color: #ffffff;">CSRF Token: <strong id="csrfToken">Fetching...</strong></span>
+        </div>
+
+        <div class="total-count" id="totalCount">Total Traces: 0</div>
+
+        <div class="tab-container">
+            <div class="tab active" onclick="switchTab('open')">Open Traces</div>
+            <div class="tab" onclick="switchTab('closed')">Closed Traces</div>
+        </div>
+
+        <div id="open-tab" class="tab-content active">
+            <div class="row mb-2">
+                <div class="col-md-3">
+                    <select id="assignedToFilterOpen" class="form-select" onchange="fetchEngagements()">
+                        <option value="">Filter by Assigned To</option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm mt-2" onclick="showSummaryModal('open')">View Summary</button>
+                    <button class="btn btn-secondary btn-sm mt-2" onclick="showCompletedModal('closed')">Closed</button>
+                </div>
+                <div class="col-md-3">
+                    <select id="severityFilterOpen" class="form-select" onchange="fetchEngagements()">
+                        <option value="">Filter by Severity</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="ruleFilterOpen" class="form-select" onchange="fetchEngagements()">
+                        <option value="">Filter by Rule</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="productFilterOpen" class="form-select" onchange="fetchEngagements()">
+                        <option value="">Filter by Product</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="text" id="nameSearchOpen" class="form-control" placeholder="Search by name..." oninput="fetchEngagements()">
+                </div>
+                <div class="col-md-3">
+                    <input type="date" id="createdFilterOpen" class="form-control" onchange="fetchEngagements()">
+                </div>
+                <div class="col-md-3 text-end">
+                    <button class="btn btn-secondary btn-sm" onclick="clearFilters('open')">↺ Clear Filters</button>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Created</th>
+                        <th>Aging (Days)</th>
+                        <th>Name</th>
+                        <th>Assigned To</th>
+                        <th>Severity</th>
+                        <th>Rule</th>
+                        <th>Product</th>
+                        <th>Comments</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="openTracesTable"></tbody>
+            </table>
+
+            <div class="pagination" id="openPagination"></div>
+        </div>
+
+        <div id="closed-tab" class="tab-content">
+            <div class="row mb-2">
+                <div class="col-md-3">
+                    <select id="assignedToFilterClosed" class="form-select" onchange="fetchEngagements()">
+                        <option value="">Filter by Assigned To</option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm mt-2" onclick="showSummaryModal('closed')">View Summary</button>
+                    <button class="btn btn-secondary btn-sm mt-2" onclick="showCompletedModal('closed')">Closed</button>
+                </div>
+                <div class="col-md-3">
+                    <select id="severityFilterClosed" class="form-select" onchange="fetchEngagements()">
+                        <option value="">Filter by Severity</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="ruleFilterClosed" class="form-select" onchange="fetchEngagements()">
+                        <option value="">Filter by Rule</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="productFilterClosed" class="form-select" onchange="fetchEngagements()">
+                        <option value="">Filter by Product</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="text" id="nameSearchClosed" class="form-control" placeholder="Search by name..." oninput="fetchEngagements()">
+                </div>
+                <div class="col-md-3">
+                    <input type="date" id="createdFilterClosed" class="form-control" onchange="fetchEngagements()">
+                </div>
+                <div class="col-md-3 text-end">
+                    <button class="btn btn-secondary btn-sm" onclick="clearFilters('closed')">↺ Clear Filters</button>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Created</th>
+                        <th>Aging (Days)</th>
+                        <th>Name</th>
+                        <th>Assigned To</th>
+                        <th>Severity</th>
+                        <th>Rule</th>
+                        <th>Product</th>
+                        <th>Comments</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="closedTracesTable"></tbody>
+            </table>
+
+            <div class="pagination" id="closedPagination"></div>
+        </div>
+
+        <div id="alertBox" class="alert"></div>
+        <div id="modalOverlay" class="modal-overlay"></div>
+
+        <!-- Reassignment Modal -->
+        <div id="reassignmentModal" class="modal large-modal" data-z-index="1000">
+            <h2>Reassignment</h2>
+            <div class="total-count" id="reassignmentTotalCount">Total Traces: 0</div>
+            <div class="row mb-2">
+                <div class="col-md-3">
+                    <select id="reassignAssignedToFilter" class="form-select" onchange="renderReassignmentTable(1)">
+                        <option value="">Filter by Assigned To</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="reassignSeverityFilter" class="form-select" onchange="renderReassignmentTable(1)">
+                        <option value="">Filter by Severity</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="reassignRuleFilter" class="form-select" onchange="renderReassignmentTable(1)">
+                        <option value="">Filter by Rule</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="reassignProductFilter" class="form-select" onchange="renderReassignmentTable(1)">
+                        <option value="">Filter by Product</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="date" id="reassignCreatedFilter" class="form-control" onchange="renderReassignmentTable(1)">
+                </div>
+            </div>
+            <table id="reassignmentTable">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Assigned To</th>
+                        <th>Severity</th>
+                        <th>Rule</th>
+                        <th>Product</th>
+                    </tr>
+                </thead>
+                <tbody id="reassignmentTableBody"></tbody>
+            </table>
+            <div class="pagination" id="reassignmentPagination"></div>
+            <div id="reassignButtonContainer" style="display: none;" class="mt-2">
+                <button class="btn btn-primary" onclick="showReassignConfirmModal()">Reassign</button>
+            </div>
+            <button class="btn btn-secondary mt-2" onclick="closeModal('reassignmentModal')">Close</button>
+        </div>
+
+        <!-- Reassign Confirmation Modal -->
+        <div id="reassignConfirmModal" class="modal" data-z-index="1001">
+            <h2>Reassign Selected Traces</h2>
+            <div class="mb-2">
+                <select id="reassignToUser" class="form-select">
+                    <option value="">Select User to Reassign To</option>
+                </select>
+            </div>
+            <div class="mb-2">
+                <label>Or Divide Among Multiple Users:</label>
+                <input type="number" id="divideAmongUsers" class="form-control" min="1" placeholder="Number of users" onchange="showUserCheckboxes()">
+            </div>
+            <div id="userCheckboxContainer" class="mb-2" style="display: none; max-height: 200px; overflow-y: auto;">
+                <h3>Select Users</h3>
+                <div id="userCheckboxes"></div>
+            </div>
+            <div class="d-flex justify-content-between">
+                <button class="btn btn-primary" onclick="confirmReassignment()">Confirm</button>
+                <button class="btn btn-secondary" onclick="closeModal('reassignConfirmModal')">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Summary Modal -->
+        <div id="summaryModal" class="modal large-modal" data-z-index="1000">
+            <h2>Summary</h2>
+            <div class="total-count" id="summaryTotalCount">Total Traces: 0</div>
+            <div class="row mb-2">
+                <div class="col-md-3">
+                    <input type="date" id="summaryCreatedFilter" class="form-control" onchange="renderSummaryContent()">
+                </div>
+            </div>
+            <div id="summaryContent"></div>
+            <button class="btn btn-secondary mt-2" onclick="closeModal('summaryModal')">Close</button>
+        </div>
+
+        <!-- Completed Traces Modal -->
+        <div id="completedModal" class="modal large-modal" data-z-index="1000">
+            <h2>Closed Traces</h2>
+            <div class="total-count" id="completedTotalCount">Total Closed Traces: 0</div>
+            <div class="row mb-2">
+                <div class="col-md-3">
+                    <input type="date" id="completedDate1" class="form-control" onchange="renderClosedTable()">
+                </div>
+                <div class="col-md-3">
+                    <input type="date" id="completedDate2" class="form-control" onchange="renderClosedTable()">
+                </div>
+                <div class="col-md-3">
+                    <input type="date" id="completedCreatedFilter" class="form-control" onchange="renderClosedTable()">
+                </div>
+            </div>
+            <table id="completedTable">
+                <thead>
+                    <tr>
+                        <th>Date Closed</th>
+                        <th>Count</th>
+                    </tr>
+                </thead>
+                <tbody id="completedTableBody"></tbody>
+            </table>
+            <div class="pagination" id="completedPagination"></div>
+            <button class="btn btn-secondary mt-2" onclick="closeModal('completedModal')">Close</button>
+        </div>
+
+        <!-- Bulk Update Modal -->
+        <div id="bulkUpdateModal" class="modal large-modal" data-z-index="1000">
+            <h2>Bulk Update</h2>
+            <div class="total-count" id="bulkUpdateTotalCount">Total Traces: 0</div>
+            <div class="row mb-2">
+                <div class="col-md-3">
+                    <select id="bulkAssignedToFilter" class="form-select" onchange="renderBulkUpdateTable(1)">
+                        <option value="">Filter by Assigned To</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="bulkSeverityFilter" class="form-select" onchange="renderBulkUpdateTable(1)">
+                        <option value="">Filter by Severity</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="bulkRuleFilter" class="form-select" onchange="renderBulkUpdateTable(1)">
+                        <option value="">Filter by Rule</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="bulkProductFilter" class="form-select" onchange="renderBulkUpdateTable(1)">
+                        <option value="">Filter by Product</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="date" id="bulkCreatedFilter" class="form-control" onchange="renderBulkUpdateTable(1)">
+                </div>
+            </div>
+            <table id="bulkUpdateTable">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="bulkSelectAll" onclick="toggleBulkSelectAll()"></th>
+                        <th>ID</th>
+                        <th>Created</th>
+                        <th>Name</th>
+                        <th>Assigned To</th>
+                        <th>Severity</th>
+                        <th>Rule</th>
+                        <th>Product</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="bulkUpdateTableBody"></tbody>
+            </table>
+            <div class="pagination" id="bulkUpdatePagination"></div>
+            <div id="bulkUpdateButtonContainer" style="display: none;" class="mt-2">
+                <button class="btn btn-primary" onclick="showBulkUpdateConfirmModal()">Bulk Update</button>
+            </div>
+            <button class="btn btn-secondary mt-2" onclick="closeModal('bulkUpdateModal')">Close</button>
+        </div>
+
+        <!-- Bulk Update Confirmation Modal -->
+        <div id="bulkUpdateConfirmModal" class="modal" data-z-index="1001">
+            <h2>Bulk Update Selected Traces</h2>
+            <div class="mb-2">
+                <select id="bulkUpdateStatus" class="form-select">
+                    <option value="">Select Status</option>
+                    <option value="Not Started">Not Started</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="On Hold">On Hold</option>
+                    <option value="Completed">Completed</option>
+                </select>
+            </div>
+            <div class="mb-2">
+                <button class="btn btn-danger" onclick="bulkCloseTraces()">Close Selected</button>
+            </div>
+            <div class="d-flex justify-content-between">
+                <button class="btn btn-primary" onclick="confirmBulkUpdate()">Update</button>
+                <button class="btn btn-secondary" onclick="closeModal('bulkUpdateConfirmModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = "https://demo.defectdojo.org/api/v2";
+        let csrfToken = '';
+        let usersList = [];
+        let productsList = [];
+        let debounceTimeout;
+        const ROWS_PER_PAGE = 5;
+        let currentPageOpen = 1;
+        let currentPageClosed = 1;
+        let currentPageReassignment = 1;
+        let currentPageBulkUpdate = 1;
+        let currentPageCompleted = 1;
+        let openTraces = [];
+        let closedTraces = [];
+        let allTraces = [];
+        let reassignmentTraces = [];
+        let bulkUpdateTraces = [];
+        let completedData = [];
+        let activeTab = 'open';
+        let modalStack = [];
+
+        async function fetchCSRF() {
+            try {
+                const response = await fetch("https://demo.defectdojo.org/api/key-v2", { credentials: "include" });
+                const text = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, "text/html");
+                const csrfInput = doc.querySelector("input[name='csrfmiddlewaretoken']");
+                if (csrfInput) {
+                    csrfToken = csrfInput.value;
+                    document.getElementById("csrfToken").innerText = csrfToken;
+                }
+            } catch (error) {
+                console.error("Error fetching CSRF Token:", error);
+            }
+        }
+
+        async function fetchUsers() {
+            try {
+                const response = await fetch(`${BASE_URL}/users/`);
+                const data = await response.json();
+                usersList = data.results || [];
+            } catch (error) {
+                console.error("Error fetching users:", error);
+            }
+        }
+
+        async function fetchProducts() {
+            try {
+                const response = await fetch(`${BASE_URL}/products/?limit=1000000`);
+                const data = await response.json();
+                productsList = data.results || [];
+            } catch (error) {
+                console.error("Error fetching products:", error);
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertBox = document.getElementById("alertBox");
+            alertBox.className = `alert alert-${type}`;
+            alertBox.innerHTML = message;
+            alertBox.style.display = "block";
+            setTimeout(() => { alertBox.style.display = "none"; }, 3000);
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-container .tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            document.querySelector(`.tab-container .tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+            document.getElementById(`${tab}-tab`).classList.add('active');
+            activeTab = tab;
+            if (tab === 'open') renderTableOpen(currentPageOpen);
+            else renderTableClosed(currentPageClosed);
+            updateTotalCount();
+        }
+
+        function updateTotalCount() {
+            const count = activeTab === 'open' ? openTraces.length : closedTraces.length;
+            document.getElementById("totalCount").textContent = `Total Traces: ${count}`;
+        }
+
+        function populateFilters() {
+            const assignedToOpen = document.getElementById("assignedToFilterOpen");
+            const assignedToClosed = document.getElementById("assignedToFilterClosed");
+            const severityOpen = document.getElementById("severityFilterOpen");
+            const severityClosed = document.getElementById("severityFilterClosed");
+            const ruleOpen = document.getElementById("ruleFilterOpen");
+            const ruleClosed = document.getElementById("ruleFilterClosed");
+            const productOpen = document.getElementById("productFilterOpen");
+            const productClosed = document.getElementById("productFilterClosed");
+            const reassignAssignedTo = document.getElementById("reassignAssignedToFilter");
+            const reassignSeverity = document.getElementById("reassignSeverityFilter");
+            const reassignRule = document.getElementById("reassignRuleFilter");
+            const reassignProduct = document.getElementById("reassignProductFilter");
+            const bulkAssignedTo = document.getElementById("bulkAssignedToFilter");
+            const bulkSeverity = document.getElementById("bulkSeverityFilter");
+            const bulkRule = document.getElementById("bulkRuleFilter");
+            const bulkProduct = document.getElementById("bulkProductFilter");
+
+            const openLeads = [...new Set(openTraces.map(t => t.lead))].map(id => {
+                const user = usersList.find(u => u.id == id);
+                return { id, name: user ? `${user.first_name} ${user.last_name}` : 'Unassigned' };
+            });
+            const closedLeads = [...new Set(closedTraces.map(t => t.lead))].map(id => {
+                const user = usersList.find(u => u.id == id);
+                return { id, name: user ? `${user.first_name} ${user.last_name}` : 'Unassigned' };
+            });
+            const openSeverities = [...new Set(openTraces.map(t => t.branch_tag || 'N/A'))].sort();
+            const closedSeverities = [...new Set(closedTraces.map(t => t.branch_tag || 'N/A'))].sort();
+            const openRules = [...new Set(openTraces.map(t => t.commit_hash || 'N/A'))].sort();
+            const closedRules = [...new Set(closedTraces.map(t => t.commit_hash || 'N/A'))].sort();
+            const openProducts = [...new Set(openTraces.map(t => t.product))].map(id => {
+                const product = productsList.find(p => p.id === id);
+                return { id, name: product ? product.name : 'Unknown' };
+            });
+            const closedProducts = [...new Set(closedTraces.map(t => t.product))].map(id => {
+                const product = productsList.find(p => p.id === id);
+                return { id, name: product ? product.name : 'Unknown' };
+            });
+
+            assignedToOpen.innerHTML = '<option value="">Filter by Assigned To</option>' + 
+                openLeads.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+            assignedToClosed.innerHTML = '<option value="">Filter by Assigned To</option>' + 
+                closedLeads.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+            severityOpen.innerHTML = '<option value="">Filter by Severity</option>' + 
+                openSeverities.map(s => `<option value="${s}">${s}</option>`).join('');
+            severityClosed.innerHTML = '<option value="">Filter by Severity</option>' + 
+                closedSeverities.map(s => `<option value="${s}">${s}</option>`).join('');
+            ruleOpen.innerHTML = '<option value="">Filter by Rule</option>' + 
+                openRules.map(r => `<option value="${r}">${r}</option>`).join('');
+            ruleClosed.innerHTML = '<option value="">Filter by Rule</option>' + 
+                closedRules.map(r => `<option value="${r}">${r}</option>`).join('');
+            productOpen.innerHTML = '<option value="">Filter by Product</option>' + 
+                openProducts.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            productClosed.innerHTML = '<option value="">Filter by Product</option>' + 
+                closedProducts.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+
+            reassignAssignedTo.innerHTML = '<option value="">Filter by Assigned To</option>' + 
+                openLeads.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+            reassignSeverity.innerHTML = '<option value="">Filter by Severity</option>' + 
+                openSeverities.map(s => `<option value="${s}">${s}</option>`).join('');
+            reassignRule.innerHTML = '<option value="">Filter by Rule</option>' + 
+                openRules.map(r => `<option value="${r}">${r}</option>`).join('');
+            reassignProduct.innerHTML = '<option value="">Filter by Product</option>' + 
+                openProducts.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+
+            bulkAssignedTo.innerHTML = '<option value="">Filter by Assigned To</option>' + 
+                openLeads.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+            bulkSeverity.innerHTML = '<option value="">Filter by Severity</option>' + 
+                openSeverities.map(s => `<option value="${s}">${s}</option>`).join('');
+            bulkRule.innerHTML = '<option value="">Filter by Rule</option>' + 
+                openRules.map(r => `<option value="${r}">${r}</option>`).join('');
+            bulkProduct.innerHTML = '<option value="">Filter by Product</option>' + 
+                openProducts.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        }
+
+        function clearFilters(tab) {
+            if (tab === 'open') {
+                document.getElementById("assignedToFilterOpen").value = "";
+                document.getElementById("severityFilterOpen").value = "";
+                document.getElementById("ruleFilterOpen").value = "";
+                document.getElementById("productFilterOpen").value = "";
+                document.getElementById("nameSearchOpen").value = "";
+                document.getElementById("createdFilterOpen").value = "";
+            } else {
+                document.getElementById("assignedToFilterClosed").value = "";
+                document.getElementById("severityFilterClosed").value = "";
+                document.getElementById("ruleFilterClosed").value = "";
+                document.getElementById("productFilterClosed").value = "";
+                document.getElementById("nameSearchClosed").value = "";
+                document.getElementById("createdFilterClosed").value = "";
+            }
+            fetchEngagements();
+        }
+
+        async function fetchEngagements() {
+            try {
+                if (debounceTimeout) clearTimeout(debounceTimeout);
+                debounceTimeout = setTimeout(async () => {
+                    const response = await fetch(`${BASE_URL}/engagements/?tags=pci&limit=1000000`);
+                    const data = await response.json();
+                    allTraces = data.results || [];
+
+                    const assignedToOpen = document.getElementById("assignedToFilterOpen").value;
+                    const severityOpen = document.getElementById("severityFilterOpen").value;
+                    const ruleOpen = document.getElementById("ruleFilterOpen").value;
+                    const productOpen = document.getElementById("productFilterOpen").value;
+                    const nameSearchOpen = document.getElementById("nameSearchOpen").value.toLowerCase().trim();
+                    const createdOpen = document.getElementById("createdFilterOpen").value;
+
+                    const assignedToClosed = document.getElementById("assignedToFilterClosed").value;
+                    const severityClosed = document.getElementById("severityFilterClosed").value;
+                    const ruleClosed = document.getElementById("ruleFilterClosed").value;
+                    const productClosed = document.getElementById("productFilterClosed").value;
+                    const nameSearchClosed = document.getElementById("nameSearchClosed").value.toLowerCase().trim();
+                    const createdClosed = document.getElementById("createdFilterClosed").value;
+
+                    openTraces = allTraces.filter(t => t.active).filter(t => {
+                        const name = t.name.toLowerCase();
+                        const createdDate = t.created.split("T")[0];
+                        return (!assignedToOpen || t.lead == assignedToOpen) &&
+                               (!severityOpen || t.branch_tag === severityOpen) &&
+                               (!ruleOpen || t.commit_hash === ruleOpen) &&
+                               (!productOpen || t.product == productOpen) &&
+                               (!nameSearchOpen || name.includes(nameSearchOpen)) &&
+                               (!createdOpen || createdDate === createdOpen);
+                    });
+
+                    closedTraces = allTraces.filter(t => !t.active).filter(t => {
+                        const name = t.name.toLowerCase();
+                        const createdDate = t.created.split("T")[0];
+                        return (!assignedToClosed || t.lead == assignedToClosed) &&
+                               (!severityClosed || t.branch_tag === severityClosed) &&
+                               (!ruleClosed || t.commit_hash === ruleClosed) &&
+                               (!productClosed || t.product == productClosed) &&
+                               (!nameSearchClosed || name.includes(nameSearchClosed)) &&
+                               (!createdClosed || createdDate === createdClosed);
+                    });
+
+                    currentPageOpen = 1;
+                    currentPageClosed = 1;
+                    renderTableOpen(currentPageOpen);
+                    renderTableClosed(currentPageClosed);
+                    updateTotalCount();
+                    populateFilters();
+                }, 300);
+            } catch (error) {
+                console.error("Error fetching traces:", error);
+                showAlert("Error fetching traces!", "danger");
+            }
+        }
+
+        function calculateAgingOpen(created) {
+            const today = new Date();
+            const createdDate = new Date(created.split("T")[0]);
+            const diffTime = today - createdDate;
+            return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        function calculateAgingClosed(created, updated) {
+            const createdDate = new Date(created.split("T")[0]);
+            const updatedDate = updated ? new Date(updated.split("T")[0]) : createdDate;
+            const diffTime = updatedDate - createdDate;
+            return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        function getProductName(productId) {
+            const product = productsList.find(p => p.id === productId);
+            return product ? product.name : 'Unknown';
+        }
+
+        function getAssignedToName(leadId) {
+            const user = usersList.find(u => u.id == leadId);
+            return user ? `${user.first_name} ${user.last_name}` : 'Unassigned';
+        }
+
+        function renderTableOpen(page) {
+            const tableBody = document.getElementById("openTracesTable");
+            tableBody.innerHTML = "";
+            const start = (page - 1) * ROWS_PER_PAGE;
+            const end = start + ROWS_PER_PAGE;
+            const paginatedTraces = openTraces.slice(start, end);
+
+            paginatedTraces.forEach(t => {
+                const row = document.createElement("tr");
+                row.dataset.id = t.id;
+                row.innerHTML = `
+                    <td>${t.id}</td>
+                    <td>${t.created.split("T")[0]}</td>
+                    <td>${calculateAgingOpen(t.created)}</td>
+                    <td>${t.name}</td>
+                    <td>${getAssignedToName(t.lead)}</td>
+                    <td>${t.branch_tag || 'N/A'}</td>
+                    <td>${t.commit_hash || 'N/A'}</td>
+                    <td>${getProductName(t.product)}</td>
+                    <td><textarea class="description" data-id="${t.id}">${t.description || ''}</textarea></td>
+                    <td>${createStatusDropdown(t.status)}</td>
+                    <td><button class="btn btn-danger btn-sm" onclick="closeTrace(${t.id}, '${t.name}')">Close</button></td>
+                `;
+                tableBody.appendChild(row);
+
+                const description = row.querySelector(".description");
+                const status = row.querySelector("select");
+                [description, status].forEach(el => {
+                    el.addEventListener("change", () => updateTrace(t.id, t.name));
+                    el.addEventListener("blur", () => showAlert("Saved", "success"));
+                });
+            });
+            renderPagination('open');
+        }
+
+        function renderTableClosed(page) {
+            const tableBody = document.getElementById("closedTracesTable");
+            tableBody.innerHTML = "";
+            const start = (page - 1) * ROWS_PER_PAGE;
+            const end = start + ROWS_PER_PAGE;
+            const paginatedTraces = closedTraces.slice(start, end);
+
+            paginatedTraces.forEach(t => {
+                const row = document.createElement("tr");
+                row.dataset.id = t.id;
+                row.innerHTML = `
+                    <td>${t.id}</td>
+                    <td>${t.created.split("T")[0]}</td>
+                    <td>${calculateAgingClosed(t.created, t.updated)}</td>
+                    <td>${t.name}</td>
+                    <td>${getAssignedToName(t.lead)}</td>
+                    <td>${t.branch_tag || 'N/A'}</td>
+                    <td>${t.commit_hash || 'N/A'}</td>
+                    <td>${getProductName(t.product)}</td>
+                    <td>${t.description || ''}</td>
+                    <td>${t.status}</td>
+                    <td><button class="btn btn-success btn-sm" onclick="reopenTrace(${t.id}, '${t.name}')">Reopen</button></td>
+                `;
+                tableBody.appendChild(row);
+            });
+            renderPagination('closed');
+        }
+
+        function renderPagination(tab) {
+            const totalItems = tab === 'open' ? openTraces : 
+                            tab === 'closed' ? closedTraces : 
+                            tab === 'reassignment' ? reassignmentTraces : 
+                            tab === 'bulkUpdate' ? bulkUpdateTraces :
+                            tab === 'completed' ? completedData : [];
+            const totalPages = Math.ceil(totalItems.length / ROWS_PER_PAGE);
+            const pagination = document.getElementById(`${tab}Pagination`);
+            pagination.innerHTML = "";
+
+            const firstItem = document.createElement("div");
+            firstItem.className = `page-item ${(tab === 'open' ? currentPageOpen : tab === 'closed' ? currentPageClosed : tab === 'reassignment' ? currentPageReassignment : tab === 'bulkUpdate' ? currentPageBulkUpdate : currentPageCompleted) === 1 ? 'active' : ''}`;
+            firstItem.textContent = "First";
+            firstItem.onclick = () => { 
+                if (tab === 'open') { currentPageOpen = 1; renderTableOpen(1); } 
+                else if (tab === 'closed') { currentPageClosed = 1; renderTableClosed(1); } 
+                else if (tab === 'reassignment') { currentPageReassignment = 1; renderReassignmentTable(1); }
+                else if (tab === 'bulkUpdate') { currentPageBulkUpdate = 1; renderBulkUpdateTable(1); }
+                else if (tab === 'completed') { currentPageCompleted = 1; renderClosedTable(); }
+            };
+            pagination.appendChild(firstItem);
+
+            const prevItem = document.createElement("div");
+            prevItem.className = "page-item";
+            prevItem.textContent = "Previous";
+            prevItem.onclick = () => { 
+                if (tab === 'open' && currentPageOpen > 1) { currentPageOpen--; renderTableOpen(currentPageOpen); } 
+                else if (tab === 'closed' && currentPageClosed > 1) { currentPageClosed--; renderTableClosed(currentPageClosed); } 
+                else if (tab === 'reassignment' && currentPageReassignment > 1) { currentPageReassignment--; renderReassignmentTable(currentPageReassignment); }
+                else if (tab === 'bulkUpdate' && currentPageBulkUpdate > 1) { currentPageBulkUpdate--; renderBulkUpdateTable(currentPageBulkUpdate); }
+                else if (tab === 'completed' && currentPageCompleted > 1) { currentPageCompleted--; renderClosedTable(); }
+            };
+            pagination.appendChild(prevItem);
+
+            const nextItem = document.createElement("div");
+            nextItem.className = "page-item";
+            nextItem.textContent = "Next";
+            nextItem.onclick = () => { 
+                if (tab === 'open' && currentPageOpen < totalPages) { currentPageOpen++; renderTableOpen(currentPageOpen); } 
+                else if (tab === 'closed' && currentPageClosed < totalPages) { currentPageClosed++; renderTableClosed(currentPageClosed); } 
+                else if (tab === 'reassignment' && currentPageReassignment < totalPages) { currentPageReassignment++; renderReassignmentTable(currentPageReassignment); }
+                else if (tab === 'bulkUpdate' && currentPageBulkUpdate < totalPages) { currentPageBulkUpdate++; renderBulkUpdateTable(currentPageBulkUpdate); }
+                else if (tab === 'completed' && currentPageCompleted < totalPages) { currentPageCompleted++; renderClosedTable(); }
+            };
+            pagination.appendChild(nextItem);
+
+            const lastItem = document.createElement("div");
+            lastItem.className = `page-item ${(tab === 'open' ? currentPageOpen : tab === 'closed' ? currentPageClosed : tab === 'reassignment' ? currentPageReassignment : tab === 'bulkUpdate' ? currentPageBulkUpdate : currentPageCompleted) === totalPages ? 'active' : ''}`;
+            lastItem.textContent = "Last";
+            lastItem.onclick = () => { 
+                if (tab === 'open') { currentPageOpen = totalPages; renderTableOpen(totalPages); } 
+                else if (tab === 'closed') { currentPageClosed = totalPages; renderTableClosed(totalPages); } 
+                else if (tab === 'reassignment') { currentPageReassignment = totalPages; renderReassignmentTable(totalPages); }
+                else if (tab === 'bulkUpdate') { currentPageBulkUpdate = totalPages; renderBulkUpdateTable(totalPages); }
+                else if (tab === 'completed') { currentPageCompleted = totalPages; renderClosedTable(); }
+            };
+            pagination.appendChild(lastItem);
+        }
+
+        function createStatusDropdown(selectedValue) {
+            const options = ["Not Started", "In Progress", "On Hold", "Completed"];
+            return `<select class="form-select">${options.map(o => `<option value="${o}" ${o === selectedValue ? "selected" : ""}>${o}</option>`).join('')}</select>`;
+        }
+
+        async function updateTrace(id, name) {
+            const row = document.querySelector(`#openTracesTable tr[data-id="${id}"]`);
+            if (!row) return;
+            const description = row.querySelector(".description").value;
+            const status = row.querySelector("select").value;
+
+            const payload = {
+                id, name, description, status, branch_tag: allTraces.find(t => t.id === id).branch_tag,
+                commit_hash: allTraces.find(t => t.id === id).commit_hash, lead: allTraces.find(t => t.id === id).lead,
+                active: true, product: allTraces.find(t => t.id === id).product,
+                target_start: allTraces.find(t => t.id === id).target_start,
+                target_end: allTraces.find(t => t.id === id).target_end
+            };
+
+            try {
+                const response = await fetch(`${BASE_URL}/engagements/${id}/`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                    body: JSON.stringify(payload),
+                    credentials: "include"
+                });
+                if (!response.ok) showAlert("Failed to update trace!", "danger");
+                fetchEngagements();
+            } catch (error) {
+                console.error("Error updating trace:", error);
+                showAlert("Error updating trace!", "danger");
+            }
+        }
+
+        async function closeTrace(id, name) {
+            try {
+                const response = await fetch(`${BASE_URL}/engagements/${id}/close/`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                    credentials: "include"
+                });
+                if (response.ok) {
+                    showAlert(`${name} closed successfully`, "success");
+                    fetchEngagements();
+                } else {
+                    showAlert("Failed to close trace!", "danger");
+                }
+            } catch (error) {
+                console.error("Error closing trace:", error);
+                showAlert("Error closing trace!", "danger");
+            }
+        }
+
+        async function reopenTrace(id, name) {
+            try {
+                const response = await fetch(`${BASE_URL}/engagements/${id}/reopen/`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                    credentials: "include"
+                });
+                if (response.ok) {
+                    showAlert(`${name} reopened successfully`, "success");
+                    fetchEngagements();
+                } else {
+                    showAlert("Failed to reopen trace!", "danger");
+                }
+            } catch (error) {
+                console.error("Error reopening trace:", error);
+                showAlert("Error reopening trace!", "danger");
+            }
+        }
+
+        function showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            const overlay = document.getElementById("modalOverlay");
+            modal.style.display = "block";
+            overlay.style.display = "block";
+            modalStack.push(modalId);
+            modal.style.zIndex = modal.dataset.zIndex;
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modalStack.length > 1 && modalStack[modalStack.length - 1] !== modalId) {
+                showAlert("Please close the top modal first!", "danger");
+                return;
+            }
+            modal.style.display = "none";
+            modalStack.pop();
+            if (modalStack.length === 0) {
+                document.getElementById("modalOverlay").style.display = "none";
+            }
+        }
+
+        async function showReassignmentModal() {
+            reassignmentTraces = [...openTraces];
+            renderReassignmentTable(1);
+            showModal("reassignmentModal");
+        }
+
+        function renderReassignmentTable(page) {
+            const assignedTo = document.getElementById("reassignAssignedToFilter").value;
+            const severity = document.getElementById("reassignSeverityFilter").value;
+            const rule = document.getElementById("reassignRuleFilter").value;
+            const product = document.getElementById("reassignProductFilter").value;
+            const created = document.getElementById("reassignCreatedFilter").value;
+
+            reassignmentTraces = openTraces.filter(t => {
+                const createdDate = t.created.split("T")[0];
+                return (!assignedTo || t.lead == assignedTo) &&
+                       (!severity || t.branch_tag === severity) &&
+                       (!rule || t.commit_hash === rule) &&
+                       (!product || t.product == product) &&
+                       (!created || createdDate === created);
+            });
+
+            const tableBody = document.getElementById("reassignmentTableBody");
+            tableBody.innerHTML = "";
+            const start = (page - 1) * ROWS_PER_PAGE;
+            const end = start + ROWS_PER_PAGE;
+            const paginatedTraces = reassignmentTraces.slice(start, end);
+
+            paginatedTraces.forEach(t => {
+                const ruleWords = (t.commit_hash || 'N/A').split(' ').map(word => `<span>${word}</span>`).join(' ');
+                const row = document.createElement("tr");
+                row.dataset.id = t.id;
+                row.innerHTML = `
+                    <td><input type="checkbox" class="rowCheckbox" onchange="updateReassignButton()"></td>
+                    <td>${t.id}</td>
+                    <td>${t.name}</td>
+                    <td>${getAssignedToName(t.lead)}</td>
+                    <td>${t.branch_tag || 'N/A'}</td>
+                    <td class="word-wrap-rule">${ruleWords}</td>
+                    <td>${getProductName(t.product)}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            currentPageReassignment = page;
+            renderPagination('reassignment');
+            document.getElementById("reassignmentTotalCount").textContent = `Total Traces: ${reassignmentTraces.length}`;
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById("selectAll");
+            document.querySelectorAll(".rowCheckbox").forEach(cb => cb.checked = selectAll.checked);
+            updateReassignButton();
+        }
+
+        function updateReassignButton() {
+            const checkedCount = document.querySelectorAll(".rowCheckbox:checked").length;
+            document.getElementById("reassignButtonContainer").style.display = checkedCount > 0 ? "block" : "none";
+        }
+
+        function showReassignConfirmModal() {
+            const modal = document.getElementById("reassignConfirmModal");
+            const reassignToUser = document.getElementById("reassignToUser");
+            reassignToUser.innerHTML = '<option value="">Select User to Reassign To</option>' + 
+                usersList.map(u => `<option value="${u.id}">${u.first_name} ${u.last_name}</option>`).join('');
+            document.getElementById("divideAmongUsers").value = '';
+            document.getElementById("userCheckboxContainer").style.display = "none";
+            showModal("reassignConfirmModal");
+        }
+
+        function showUserCheckboxes() {
+            const divideAmongUsers = parseInt(document.getElementById("divideAmongUsers").value) || 0;
+            const container = document.getElementById("userCheckboxContainer");
+            const checkboxes = document.getElementById("userCheckboxes");
+            if (divideAmongUsers > 0) {
+                checkboxes.innerHTML = usersList.map(u => `
+                    <div>
+                        <input type="checkbox" id="user_${u.id}" value="${u.id}">
+                        <label for="user_${u.id}">${u.first_name} ${u.last_name}</label>
+                    </div>
+                `).join('');
+                container.style.display = "block";
+            } else {
+                container.style.display = "none";
+            }
+        }
+
+        async function confirmReassignment() {
+            const selectedUserId = document.getElementById("reassignToUser").value;
+            const divideAmongUsers = parseInt(document.getElementById("divideAmongUsers").value) || 0;
+            const selectedTraces = Array.from(document.querySelectorAll(".rowCheckbox:checked")).map(cb => 
+                reassignmentTraces.find(t => t.id == cb.closest('tr').dataset.id)
+            );
+
+            if (!selectedUserId && divideAmongUsers <= 0) {
+                showAlert("Please select a user or specify number of users!", "danger");
+                return;
+            }
+
+            try {
+                if (divideAmongUsers > 0) {
+                    const selectedUserIds = Array.from(document.querySelectorAll("#userCheckboxes input:checked")).map(cb => cb.value);
+                    if (selectedUserIds.length !== divideAmongUsers) {
+                        showAlert(`Please select exactly ${divideAmongUsers} users!`, "danger");
+                        return;
+                    }
+                    const testsPerUser = Math.floor(selectedTraces.length / divideAmongUsers);
+                    const extraTests = selectedTraces.length % divideAmongUsers;
+                    let testIndex = 0;
+                    for (let i = 0; i < divideAmongUsers; i++) {
+                        const userTests = selectedTraces.slice(testIndex, testIndex + testsPerUser + (i < extraTests ? 1 : 0));
+                        const userId = selectedUserIds[i];
+                        for (const test of userTests) {
+                            await reassignTrace(test.id, userId);
+                            const traceIndex = reassignmentTraces.findIndex(t => t.id === test.id);
+                            reassignmentTraces[traceIndex].lead = userId;
+                        }
+                        testIndex += testsPerUser + (i < extraTests ? 1 : 0);
+                    }
+                } else {
+                    for (const test of selectedTraces) {
+                        await reassignTrace(test.id, selectedUserId);
+                        const traceIndex = reassignmentTraces.findIndex(t => t.id === test.id);
+                        reassignmentTraces[traceIndex].lead = selectedUserId;
+                    }
+                }
+                showAlert(`${selectedTraces.length} trace(s) reassigned!`, "success");
+                closeModal("reassignConfirmModal");
+                renderReassignmentTable(currentPageReassignment);
+                await fetchEngagements();
+            } catch (error) {
+                console.error("Error reassigning traces:", error);
+                showAlert("Error reassigning traces!", "danger");
+            }
+        }
+
+        async function reassignTrace(id, userId) {
+            const trace = allTraces.find(t => t.id === id);
+            const payload = { ...trace, lead: userId };
+            const response = await fetch(`${BASE_URL}/engagements/${id}/`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                body: JSON.stringify(payload),
+                credentials: "include"
+            });
+            if (!response.ok) throw new Error("Failed to reassign trace");
+        }
+
+        function showSummaryModal(tab) {
+            document.getElementById("summaryCreatedFilter").value = "";
+            renderSummaryContent(tab);
+            showModal("summaryModal");
+        }
+
+        function renderSummaryContent(tab) {
+            const traces = tab === 'open' ? openTraces : closedTraces;
+            const createdFilter = document.getElementById("summaryCreatedFilter").value;
+            let filteredTraces = traces;
+            if (createdFilter) {
+                filteredTraces = traces.filter(t => t.created.split("T")[0] === createdFilter);
+            }
+
+            const byRule = {};
+            const bySeverity = {};
+            const byProduct = {};
+
+            filteredTraces.forEach(t => {
+                byRule[t.commit_hash || 'N/A'] = (byRule[t.commit_hash || 'N/A'] || 0) + 1;
+                bySeverity[t.branch_tag || 'N/A'] = (bySeverity[t.branch_tag || 'N/A'] || 0) + 1;
+                byProduct[getProductName(t.product)] = (byProduct[getProductName(t.product)] || 0) + 1;
+            });
+
+            const content = `
+                <h3>By Rule</h3>
+                <ul>${Object.entries(byRule).map(([rule, count]) => `<li>${rule}: ${count}</li>`).join('')}</ul>
+                <h3>By Severity</h3>
+                <ul>${Object.entries(bySeverity).map(([severity, count]) => `<li>${severity}: ${count}</li>`).join('')}</ul>
+                <h3>By Product</h3>
+                <ul>${Object.entries(byProduct).map(([product, count]) => `<li>${product}: ${count}</li>`).join('')}</ul>
+                <p>Total: ${filteredTraces.length}</p>
+            `;
+            document.getElementById("summaryContent").innerHTML = content;
+            document.getElementById("summaryTotalCount").textContent = `Total Traces: ${filteredTraces.length}`;
+        }
+
+        function showCompletedModal(tab) {
+            document.getElementById("completedDate1").value = "";
+            document.getElementById("completedDate2").value = "";
+            document.getElementById("completedCreatedFilter").value = "";
+            renderClosedTable(tab);
+            showModal("completedModal");
+        }
+
+        function renderClosedTable(tab) {
+            const traces = closedTraces; // Only closed traces
+            const date1 = document.getElementById("completedDate1").value;
+            const date2 = document.getElementById("completedDate2").value;
+            const createdFilter = document.getElementById("completedCreatedFilter").value;
+
+            let filteredTraces = traces;
+            if (date1 || date2 || createdFilter) {
+                const start = date1 ? new Date(date1).setHours(0, 0, 0, 0) : null;
+                const end = date2 ? new Date(date2).setHours(23, 59, 59, 999) : null;
+                filteredTraces = traces.filter(t => {
+                    const updated = new Date(t.updated || t.created).getTime();
+                    const createdDate = t.created.split("T")[0];
+                    return (!start || updated >= start) && 
+                           (!end || updated <= end) && 
+                           (!createdFilter || createdDate === createdFilter);
+                });
+            }
+
+            const closedByDate = {};
+            filteredTraces.forEach(t => {
+                const date = (t.updated || t.created).split("T")[0];
+                closedByDate[date] = (closedByDate[date] || 0) + 1;
+            });
+            completedData = Object.entries(closedByDate).map(([date, count]) => ({
+                date, count
+            })).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const tableBody = document.getElementById("completedTableBody");
+            tableBody.innerHTML = "";
+            const start = (currentPageCompleted - 1) * ROWS_PER_PAGE;
+            const end = start + ROWS_PER_PAGE;
+            const paginatedCompletedData = completedData.slice(start, end);
+
+            paginatedCompletedData.forEach(d => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${d.date}</td>
+                    <td>${d.count}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            renderPagination('completed');
+            document.getElementById("completedTotalCount").textContent = `Total Closed Traces: ${filteredTraces.length}`;
+        }
+
+        async function showBulkUpdateModal() {
+            bulkUpdateTraces = [...openTraces];
+            renderBulkUpdateTable(1);
+            showModal("bulkUpdateModal");
+        }
+
+        function renderBulkUpdateTable(page) {
+            const assignedTo = document.getElementById("bulkAssignedToFilter").value;
+            const severity = document.getElementById("bulkSeverityFilter").value;
+            const rule = document.getElementById("bulkRuleFilter").value;
+            const product = document.getElementById("bulkProductFilter").value;
+            const created = document.getElementById("bulkCreatedFilter").value;
+
+            bulkUpdateTraces = openTraces.filter(t => {
+                const createdDate = t.created.split("T")[0];
+                return (!assignedTo || t.lead == assignedTo) &&
+                       (!severity || t.branch_tag === severity) &&
+                       (!rule || t.commit_hash === rule) &&
+                       (!product || t.product == product) &&
+                       (!created || createdDate === created);
+            });
+
+            const tableBody = document.getElementById("bulkUpdateTableBody");
+            tableBody.innerHTML = "";
+            const start = (page - 1) * ROWS_PER_PAGE;
+            const end = start + ROWS_PER_PAGE;
+            const paginatedTraces = bulkUpdateTraces.slice(start, end);
+
+            paginatedTraces.forEach(t => {
+                const ruleWords = (t.commit_hash || 'N/A').split(' ').map(word => `<span>${word}</span>`).join(' ');
+                const row = document.createElement("tr");
+                row.dataset.id = t.id;
+                row.innerHTML = `
+                    <td><input type="checkbox" class="bulkRowCheckbox" onchange="updateBulkUpdateButton()"></td>
+                    <td>${t.id}</td>
+                    <td>${t.created.split("T")[0]}</td>
+                    <td>${t.name}</td>
+                    <td>${getAssignedToName(t.lead)}</td>
+                    <td>${t.branch_tag || 'N/A'}</td>
+                    <td class="word-wrap-rule">${ruleWords}</td>
+                    <td>${getProductName(t.product)}</td>
+                    <td>${t.status}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            currentPageBulkUpdate = page;
+            renderPagination('bulkUpdate');
+            document.getElementById("bulkUpdateTotalCount").textContent = `Total Traces: ${bulkUpdateTraces.length}`;
+        }
+
+        function toggleBulkSelectAll() {
+            const selectAll = document.getElementById("bulkSelectAll");
+            document.querySelectorAll(".bulkRowCheckbox").forEach(cb => cb.checked = selectAll.checked);
+            updateBulkUpdateButton();
+        }
+
+        function updateBulkUpdateButton() {
+            const checkedCount = document.querySelectorAll(".bulkRowCheckbox:checked").length;
+            document.getElementById("bulkUpdateButtonContainer").style.display = checkedCount > 0 ? "block" : "none";
+        }
+
+        function showBulkUpdateConfirmModal() {
+            showModal("bulkUpdateConfirmModal");
+        }
+
+        async function confirmBulkUpdate() {
+            const selectedStatus = document.getElementById("bulkUpdateStatus").value;
+            if (!selectedStatus) {
+                showAlert("Please select a status!", "danger");
+                return;
+            }
+
+            const selectedTraces = Array.from(document.querySelectorAll(".bulkRowCheckbox:checked")).map(cb => 
+                bulkUpdateTraces.find(t => t.id == cb.closest('tr').dataset.id)
+            );
+
+            try {
+                for (const trace of selectedTraces) {
+                    const payload = { ...trace, status: selectedStatus };
+                    const response = await fetch(`${BASE_URL}/engagements/${trace.id}/`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                        body: JSON.stringify(payload),
+                        credentials: "include"
+                    });
+                    if (!response.ok) throw new Error("Failed to update trace");
+                    const traceIndex = bulkUpdateTraces.findIndex(t => t.id === trace.id);
+                    bulkUpdateTraces[traceIndex].status = selectedStatus;
+                }
+                showAlert(`${selectedTraces.length} trace(s) updated!`, "success");
+                closeModal("bulkUpdateConfirmModal");
+                renderBulkUpdateTable(currentPageBulkUpdate);
+                await fetchEngagements();
+            } catch (error) {
+                console.error("Error updating traces:", error);
+                showAlert("Error updating traces!", "danger");
+            }
+        }
+
+        async function bulkCloseTraces() {
+            const selectedStatus = document.getElementById("bulkUpdateStatus").value;
+            if (!selectedStatus) {
+                showAlert("Please select a status first!", "danger");
+                return;
+            }
+
+            const selectedTraces = Array.from(document.querySelectorAll(".bulkRowCheckbox:checked")).map(cb => 
+                bulkUpdateTraces.findIndex(t => t.id == cb.closest('tr').dataset.id)
+            );
+
+            try {
+                for (const traceIndex of selectedTraces) {
+                    const trace = bulkUpdateTraces[traceIndex];
+                    const updateResponse = await fetch(`${BASE_URL}/engagements/${trace.id}/`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                        body: JSON.stringify({ ...trace, status: selectedStatus }),
+                        credentials: "include"
+                    });
+                    if (!updateResponse.ok) throw new Error("Failed to update status");
+
+                    const closeResponse = await fetch(`${BASE_URL}/engagements/${trace.id}/close/`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                        credentials: "include"
+                    });
+                    if (!closeResponse.ok) throw new Error("Failed to close trace");
+                }
+                showAlert(`${selectedTraces.length} trace(s) closed!`, "success");
+                closeModal("bulkUpdateConfirmModal");
+                await fetchEngagements();
+                renderBulkUpdateTable(currentPageBulkUpdate);
+            } catch (error) {
+                console.error("Error closing traces:", error);
+                showAlert("Error closing traces!", "danger");
+            }
+        }
+
+        (async () => {
+            await fetchCSRF();
+            await fetchUsers();
+            await fetchProducts();
+            await fetchEngagements();
+        })();
+    </script>
+</body>
+</html>
