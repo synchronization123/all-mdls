@@ -596,7 +596,7 @@
         function showLoadingModal() {
             const modal = document.getElementById('loadingModal');
             const countdownElement = document.getElementById('countdown');
-            let timeLeft = 25; // Changed to 25 seconds
+            let timeLeft = 25;
 
             modal.style.display = 'block';
             countdownElement.textContent = timeLeft;
@@ -606,7 +606,7 @@
                 countdownElement.textContent = timeLeft;
                 if (timeLeft <= 0) {
                     clearInterval(countdownTimer);
-                    hideLoadingModal(); // Automatically hide the modal after 25 seconds
+                    hideLoadingModal();
                 }
             }, 1000);
         }
@@ -774,7 +774,7 @@
         async function fetchEngagements() {
             showLoadingModal();
             try {
-                if (deb Routimeout) clearTimeout(debounceTimeout);
+                if (debounceTimeout) clearTimeout(debounceTimeout);  // Fixed typo: "deb Routimeout" to "debounceTimeout"
                 debounceTimeout = setTimeout(async () => {
                     const response = await fetch(`${BASE_URL}/engagements/?tags=pci&limit=1000000`);
                     const data = await response.json();
@@ -838,7 +838,7 @@
             return Math.floor(diffTime / (1000 * 60 * 60 * 24));
         }
 
-        function calculateAgingClosed цены(created, updated) {
+        function calculateAgingClosed(created, updated) {  // Fixed typo: "цены" removed
             const createdDate = new Date(created.split("T")[0]);
             const updatedDate = updated ? new Date(updated.split("T")[0]) : createdDate;
             const diffTime = updatedDate - createdDate;
@@ -1143,7 +1143,7 @@
         function showReassignConfirmModal() {
             const modal = document.getElementById("reassignConfirmModal");
             const reassignToUser = document.getElementById("reassignToUser");
-            reassigntoUser.innerHTML = '<option value="">Select User to Reassign To</option>' + 
+            reassignToUser.innerHTML = '<option value="">Select User to Reassign To</option>' +  // Fixed typo: "reassigntoUser" to "reassignToUser"
                 usersList.map(u => `<option value="${u.id}">${u.first_name} ${u.last_name}</option>`).join('');
             document.getElementById("divideAmongUsers").value = '';
             document.getElementById("userCheckboxContainer").style.display = "none";
