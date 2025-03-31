@@ -1080,7 +1080,7 @@
         }
 
         async function showReassignmentModal() {
-            reassignmentTraces = openTraces.map(t => ({ ...t, selected: false })); // Initialize all as unselected
+            reassignmentTraces = openTraces.map(t => ({ ...t, selected: false }));
             renderReassignmentTable(1);
             showModal("reassignmentModal");
         }
@@ -1184,6 +1184,12 @@
             const divideAmongUsers = parseInt(document.getElementById("divideAmongUsers").value) || 0;
             const selectedTraces = reassignmentTraces.filter(t => t.selected);
 
+            if (selectedTraces.length === 0) {
+                showAlert("No traces selected for reassignment!", "danger");
+                hideLoadingModal();
+                return;
+            }
+
             if (!selectedUserId && divideAmongUsers <= 0) {
                 showAlert("Please select a user or specify number of users!", "danger");
                 hideLoadingModal();
@@ -1191,6 +1197,7 @@
             }
 
             try {
+                let successfulReassignments = 0;
                 if (divideAmongUsers > 0) {
                     const selectedUserIds = Array.from(document.querySelectorAll("#userCheckboxes input:checked")).map(cb => cb.value);
                     if (selectedUserIds.length !== divideAmongUsers) {
@@ -1201,24 +1208,38 @@
                     const testsPerUser = Math.floor(selectedTraces.length / divideAmongUsers);
                     const extraTests = selectedTraces.length % divideAmongUsers;
                     let testIndex = 0;
+
                     for (let i = 0; i < divideAmongUsers; i++) {
                         const userTests = selectedTraces.slice(testIndex, testIndex + testsPerUser + (i < extraTests ? 1 : 0));
                         const userId = selectedUserIds[i];
                         for (const test of userTests) {
-                            await reassignTrace(test.id, userId);
-                            const traceIndex = reassignmentTraces.findIndex(t => t.id === test.id);
-                            reassignmentTraces[traceIndex].lead = userId;
+                            const response = await reassignTrace(test.id, userId);
+                            if (response.ok) {
+                                successfulReassignments++;
+                                const traceIndex = reassignmentTraces.findIndex(t => t.id === test.id);
+                                reassignmentTraces[traceIndex].lead = userId;
+                                reassignmentTraces[traceIndex].selected = false; // Deselect after reassignment
+                            } else {
+                                console.error(`Failed to reassign trace ${test.id}`);
+                            }
                         }
                         testIndex += testsPerUser + (i < extraTests ? 1 : 0);
                     }
                 } else {
                     for (const test of selectedTraces) {
-                        await reassignTrace(test.id, selectedUserId);
-                        const traceIndex = reassignmentTraces.findIndex(t => t.id === test.id);
-                        reassignmentTraces[traceIndex].lead = selectedUserId;
+                        const response = await reassignTrace(test.id, selectedUserId);
+                        if (response.ok) {
+                            successfulReassignments++;
+                            const traceIndex = reassignmentTraces.findIndex(t => t.id === test.id);
+                            reassignmentTraces[traceIndex].lead = selectedUserId;
+                            reassignmentTraces[traceIndex].selected = false; // Deselect after reassignment
+                        } else {
+                            console.error(`Failed to reassign trace ${test.id}`);
+                        }
                     }
                 }
-                showAlert(`${selectedTraces.length} trace(s) reassigned!`, "success");
+
+                showAlert(`${successfulReassignments} of ${selectedTraces.length} trace(s) reassigned successfully!`, "success");
                 closeModal("reassignConfirmModal");
                 renderReassignmentTable(currentPageReassignment);
                 await fetchEngagements();
@@ -1233,13 +1254,12 @@
         async function reassignTrace(id, userId) {
             const trace = allTraces.find(t => t.id === id);
             const payload = { ...trace, lead: userId };
-            const response = await fetch(`${BASE_URL}/engagements/${id}/`, {
+            return await fetch(`${BASE_URL}/engagements/${id}/`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
                 body: JSON.stringify(payload),
                 credentials: "include"
             });
-            if (!response.ok) throw new Error("Failed to reassign trace");
         }
 
         function showSummaryModal(tab) {
@@ -1335,7 +1355,7 @@
         }
 
         async function showBulkUpdateModal() {
-            bulkUpdateTraces = openTraces.map(t => ({ ...t, selected: false })); // Initialize all as unselected
+            bulkUpdateTraces = openTraces.map(t => ({ ...t, selected: false }));
             renderBulkUpdateTable(1);
             showModal("bulkUpdateModal");
         }
@@ -1415,15 +1435,22 @@
         async function confirmBulkUpdate() {
             showLoadingModal();
             const selectedStatus = document.getElementById("bulkUpdateStatus").value;
+            const selectedTraces = bulkUpdateTraces.filter(t => t.selected);
+
+            if (selectedTraces.length === 0) {
+                showAlert("No traces selected for update!", "danger");
+                hideLoadingModal();
+                return;
+            }
+
             if (!selectedStatus) {
                 showAlert("Please select a status!", "danger");
                 hideLoadingModal();
                 return;
             }
 
-            const selectedTraces = bulkUpdateTraces.filter(t => t.selected);
-
             try {
+                let successfulUpdates = 0;
                 for (const trace of selectedTraces) {
                     const payload = { ...trace, status: selectedStatus };
                     const response = await fetch(`${BASE_URL}/engagements/${trace.id}/`, {
@@ -1432,11 +1459,16 @@
                         body: JSON.stringify(payload),
                         credentials: "include"
                     });
-                    if (!response.ok) throw new Error("Failed to update trace");
-                    const traceIndex = bulkUpdateTraces.findIndex(t => t.id === trace.id);
-                    bulkUpdateTraces[traceIndex].status = selectedStatus;
+                    if (response.ok) {
+                        successfulUpdates++;
+                        const traceIndex = bulkUpdateTraces.findIndex(t => t.id === trace.id);
+                        bulkUpdateTraces[traceIndex].status = selectedStatus;
+                        bulkUpdateTraces[traceIndex].selected = false; // Deselect after update
+                    } else {
+                        console.error(`Failed to update trace ${trace.id}`);
+                    }
                 }
-                showAlert(`${selectedTraces.length} trace(s) updated!`, "success");
+                showAlert(`${successfulUpdates} of ${selectedTraces.length} trace(s) updated!`, "success");
                 closeModal("bulkUpdateConfirmModal");
                 renderBulkUpdateTable(currentPageBulkUpdate);
                 await fetchEngagements();
@@ -1451,15 +1483,22 @@
         async function bulkCloseTraces() {
             showLoadingModal();
             const selectedStatus = document.getElementById("bulkUpdateStatus").value;
+            const selectedTraces = bulkUpdateTraces.filter(t => t.selected);
+
+            if (selectedTraces.length === 0) {
+                showAlert("No traces selected to close!", "danger");
+                hideLoadingModal();
+                return;
+            }
+
             if (!selectedStatus) {
                 showAlert("Please select a status first!", "danger");
                 hideLoadingModal();
                 return;
             }
 
-            const selectedTraces = bulkUpdateTraces.filter(t => t.selected);
-
             try {
+                let successfulCloses = 0;
                 for (const trace of selectedTraces) {
                     const updateResponse = await fetch(`${BASE_URL}/engagements/${trace.id}/`, {
                         method: "PUT",
@@ -1467,16 +1506,25 @@
                         body: JSON.stringify({ ...trace, status: selectedStatus }),
                         credentials: "include"
                     });
-                    if (!updateResponse.ok) throw new Error("Failed to update status");
+                    if (!updateResponse.ok) {
+                        console.error(`Failed to update status for trace ${trace.id}`);
+                        continue;
+                    }
 
                     const closeResponse = await fetch(`${BASE_URL}/engagements/${trace.id}/close/`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
                         credentials: "include"
                     });
-                    if (!closeResponse.ok) throw new Error("Failed to close trace");
+                    if (closeResponse.ok) {
+                        successfulCloses++;
+                        const traceIndex = bulkUpdateTraces.findIndex(t => t.id === trace.id);
+                        bulkUpdateTraces[traceIndex].selected = false; // Deselect after close
+                    } else {
+                        console.error(`Failed to close trace ${trace.id}`);
+                    }
                 }
-                showAlert(`${selectedTraces.length} trace(s) closed!`, "success");
+                showAlert(`${successfulCloses} of ${selectedTraces.length} trace(s) closed!`, "success");
                 closeModal("bulkUpdateConfirmModal");
                 await fetchEngagements();
                 renderBulkUpdateTable(currentPageBulkUpdate);
