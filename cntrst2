@@ -1,0 +1,215 @@
+Modified Code for Reassignmentasync function confirmReassignment() {
+    const selectedUserId = document.getElementById("reassignToUser").value;
+    const divideAmongUsers = parseInt(document.getElementById("divideAmongUsers").value) || 0;
+    const selectedTraces = reassignmentTraces.filter(t => t.selected);
+
+    if (selectedTraces.length === 0) {
+        showAlert("No traces selected for reassignment!", "danger");
+        return;
+    }
+
+    if (!selectedUserId && divideAmongUsers <= 0) {
+        showAlert("Please select a user or specify number of users!", "danger");
+        return;
+    }
+
+    showLoadingModalWithId("Starting reassignment...");
+
+    try {
+        let successfulReassignments = 0;
+        if (divideAmongUsers > 0) {
+            const selectedUserIds = Array.from(document.querySelectorAll("#userCheckboxes input:checked")).map(cb => cb.value);
+            if (selectedUserIds.length !== divideAmongUsers) {
+                showAlert(`Please select exactly ${divideAmongUsers} users!`, "danger");
+                hideLoadingModal();
+                return;
+            }
+            const testsPerUser = Math.floor(selectedTraces.length / divideAmongUsers);
+            const extraTests = selectedTraces.length % divideAmongUsers;
+            let testIndex = 0;
+
+            for (let i = 0; i < divideAmongUsers; i++) {
+                const userTests = selectedTraces.slice(testIndex, testIndex + testsPerUser + (i < extraTests ? 1 : 0));
+                const userId = selectedUserIds[i];
+                for (const test of userTests) {
+                    updateLoadingModalWithId(test.id);
+                    const response = await reassignTrace(test.id, userId);
+                    if (response.ok) {
+                        successfulReassignments++;
+                        const traceIndex = reassignmentTraces.findIndex(t => t.id === test.id);
+                        reassignmentTraces[traceIndex].lead = userId;
+                        reassignmentTraces[traceIndex].selected = false; // Deselect after reassignment
+                    } else {
+                        console.error(`Failed to reassign trace ${test.id}`);
+                    }
+                }
+                testIndex += testsPerUser + (i < extraTests ? 1 : 0);
+            }
+        } else {
+            for (const test of selectedTraces) {
+                updateLoadingModalWithId(test.id);
+                const response = await reassignTrace(test.id, selectedUserId);
+                if (response.ok) {
+                    successfulReassignments++;
+                    const traceIndex = reassignmentTraces.findIndex(t => t.id === test.id);
+                    reassignmentTraces[traceIndex].lead = selectedUserId;
+                    reassignmentTraces[traceIndex].selected = false; // Deselect after reassignment
+                } else {
+                    console.error(`Failed to reassign trace ${test.id}`);
+                }
+            }
+        }
+
+        showAlert(`${successfulReassignments} of ${selectedTraces.length} trace(s) reassigned successfully!`, "success");
+        closeModal("reassignConfirmModal");
+        closeModal("reassignmentModal");
+        await fetchEngagements(); // Refresh all data
+    } catch (error) {
+        console.error("Error reassigning traces:", error);
+        showAlert("Error reassigning traces!", "danger");
+    } finally {
+        hideLoadingModal();
+    }
+}
+
+// Helper function to show loading modal with initial message
+function showLoadingModalWithId(message) {
+    const modal = document.getElementById('loadingModal');
+    const loadingContent = modal.querySelector('.loading-modal-content');
+    loadingContent.innerHTML = `
+        <div class="spinner"></div>
+        <h3>${message}</h3>
+        <p id="currentId">Processing...</p>
+    `;
+    modal.style.display = 'block';
+}
+
+// Helper function to update loading modal with current ID
+function updateLoadingModalWithId(id) {
+    const currentIdElement = document.getElementById('currentId');
+    if (currentIdElement) {
+        currentIdElement.textContent = `Processing ID: ${id}`;
+    }
+}Modified Code for Bulk Updateasync function confirmBulkUpdate() {
+    const selectedStatus = document.getElementById("bulkUpdateStatus").value;
+    const selectedTraces = bulkUpdateTraces.filter(t => t.selected);
+
+    if (selectedTraces.length === 0) {
+        showAlert("No traces selected for update!", "danger");
+        return;
+    }
+
+    if (!selectedStatus) {
+        showAlert("Please select a status!", "danger");
+        return;
+    }
+
+    showLoadingModalWithId("Starting bulk update...");
+
+    try {
+        let successfulUpdates = 0;
+        for (const trace of selectedTraces) {
+            updateLoadingModalWithId(trace.id);
+            const payload = { ...trace, status: selectedStatus };
+            const response = await fetch(`${BASE_URL}/engagements/${trace.id}/`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                body: JSON.stringify(payload),
+                credentials: "include"
+            });
+            if (response.ok) {
+                successfulUpdates++;
+                const traceIndex = bulkUpdateTraces.findIndex(t => t.id === trace.id);
+                bulkUpdateTraces[traceIndex].status = selectedStatus;
+                bulkUpdateTraces[traceIndex].selected = false; // Deselect after update
+            } else {
+                console.error(`Failed to update trace ${trace.id}`);
+            }
+        }
+        showAlert(`${successfulUpdates} of ${selectedTraces.length} trace(s) updated!`, "success");
+        closeModal("bulkUpdateConfirmModal");
+        closeModal("bulkUpdateModal");
+        await fetchEngagements(); // Refresh all data
+    } catch (error) {
+        console.error("Error updating traces:", error);
+        showAlert("Error updating traces!", "danger");
+    } finally {
+        hideLoadingModal();
+    }
+}
+
+async function bulkCloseTraces() {
+    const selectedStatus = document.getElementById("bulkUpdateStatus").value;
+    const selectedTraces = bulkUpdateTraces.filter(t => t.selected);
+
+    if (selectedTraces.length === 0) {
+        showAlert("No traces selected to close!", "danger");
+        return;
+    }
+
+    if (!selectedStatus) {
+        showAlert("Please select a status first!", "danger");
+        return;
+    }
+
+    showLoadingModalWithId("Starting bulk close...");
+
+    try {
+        let successfulCloses = 0;
+        for (const trace of selectedTraces) {
+            updateLoadingModalWithId(trace.id);
+            const updateResponse = await fetch(`${BASE_URL}/engagements/${trace.id}/`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                body: JSON.stringify({ ...trace, status: selectedStatus }),
+                credentials: "include"
+            });
+            if (!updateResponse.ok) {
+                console.error(`Failed to update status for trace ${trace.id}`);
+                continue;
+            }
+
+            const closeResponse = await fetch(`${BASE_URL}/engagements/${trace.id}/close/`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                credentials: "include"
+            });
+            if (closeResponse.ok) {
+                successfulCloses++;
+                const traceIndex = bulkUpdateTraces.findIndex(t => t.id === trace.id);
+                bulkUpdateTraces[traceIndex].selected = false; // Deselect after close
+            } else {
+                console.error(`Failed to close trace ${trace.id}`);
+            }
+        }
+        showAlert(`${successfulCloses} of ${selectedTraces.length} trace(s) closed!`, "success");
+        closeModal("bulkUpdateConfirmModal");
+        closeModal("bulkUpdateModal");
+        await fetchEngagements(); // Refresh all data
+    } catch (error) {
+        console.error("Error closing traces:", error);
+        showAlert("Error closing traces!", "danger");
+    } finally {
+        hideLoadingModal();
+    }
+}
+
+// Helper function to show loading modal with initial message (already defined above, reused here)
+function showLoadingModalWithId(message) {
+    const modal = document.getElementById('loadingModal');
+    const loadingContent = modal.querySelector('.loading-modal-content');
+    loadingContent.innerHTML = `
+        <div class="spinner"></div>
+        <h3>${message}</h3>
+        <p id="currentId">Processing...</p>
+    `;
+    modal.style.display = 'block';
+}
+
+// Helper function to update loading modal with current ID (already defined above, reused here)
+function updateLoadingModalWithId(id) {
+    const currentIdElement = document.getElementById('currentId');
+    if (currentIdElement) {
+        currentIdElement.textContent = `Processing ID: ${id}`;
+    }
+}
