@@ -564,7 +564,7 @@
             <div class="loading-modal-content">
                 <div class="spinner"></div>
                 <h3>Loading Data...</h3>
-                <p>Closing in <span id="countdown">25</span> seconds</p>
+                <p>Processing...</p>
             </div>
         </div>
     </div>
@@ -589,30 +589,28 @@
         let completedData = [];
         let activeTab = 'open';
         let modalStack = [];
-        let countdownTimer;
 
         // Loading Modal Functions
-        function showLoadingModal() {
+        function showLoadingModalWithId(message) {
             const modal = document.getElementById('loadingModal');
-            const countdownElement = document.getElementById('countdown');
-            let timeLeft = 25;
-
+            const loadingContent = modal.querySelector('.loading-modal-content');
+            loadingContent.innerHTML = `
+                <div class="spinner"></div>
+                <h3>${message}</h3>
+                <p id="currentId">Processing...</p>
+            `;
             modal.style.display = 'block';
-            countdownElement.textContent = timeLeft;
+        }
 
-            countdownTimer = setInterval(() => {
-                timeLeft--;
-                countdownElement.textContent = timeLeft;
-                if (timeLeft <= 0) {
-                    clearInterval(countdownTimer);
-                    hideLoadingModal();
-                }
-            }, 1000);
+        function updateLoadingModalWithId(id) {
+            const currentIdElement = document.getElementById('currentId');
+            if (currentIdElement) {
+                currentIdElement.textContent = `Processing ID: ${id}`;
+            }
         }
 
         function hideLoadingModal() {
             const modal = document.getElementById('loadingModal');
-            clearInterval(countdownTimer);
             modal.style.display = 'none';
         }
 
@@ -771,7 +769,7 @@
         }
 
         async function fetchEngagements() {
-            showLoadingModal();
+            showLoadingModalWithId("Fetching engagements...");
             try {
                 if (debounceTimeout) clearTimeout(debounceTimeout);
                 debounceTimeout = setTimeout(async () => {
@@ -982,7 +980,7 @@
         }
 
         async function updateTrace(id, name) {
-            showLoadingModal();
+            showLoadingModalWithId("Updating trace...");
             const row = document.querySelector(`#openTracesTable tr[data-id="${id}"]`);
             if (!row) return;
             const description = row.querySelector(".description").value;
@@ -1014,7 +1012,7 @@
         }
 
         async function closeTrace(id, name) {
-            showLoadingModal();
+            showLoadingModalWithId("Closing trace...");
             try {
                 const response = await fetch(`${BASE_URL}/engagements/${id}/close/`, {
                     method: "POST",
@@ -1036,7 +1034,7 @@
         }
 
         async function reopenTrace(id, name) {
-            showLoadingModal();
+            showLoadingModalWithId("Reopening trace...");
             try {
                 const response = await fetch(`${BASE_URL}/engagements/${id}/reopen/`, {
                     method: "POST",
@@ -1092,7 +1090,6 @@
             const product = document.getElementById("reassignProductFilter").value;
             const created = document.getElementById("reassignCreatedFilter").value;
 
-            // Apply filters to all open traces and preserve selection state
             reassignmentTraces = openTraces.filter(t => {
                 const createdDate = t.created.split("T")[0];
                 return (!assignedTo || t.lead == assignedTo) &&
@@ -1182,22 +1179,21 @@
         }
 
         async function confirmReassignment() {
-            showLoadingModal();
             const selectedUserId = document.getElementById("reassignToUser").value;
             const divideAmongUsers = parseInt(document.getElementById("divideAmongUsers").value) || 0;
             const selectedTraces = reassignmentTraces.filter(t => t.selected);
 
             if (selectedTraces.length === 0) {
                 showAlert("No traces selected for reassignment!", "danger");
-                hideLoadingModal();
                 return;
             }
 
             if (!selectedUserId && divideAmongUsers <= 0) {
                 showAlert("Please select a user or specify number of users!", "danger");
-                hideLoadingModal();
                 return;
             }
+
+            showLoadingModalWithId("Starting reassignment...");
 
             try {
                 let successfulReassignments = 0;
@@ -1216,6 +1212,7 @@
                         const userTests = selectedTraces.slice(testIndex, testIndex + testsPerUser + (i < extraTests ? 1 : 0));
                         const userId = selectedUserIds[i];
                         for (const test of userTests) {
+                            updateLoadingModalWithId(test.id);
                             const response = await reassignTrace(test.id, userId);
                             if (response.ok) {
                                 successfulReassignments++;
@@ -1230,6 +1227,7 @@
                     }
                 } else {
                     for (const test of selectedTraces) {
+                        updateLoadingModalWithId(test.id);
                         const response = await reassignTrace(test.id, selectedUserId);
                         if (response.ok) {
                             successfulReassignments++;
@@ -1370,7 +1368,6 @@
             const product = document.getElementById("bulkProductFilter").value;
             const created = document.getElementById("bulkCreatedFilter").value;
 
-            // Apply filters to all open traces and preserve selection state
             bulkUpdateTraces = openTraces.filter(t => {
                 const createdDate = t.created.split("T")[0];
                 return (!assignedTo || t.lead == assignedTo) &&
@@ -1439,25 +1436,25 @@
         }
 
         async function confirmBulkUpdate() {
-            showLoadingModal();
             const selectedStatus = document.getElementById("bulkUpdateStatus").value;
             const selectedTraces = bulkUpdateTraces.filter(t => t.selected);
 
             if (selectedTraces.length === 0) {
                 showAlert("No traces selected for update!", "danger");
-                hideLoadingModal();
                 return;
             }
 
             if (!selectedStatus) {
                 showAlert("Please select a status!", "danger");
-                hideLoadingModal();
                 return;
             }
+
+            showLoadingModalWithId("Starting bulk update...");
 
             try {
                 let successfulUpdates = 0;
                 for (const trace of selectedTraces) {
+                    updateLoadingModalWithId(trace.id);
                     const payload = { ...trace, status: selectedStatus };
                     const response = await fetch(`${BASE_URL}/engagements/${trace.id}/`, {
                         method: "PUT",
@@ -1487,25 +1484,25 @@
         }
 
         async function bulkCloseTraces() {
-            showLoadingModal();
             const selectedStatus = document.getElementById("bulkUpdateStatus").value;
             const selectedTraces = bulkUpdateTraces.filter(t => t.selected);
 
             if (selectedTraces.length === 0) {
                 showAlert("No traces selected to close!", "danger");
-                hideLoadingModal();
                 return;
             }
 
             if (!selectedStatus) {
                 showAlert("Please select a status first!", "danger");
-                hideLoadingModal();
                 return;
             }
+
+            showLoadingModalWithId("Starting bulk close...");
 
             try {
                 let successfulCloses = 0;
                 for (const trace of selectedTraces) {
+                    updateLoadingModalWithId(trace.id);
                     const updateResponse = await fetch(`${BASE_URL}/engagements/${trace.id}/`, {
                         method: "PUT",
                         headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
@@ -1543,7 +1540,7 @@
         }
 
         (async () => {
-            showLoadingModal();
+            showLoadingModalWithId("Initializing...");
             try {
                 await fetchCSRF();
                 await fetchUsers();
