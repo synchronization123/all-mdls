@@ -488,7 +488,7 @@
 
         <!-- Bulk Update Modal -->
         <div id="bulkUpdateModal" class="modal large-modal" data-z-index="1000">
-            <h2>Bulk Update</h2>
+            <h2>BTRIM Update</h2>
             <div class="total-count" id="bulkUpdateTotalCount">Total Traces: 0</div>
             <div class="row mb-2">
                 <div class="col-md-3">
@@ -1092,6 +1092,7 @@
             const product = document.getElementById("reassignProductFilter").value;
             const created = document.getElementById("reassignCreatedFilter").value;
 
+            // Apply filters to all open traces and preserve selection state
             reassignmentTraces = openTraces.filter(t => {
                 const createdDate = t.created.split("T")[0];
                 return (!assignedTo || t.lead == assignedTo) &&
@@ -1141,8 +1142,10 @@
         }
 
         function toggleSelectAll() {
-            const selectAll = document.getElementById("selectAll");
-            reassignmentTraces.forEach(t => t.selected = selectAll.checked);
+            const selectAll = document.getElementById("selectAll").checked;
+            const start = (currentPageReassignment - 1) * ROWS_PER_PAGE;
+            const end = start + ROWS_PER_PAGE;
+            reassignmentTraces.slice(start, end).forEach(t => t.selected = selectAll);
             renderReassignmentTable(currentPageReassignment);
         }
 
@@ -1241,8 +1244,8 @@
 
                 showAlert(`${successfulReassignments} of ${selectedTraces.length} trace(s) reassigned successfully!`, "success");
                 closeModal("reassignConfirmModal");
-                renderReassignmentTable(currentPageReassignment);
-                await fetchEngagements();
+                closeModal("reassignmentModal");
+                await fetchEngagements(); // Refresh all data
             } catch (error) {
                 console.error("Error reassigning traces:", error);
                 showAlert("Error reassigning traces!", "danger");
@@ -1367,6 +1370,7 @@
             const product = document.getElementById("bulkProductFilter").value;
             const created = document.getElementById("bulkCreatedFilter").value;
 
+            // Apply filters to all open traces and preserve selection state
             bulkUpdateTraces = openTraces.filter(t => {
                 const createdDate = t.created.split("T")[0];
                 return (!assignedTo || t.lead == assignedTo) &&
@@ -1418,8 +1422,10 @@
         }
 
         function toggleBulkSelectAll() {
-            const selectAll = document.getElementById("bulkSelectAll");
-            bulkUpdateTraces.forEach(t => t.selected = selectAll.checked);
+            const selectAll = document.getElementById("bulkSelectAll").checked;
+            const start = (currentPageBulkUpdate - 1) * ROWS_PER_PAGE;
+            const end = start + ROWS_PER_PAGE;
+            bulkUpdateTraces.slice(start, end).forEach(t => t.selected = selectAll);
             renderBulkUpdateTable(currentPageBulkUpdate);
         }
 
@@ -1470,8 +1476,8 @@
                 }
                 showAlert(`${successfulUpdates} of ${selectedTraces.length} trace(s) updated!`, "success");
                 closeModal("bulkUpdateConfirmModal");
-                renderBulkUpdateTable(currentPageBulkUpdate);
-                await fetchEngagements();
+                closeModal("bulkUpdateModal");
+                await fetchEngagements(); // Refresh all data
             } catch (error) {
                 console.error("Error updating traces:", error);
                 showAlert("Error updating traces!", "danger");
@@ -1526,8 +1532,8 @@
                 }
                 showAlert(`${successfulCloses} of ${selectedTraces.length} trace(s) closed!`, "success");
                 closeModal("bulkUpdateConfirmModal");
-                await fetchEngagements();
-                renderBulkUpdateTable(currentPageBulkUpdate);
+                closeModal("bulkUpdateModal");
+                await fetchEngagements(); // Refresh all data
             } catch (error) {
                 console.error("Error closing traces:", error);
                 showAlert("Error closing traces!", "danger");
