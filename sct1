@@ -1,135 +1,95 @@
-async function createEngagements() {
-    const namesInput = document.getElementById("engagementNames").value.trim();
-    if (!namesInput) {
-        showAlert("Please enter at least one engagement name!", "danger");
-        return;
-    }
+<!-- Description Edit Modal -->
+<div id="editDescriptionModal" class="modal">
+    <h2>Edit Description</h2>
+    <div class="mb-2">
+        <label for="engagementDescription" style="display: block; margin-bottom: 5px;">Description:</label>
+        <textarea id="engagementDescription" class="form-control" rows="5" placeholder="Enter description..."></textarea>
+    </div>
+    <div class="d-flex justify-content-between">
+        <button class="btn btn-secondary" onclick="closeEditDescriptionModal()">Close</button>
+    </div>
+</div>
 
-    const names = namesInput.split(',').map(name => name.trim()).filter(name => name);
-    const today = new Date().toISOString().split('T')[0];
-    const created = [];
-    const skipped = [];
-    const errors = [];
 
-    // Check existing engagements
-    const existingNames = new Set(allEngagements.map(eng => eng.name.toLowerCase()));
 
-    for (const name of names) {
-        if (existingNames.has(name.toLowerCase())) {
-            skipped.push(name);
-            continue;
+
+
+
+let currentEditingEngagementId = null;
+
+function showEditDescriptionModal(engagementId, description) {
+    currentEditingEngagementId = engagementId;
+    const modal = document.getElementById("editDescriptionModal");
+    const overlay = document.getElementById("modalOverlay");
+    const descriptionTextarea = document.getElementById("engagementDescription");
+
+    descriptionTextarea.value = description || '';
+    modal.style.display = "block";
+    overlay.style.display = "block";
+
+    // Autosave on input
+    descriptionTextarea.addEventListener("input", debounce(() => {
+        saveDescription(engagementId, descriptionTextarea.value);
+    }, 500));
+}
+
+function closeEditDescriptionModal() {
+    const modal = document.getElementById("editDescriptionModal");
+    const overlay = document.getElementById("modalOverlay");
+    modal.style.display = "none";
+    overlay.style.display = "none";
+    currentEditingEngagementId = null;
+}
+
+async function saveDescription(engagementId, description) {
+    try {
+        const engagement = openEngagements.find(eng => eng.id === engagementId);
+        if (!engagement) {
+            showAlert("Engagement not found!", "danger");
+            return;
         }
 
-        const engagementPayload = {
-            name: name,
-            target_start: today,
-            target_end: today,
-            lead: 2, // Default lead for engagement
-            status: "Not Started",
-            tags: ["crm"],
-            product: 3,
-            active: true
+        const payload = {
+            id: engagementId,
+            name: engagement.name,
+            target_start: engagement.target_start,
+            target_end: engagement.target_end,
+            product: engagement.product,
+            lead: engagement.lead,
+            status: engagement.status,
+            commit_hash: engagement.commit_hash,
+            build_id: engagement.build_id,
+            version: engagement.version,
+            active: engagement.active,
+            description: description // Update description
         };
 
-        try {
-            // Step 1: Create the engagement
-            const engagementResponse = await fetch(`${BASE_URL}/engagements/`, {
-                method: "POST",
-                headers: { 
-                    "Content-Type": "application/json", 
-                    "X-CSRFToken": csrfToken 
-                },
-                body: JSON.stringify(engagementPayload),
-                credentials: "include"
-            });
+        const response = await fetch(`${BASE_URL}/engagements/${engagementId}/`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+            body: JSON.stringify(payload),
+            credentials: "include"
+        });
 
-            if (engagementResponse.ok) {
-                const engagementData = await engagementResponse.json();
-                created.push({ id: engagementData.id, name: engagementData.name });
-                existingNames.add(name.toLowerCase()); // Add to prevent duplicates in this batch
-
-                // Step 2: Create tests for the engagement
-                const tests = [
-                    { title: "sql", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
-                    { title: "css", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
-                    { title: "bhj", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
-                    { title: "reporting", tags: ["reporting"], scan_type: "mcr_jira", test_type: 207 }
-                ];
-
-                for (const test of tests) {
-                    const testPayload = {
-                        title: test.title,
-                        tags: test.tags,
-                        scan_type: test.scan_type,
-                        target_start: today,
-                        target_end: today,
-                        commit_hash: test.title === "reporting" ? "" : "NA", // Blank for reporting, NA for others
-                        branch_tag: test.title === "reporting" ? "" : "NA", // Blank for reporting, NA for others
-                        lead: engagementData.lead, // Fetch lead from the created engagement
-                        test_type: test.test_type,
-                        environment: 10,
-                        engagement: engagementData.id // Link to the newly created engagement
-                    };
-
-                    try {
-                        const testResponse = await fetch(`${BASE_URL}/tests/`, {
-                            method: "POST",
-                            headers: { 
-                                "Content-Type": "application/json", 
-                                "X-CSRFToken": csrfToken 
-                            },
-                            body: JSON.stringify(testPayload),
-                            credentials: "include"
-                        });
-
-                        if (!testResponse.ok) {
-                            console.error(`Failed to create test '${test.title}' for engagement ${name}`);
-                            // Optionally add to errors if you want to track test creation failures separately
-                        }
-                    } catch (testError) {
-                        console.error(`Error creating test '${test.title}' for engagement ${name}:`, testError);
-                    }
-                }
-            } else {
-                errors.push(name);
-            }
-        } catch (error) {
-            console.error(`Error creating engagement ${name}:`, error);
-            errors.push(name);
+        if (response.ok) {
+            engagement.description = description; // Update local data
+            showAlert("Description saved successfully", "success", engagement.name);
+            fetchEngagements(); // Refresh engagements
+        } else {
+            showAlert("Failed to save description!", "danger");
         }
-    }
-
-    // Render summary
-    const createdTableBody = document.getElementById("createdTableBody");
-    const skippedTableBody = document.getElementById("skippedTableBody");
-    const errorTableBody = document.getElementById("errorTableBody");
-
-    createdTableBody.innerHTML = created.map(item => `
-        <tr>
-            <td>${item.id}</td>
-            <td>${item.name}</td>
-        </tr>
-    `).join('') || '<tr><td colspan="2">None</td></tr>';
-
-    skippedTableBody.innerHTML = skipped.map(name => `
-        <tr>
-            <td>${name}</td>
-        </tr>
-    `).join('') || '<tr><td>None</td></tr>';
-
-    errorTableBody.innerHTML = errors.map(name => `
-        <tr>
-            <td>${name}</td>
-        </tr>
-    `).join('') || '<tr><td>None</td></tr>';
-
-    document.getElementById("createSummary").style.display = 'block';
-
-    if (created.length > 0) {
-        fetchEngagements(); // Refresh the main table
-        showAlert(`${created.length} engagement(s) created successfully with tests!`, "success");
-    }
-    if (errors.length > 0) {
-        showAlert(`${errors.length} engagement(s) failed to create!`, "danger");
+    } catch (error) {
+        showAlert("Error saving description!", "danger");
+        console.error("Error:", error);
     }
 }
+
+// Debounce function to limit API calls during typing
+function debounce(func, wait) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
