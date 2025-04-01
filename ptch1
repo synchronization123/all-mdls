@@ -1,0 +1,234 @@
+<style>
+    /* ... existing styles ... */
+    .jira-bifurcation-input {
+        width: 60px;
+        padding: 4px;
+        text-align: center;
+        border: none;
+        border-radius: 4px;
+        background: #f0f4f8;
+    }
+    .jira-bifurcation-input:focus {
+        outline: none;
+        box-shadow: 0 0 5px rgba(13, 110, 253, 0.5);
+        background: #fff;
+    }
+</style>
+
+<!-- Open Tasks Table Header -->
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Created</th>
+            <th>Aging (Days)</th>
+            <th>Name</th>
+            <th colspan="4">Jira Bifurcation</th>
+            <th>Assigned To</th>
+            <th>Status (Analyst)</th>
+            <th>Status (Mentor)</th>
+            <th>Status (Lead)</th>
+            <th>AppSec ETA</th>
+            <th>RM ETA</th>
+            <th>Kick Off Date</th>
+            <th>Created by</th>
+            <th>Product</th>
+            <th>IR</th>
+            <th>Action</th>
+        </tr>
+        <tr class="jira-bifurcation">
+            <th colspan="4"></th>
+            <th>Changelog</th>
+            <th>Doable</th>
+            <th>Security</th>
+            <th>Functional</th>
+            <th colspan="11"></th>
+        </tr>
+    </thead>
+    <tbody id="openTasksTable"></tbody>
+</table>
+
+<!-- Closed Tasks Table Header -->
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Created</th>
+            <th>Aging (Days)</th>
+            <th>Name</th>
+            <th colspan="4">Jira Bifurcation</th>
+            <th>Assigned To</th>
+            <th>Status (Analyst)</th>
+            <th>Status (Mentor)</th>
+            <th>Status (Lead)</th>
+            <th>AppSec ETA</th>
+            <th>RM ETA</th>
+            <th>Kick Off Date</th>
+            <th>Created by</th>
+            <th>Product</th>
+            <th>IR</th>
+            <th>Action</th>
+        </tr>
+        <tr class="jira-bifurcation">
+            <th colspan="4"></th>
+            <th>Changelog</th>
+            <th>Doable</th>
+            <th>Security</th>
+            <th>Functional</th>
+            <th colspan="11"></th>
+        </tr>
+    </thead>
+    <tbody id="closedTasksTable"></tbody>
+</table>// Modified functions in the <script> section
+async function fetchTests(engagementId) {
+    try {
+        const response = await fetch(`${BASE_URL}/tests/?engagement=${engagementId}&tags=patch_jira_count&limit=1000000`);
+        const data = await response.json();
+        testsList = data.results || [];
+    } catch (error) {
+        console.error("Error fetching tests:", error);
+        return [];
+    }
+    return testsList;
+}
+
+async function getJiraBifurcation(engagementId) {
+    const tests = await fetchTests(engagementId);
+    const changelogCount = tests.filter(t => t.version).length;
+    const doableCount = tests.filter(t => t.build_id).length;
+    const securityCount = tests.filter(t => t.commit_hash).length;
+    const functionalCount = tests.filter(t => t.branch_tag).length;
+    return { changelogCount, doableCount, securityCount, functionalCount };
+}
+
+async function renderTableOpen(page) {
+    const tableBody = document.getElementById("openTasksTable");
+    tableBody.innerHTML = "";
+    const start = (page - 1) * ROWS_PER_PAGE;
+    const end = start + ROWS_PER_PAGE;
+    const paginatedTasks = openTasks.slice(start, end);
+
+    for (const t of paginatedTasks) {
+        const jiraBifurcation = await getJiraBifurcation(t.id);
+        const row = document.createElement("tr");
+        row.dataset.id = t.id;
+        row.innerHTML = `
+            <td>${t.id}</td>
+            <td>${t.created.split("T")[0]}</td>
+            <td>${calculateAgingOpen(t.created)}</td>
+            <td>${t.name}</td>
+            <td><input type="number" class="jira-bifurcation-input" value="${jiraBifurcation.changelogCount}" max="9999" min="0" data-field="version"></td>
+            <td><input type="number" class="jira-bifurcation-input" value="${jiraBifurcation.doableCount}" max="9999" min="0" data-field="build_id"></td>
+            <td><input type="number" class="jira-bifurcation-input" value="${jiraBifurcation.securityCount}" max="9999" min="0" data-field="commit_hash"></td>
+            <td><input type="number" class="jira-bifurcation-input" value="${jiraBifurcation.functionalCount}" max="9999" min="0" data-field="branch_tag"></td>
+            <td>${createAssignedToDropdown(t.lead)}</td>
+            <td>${createStatusDropdown(t.status)}</td>
+            <td>${createStatusDropdown(t.branch_tag || 'Not Started')}</td>
+            <td>${createStatusDropdown(t.commit_hash || 'Not Started')}</td>
+            <td>${t.target_start?.split("T")[0] || 'N/A'}</td>
+            <td>${t.target_end?.split("T")[0] || 'N/A'}</td>
+            <td>${t.build_id || 'N/A'}</td>
+            <td>${t.reason || 'N/A'}</td>
+            <td>${createProductDropdown(t.product)}</td>
+            <td>${t.version || 'N/A'}</td>
+            <td>
+                <button class="btn btn-danger btn-sm" onclick="closeTask(${t.id}, '${t.name}')">Close</button>
+                <button class="btn btn-primary btn-sm" onclick="showEditModal(${t.id})">Edit</button>
+            </td>
+        `;
+        tableBody.appendChild(row);
+
+        const statusAnalyst = row.querySelector("td:nth-child(10) select");
+        const statusMentor = row.querySelector("td:nth-child(11) select");
+        const statusLead = row.querySelector("td:nth-child(12) select");
+        const assignedTo = row.querySelector("td:nth-child(9) select");
+        const product = row.querySelector("td:nth-child(17) select");
+        const jiraInputs = row.querySelectorAll(".jira-bifurcation-input");
+
+        [statusAnalyst, statusMentor, statusLead, assignedTo, product, ...jiraInputs].forEach(el => {
+            el.addEventListener("change", () => updateTask(t.id, t.name));
+            el.addEventListener("blur", () => showAlert("Saved", "success"));
+        });
+    }
+    renderPagination('open');
+}
+
+async function renderTableClosed(page) {
+    const tableBody = document.getElementById("closedTasksTable");
+    tableBody.innerHTML = "";
+    const start = (page - 1) * ROWS_PER_PAGE;
+    const end = start + ROWS_PER_PAGE;
+    const paginatedTasks = closedTasks.slice(start, end);
+
+    for (const t of paginatedTasks) {
+        const jiraBifurcation = await getJiraBifurcation(t.id);
+        const row = document.createElement("tr");
+        row.dataset.id = t.id;
+        row.innerHTML = `
+            <td>${t.id}</td>
+            <td>${t.created.split("T")[0]}</td>
+            <td>${calculateAgingClosed(t.created, t.updated)}</td>
+            <td>${t.name}</td>
+            <td>${jiraBifurcation.changelogCount}</td>
+            <td>${jiraBifurcation.doableCount}</td>
+            <td>${jiraBifurcation.securityCount}</td>
+            <td>${jiraBifurcation.functionalCount}</td>
+            <td>${getAssignedToName(t.lead)}</td>
+            <td>${t.status}</td>
+            <td>${t.branch_tag || 'N/A'}</td>
+            <td>${t.commit_hash || 'N/A'}</td>
+            <td>${t.target_start?.split("T")[0] || 'N/A'}</td>
+            <td>${t.target_end?.split("T")[0] || 'N/A'}</td>
+            <td>${t.build_id || 'N/A'}</td>
+            <td>${t.reason || 'N/A'}</td>
+            <td>${getProductName(t.product)}</td>
+            <td>${t.version || 'N/A'}</td>
+            <td>
+                <button class="btn btn-success btn-sm" onclick="reopenTask(${t.id}, '${t.name}')">Reopen</button>
+                <button class="btn btn-primary btn-sm" onclick="showEditModal(${t.id})">Edit</button>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    }
+    renderPagination('closed');
+}
+
+async function updateTask(id, name) {
+    const row = document.querySelector(`#${activeTab}TasksTable tr[data-id="${id}"]`);
+    if (!row) return;
+    const statusAnalyst = row.querySelector("td:nth-child(10) select").value;
+    const statusMentor = row.querySelector("td:nth-child(11) select").value;
+    const statusLead = row.querySelector("td:nth-child(12) select").value;
+    const assignedTo = row.querySelector("td:nth-child(9) select").value;
+    const product = row.querySelector("td:nth-child(17) select").value;
+    const changelogCount = row.querySelector("td:nth-child(5) input").value;
+    const doableCount = row.querySelector("td:nth-child(6) input").value;
+    const securityCount = row.querySelector("td:nth-child(7) input").value;
+    const functionalCount = row.querySelector("td:nth-child(8) input").value;
+
+    const task = allTasks.find(t => t.id === id);
+    const payload = {
+        ...task,
+        status: statusAnalyst,
+        branch_tag: statusMentor,
+        commit_hash: statusLead,
+        lead: assignedTo,
+        product: product,
+        version: changelogCount > 0 ? changelogCount : task.version,
+        build_id: doableCount > 0 ? doableCount : task.build_id,
+    };
+
+    try {
+        const response = await fetch(`${BASE_URL}/engagements/${id}/`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+            body: JSON.stringify(payload),
+            credentials: "include"
+        });
+        if (!response.ok) showAlert("Failed to update task!", "danger");
+        fetchEngagements();
+    } catch (error) {
+        console.error("Error updating task:", error);
+        showAlert("Error updating task!", "danger");
+    }
+}
