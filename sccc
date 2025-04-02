@@ -1,0 +1,4094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MCR</title>
+    <style>
+        /* Enhanced Bootstrap-inspired CSS */
+        :root {
+            --bs-blue: #5AC1E8;
+            --bs-success: #28a745;
+            --bs-warning: #ffc107;
+            --bs-danger: #dc3545;
+            --bs-gray-100: #f8f9fa;
+            --bs-gray-200: #e9ecef;
+            --bs-dark: #2c3e50;
+            --bs-light: #ffffff;
+            --highlight-green: #d4edda; /* Light green for highlight */
+        }
+        body {
+            background: linear-gradient(135deg, #6e48aa 0%, #9d50bb 100%);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+.container {
+            background: var(--bs-light);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            width: 90vw;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+            margin-left: 100px;
+        }
+        .sidebar {
+            position: fixed;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 80px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 15px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            font-size: 1.2rem;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.05);
+            display: block;
+        }
+        .sidebar a:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        .sidebar a.active {
+            background: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        h1, h2 {
+            color: var(--bs-dark);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            font-weight: 600;
+        }
+        .text-center { text-align: center; }
+        .mb-4 { margin-bottom: 1.5rem; }
+        .mb-2 { margin-bottom: 0.5rem; }
+        .d-flex { display: flex; }
+        .justify-content-between { justify-content: space-between; }
+        .row { display: flex; flex-wrap: wrap; gap: 15px; }
+        .col-md-3, .col-md-2 { flex: 1; min-width: 150px; }
+        .col-md-2-4 { flex: 0 0 20%; min-width: 120px; } /* Adjusted for 5 filters */
+        .text-end { text-align: end; }
+        .w-100 { width: 100%; }
+
+        .form-control, .form-select, .version-input {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            border-radius: 8px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+            background: #f0f4f8;
+            font-size: 1rem;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+        .form-control:focus, .form-select:focus {
+            outline: none;
+            box-shadow: 0 0 5px rgba(13, 110, 253, 0.5);
+            background: #fff;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, var(--bs-blue), #5a9bff);
+            color: white;
+        }
+        .btn-secondary {
+            background: linear-gradient(45deg, #6c757d, #95a5a6);
+            color: white;
+        }
+        .btn-success {
+            background: linear-gradient(45deg, var(--bs-success), #5cb85c);
+            color: white;
+        }
+        .btn-danger {
+            background: linear-gradient(45deg, var(--bs-danger), #ff6b6b);
+            color: white;
+        }
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.875rem;
+        }
+        .btn-refresh, .btn-clear {
+            padding: 6px 12px; /* Match btn-sm size */
+            font-size: 0.875rem;
+        }
+        .btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+        .btn:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+        .alert {
+            position: absolute;
+            right: 25px;
+            top: 150px;
+            padding: 8px 15px;
+            border-radius: 8px;
+            display: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 10;
+            max-width: 200px;
+            font-size: 0.9rem;
+        }
+        .alert-success {
+            background: linear-gradient(45deg, #d4edda, #e6f7e9);
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .alert-danger {
+            background: linear-gradient(45deg, #f8d7da, #fce4e6);
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            max-width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            text-align: center;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        .large-modal {
+            max-width: 95%;
+            width: 95%;
+            max-height: 85vh;
+        }
+        #testCasesModal {
+            z-index: 1001; /* Higher z-index to appear on top of analystViewModal */
+        }
+
+        /* Tab Styles */
+        .tab-container {
+            display: flex;
+            border-bottom: 2px solid var(--bs-gray-200);
+            margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px 15px;
+            text-align: center;
+            cursor: pointer;
+            background: var(--bs-gray-100);
+            color: var(--bs-dark);
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .tab:hover {
+            background: #e0e0e0;
+        }
+        .tab.active {
+            background: var(--bs-blue);
+            color: white;
+        }
+        .tab-content {
+            display: none;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        th, td {
+            border: 1px solid #e0e0e0;
+            padding: 10px;
+            text-align: center;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        th {
+            background: linear-gradient(45deg, var(--bs-gray-200), #f1f3f5);
+            color: var(--bs-dark);
+            font-weight: 600;
+            white-space: normal;
+            word-wrap: break-word;
+        }
+        td {
+            background: #fafafa;
+            transition: background 0.2s;
+        }
+        tr:hover td {
+            background: #f0f4f8;
+        }
+        .highlight-name {
+            background: var(--highlight-green) !important;
+        }
+        .clickable {
+            cursor: pointer;
+            text-decoration: underline;
+            color: var(--bs-blue);
+        }
+        .clickable:hover {
+            color: #0056b3;
+        }
+        /* Adjust column widths */
+        th:nth-child(1), td:nth-child(1) { min-width: 100px; } /* Created */
+        th:nth-child(2), td:nth-child(2) { min-width: 150px; } /* Name */
+        th:nth-child(3), td:nth-child(3) { min-width: 60px; } /* Total Key */
+        th:nth-child(4), td:nth-child(4) { min-width: 60px; } /* Completed */
+        th:nth-child(5), td:nth-child(5) { min-width: 50px; } /* Pending (Reduced from 60px) */
+        th:nth-child(6), td:nth-child(6) { min-width: 60px; } /* On Hold */
+        th:nth-child(7), td:nth-child(7) { min-width: 60px; } /* Rejected */
+        th:nth-child(8), td:nth-child(8) { min-width: 60px; } /* Doable Jira */
+        th:nth-child(9), td:nth-child(9) { min-width: 60px; } /* Non-Doable Jira */
+        th:nth-child(10), td:nth-child(10) { min-width: 120px; } /* Status (Analyst) */
+        th:nth-child(11), td:nth-child(11) { min-width: 120px; } /* Status (Mentor) */
+        th:nth-child(12), td:nth-child(12) { min-width: 120px; } /* Status (Lead) */
+        th:nth-child(13), td:nth-child(13) { min-width: 150px; } /* Lead */
+        th:nth-child(14), td:nth-child(14) { min-width: 120px; } /* Version */
+        th:nth-child(15), td:nth-child(15) { min-width: 120px; } /* Action */
+        /* Test Cases Modal Table Column Widths */
+        #testCasesTable th:nth-child(1), #testCasesTable td:nth-child(1) { min-width: 50px; } /* ID */
+        #testCasesTable th:nth-child(2), #testCasesTable td:nth-child(2) { min-width: 150px; } /* Title */
+        #testCasesTable th:nth-child(3), #testCasesTable td:nth-child(3) { min-width: 200px; } /* Description */
+        #testCasesTable th:nth-child(4), #testCasesTable td:nth-child(4) { min-width: 100px; } /* Version */
+        #testCasesTable th:nth-child(5), #testCasesTable td:nth-child(5) { min-width: 100px; } /* Status */
+        #testCasesTable th:nth-child(6), #testCasesTable td:nth-child(6) { min-width: 150px; } /* Assigned To */
+        #testCasesTable th:nth-child(7), #testCasesTable td:nth-child(7) { min-width: 100px; } /* Type */
+        #testCasesTable th:nth-child(8), #testCasesTable td:nth-child(8) { min-width: 100px; } /* Issue Type */
+        #testCasesTable th:nth-child(9), #testCasesTable td:nth-child(9) { min-width: 100px; } /* Jira Status */
+        /* Analyst View Table Column Widths */
+        #analystTable th:nth-child(1), #analystTable td:nth-child(1) { min-width: 150px; } /* Assigned To */
+        #analystTable th:nth-child(2), #analystTable td:nth-child(2) { min-width: 100px; } /* Type */
+        #analystTable th:nth-child(3), #analystTable td:nth-child(3) { min-width: 100px; } /* Version */
+        #analystTable th:nth-child(4), #analystTable td:nth-child(4) { min-width: 60px; } /* Pending */
+        #analystTable th:nth-child(5), #analystTable td:nth-child(5) { min-width: 60px; } /* On Hold */
+        #analystTable th:nth-child(6), #analystTable td:nth-child(6) { min-width: 60px; } /* Completed */
+        #analystTable th:nth-child(7), #analystTable td:nth-child(7) { min-width: 60px; } /* Rejected */
+        #analystTable th:nth-child(8), #analystTable td:nth-child(8) { min-width: 60px; } /* Doable */
+        #analystTable th:nth-child(9), #analystTable td:nth-child(9) { min-width: 60px; } /* Non Doable */
+        .form-select {
+            padding: 8px 24px 8px 8px;
+            appearance: none;
+            background: #f0f4f8 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="5" viewBox="0 0 10 5"><path fill="%232c3e50" d="M0 0h10L5 5z"/></svg>') no-repeat right 8px center;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            flex-shrink: 0;
+        }
+        .page-item {
+            padding: 8px 14px;
+            background: var(--bs-gray-100);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .page-item:hover, .page-item.active {
+            background: var(--bs-blue);
+            color: white;
+        }
+
+        /* Invisible CSRF */
+        #csrfToken, .csrf-label {
+            color: #ffffff;
+        }
+
+        /* Total Count */
+        .total-count {
+            font-size: 1.1rem;
+            color: var(--bs-dark);
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        /* Total Row */
+        .total-row td {
+            background: var(--bs-gray-100);
+            font-weight: bold;
+        }
+    </style>
+	
+	
+</head>
+<body>
+
+<div class="sidebar">
+        <a href="https://demo.defectdojo.org/access_file/4432/63476/Engagement">MCR</a>
+        <a href="https://demo.defectdojo.org/access_file/4385/63476/Engagement">Patches</a>
+		<a href="https://demo.defectdojo.org/access_file/4548/63476/Engagement">eCI</a>
+		<a href="https://demo.defectdojo.org/access_file/4549/63476/Engagement">eManager</a>
+		<a href="https://demo.defectdojo.org/access_file/4377/63476/Engagement">VAPT</a>
+        <a href="https://demo.defectdojo.org/access_file/4550/63476/Engagement">SCA</a>
+		<a href="https://demo.defectdojo.org/access_file/4551/63476/Engagement">Contrast</a>
+        <a href="https://demo.defectdojo.org/access_file/4552/63476/Engagement">Sonar</a>
+		<a href="https://demo.defectdojo.org/access_file/4553/63476/Engagement">Cases</a>
+    </div>
+
+
+
+
+    <div class="container">
+	
+
+	
+	
+	
+        <h1 class="text-center mb-4">MCR</h1>
+
+        <div class="d-flex justify-content-between mb-2">
+
+	
+		<button class="btn btn-success btn-sm" onclick="showCreateSCTModal()">Create SCT Task</button>  <button class="btn btn-primary btn-sm" onclick="showReassignmentModal()">Reassignment</button>
+		
+		
+            <button class="btn btn-primary btn-refresh" onclick="fetchEngagements()" data-tooltip="Refresh">🔄</button>
+			
+			
+            <span class="csrf-label">CSRF Token: <strong id="csrfToken">Fetching...</strong></span>
+        </div>
+
+
+
+        <div class="tab-container">
+            <div class="tab active" onclick="switchTab('open')">Open SCT</div>
+            <div class="tab" onclick="switchTab('closed')">Closed SCT</div>
+        </div>
+
+        <div id="open-tab" class="tab-content active">
+            <div class="row mb-2">
+                <!-- Filter by Jira(s) assigned -->
+               <div class="col-md-3">
+                  <select id="jiraAssignedFilterOpen" class="form-select" onchange="renderTableOpen(currentPageOpen)">
+                        <option value="">Filter by Jira(s) assigned</option>
+                    </select>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+                   <div class="d-flex gap-2 flex-wrap">
+    <button class="btn btn-secondary btn-sm icon-btn" data-bs-toggle="tooltip" title="View by Assignment" onclick="showAnalystView('open')">&#128100;</button> 
+	<button class="btn btn-secondary btn-sm icon-btn" data-bs-toggle="tooltip" title="View Report" onclick="showReportModal()">&#128196;</button>
+    <button class="btn btn-secondary btn-sm icon-btn" data-bs-toggle="tooltip" title="Total Jira Counts" onclick="showTotalTestCounts()">&#128202;</button> 
+	<button class="btn btn-secondary btn-sm mt-2" onclick="showTrendView('open')">View Trend</button>
+    <button class="btn btn-secondary btn-sm icon-btn" data-bs-toggle="tooltip" title="View Completed Summary" onclick="showCompletedSummary('open')">&#9989;</button> 
+
+	<button class="btn btn-primary btn-sm mt-2" onclick="showOverallSummary()">Overall Summary</button>
+		<button class="btn btn-warning btn-sm" id="fetchReportBtn" onclick="fetchReportImmediately()" data-tooltip="Use with caution">Fetch Report Immediately</button>
+</div>
+        <div class="total-count" id="totalCount">Total Version(s): 0</div>
+<style>
+    .icon-btn {
+        width: 40px; 
+        height: 40px; 
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        padding: 5px;
+    }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+            new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+
+
+                </div>
+                <!-- Name Search -->
+                <div class="col-md-3">
+                    <input type="text" id="nameSearchOpen" class="form-control" placeholder="Search by version..." oninput="fetchEngagements()">
+                </div>
+                <!-- Filter by SCT assigned -->
+                <div class="col-md-3">
+                    <select id="leadFilterOpen" class="form-select" onchange="fetchEngagements()">
+                        <option value="">Filter by SCT assigned</option>
+                    </select>
+                </div>
+                <!-- Date Filters -->
+                <div class="col-md-2">
+                    <input type="date" id="date1Open" class="form-control" onchange="fetchEngagements()">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" id="date2Open" class="form-control" onchange="fetchEngagements()">
+                </div>
+                <!-- Clear Filters Button -->
+                <div class="col-md-2 text-end">
+                    <button class="btn btn-secondary btn-clear" onclick="clearFilters('open')" data-tooltip="Clear Filters">↺</button>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th rowspan="2">Created</th>
+                        <th rowspan="2">Version</th>
+                        <th rowspan="2">Total Jira</th>
+                        <th colspan="4" class="text-center">Analysis Status</th>
+                        <th colspan="2" class="text-center">Jira Status</th>
+                        <th rowspan="2">Status (Analyst)</th>
+                        <th rowspan="2">Status (Mentor)</th>
+                        <th rowspan="2">Status (Lead)</th>
+                        <th rowspan="2">Assigned To</th>
+                        <th rowspan="2">IR #</th>
+                        <th rowspan="2">Action</th>
+                    </tr>
+                    <tr>
+                        <th>Completed</th>
+                        <th>Pending</th>
+                        <th>On Hold</th>
+                        <th>Rejected</th>
+                        <th>Doable Jira</th>
+                        <th>Non-Doable Jira</th>
+                    </tr>
+                </thead>
+                <tbody id="engagementsTable"></tbody>
+            </table>
+
+            <div class="pagination" id="pagination"></div>
+        </div>
+
+        <div id="closed-tab" class="tab-content">
+            <div class="row mb-2">
+                <!-- Filter by Jira(s) assigned -->
+                <div class="col-md-3">
+                    <select id="jiraAssignedFilterClosed" class="form-select" onchange="renderTableClosed(currentPageClosed)">
+                        <option value="">Filter by Jira(s) assigned</option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm mt-2" onclick="showAnalystView('closed')">View by Assignment</button>
+                &nbsp;&nbsp;
+					<button class="btn btn-secondary btn-sm mt-2" onclick="showCompletedSummary('closed')">View Completed Summary</button>
+					<button class="btn btn-secondary btn-sm mt-2" onclick="showTrendView('closed')">View Trend</button>
+				
+					
+					
+					
+				</div>
+                <!-- Name Search -->
+                <div class="col-md-3">
+                    <input type="text" id="nameSearchClosed" class="form-control" placeholder="Search by version..." oninput="fetchEngagements()">
+                </div>
+                <!-- Filter by SCT assigned -->
+                <div class="col-md-3">
+                    <select id="leadFilterClosed" class="form-select" onchange="fetchEngagements()">
+                        <option value="">Filter by SCT assigned</option>
+                    </select>
+                </div>
+                <!-- Date Filters -->
+                <div class="col-md-2">
+                    <input type="date" id="date1Closed" class="form-control" onchange="fetchEngagements()">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" id="date2Closed" class="form-control" onchange="fetchEngagements()">
+                </div>
+                <!-- Clear Filters Button -->
+                <div class="col-md-2 text-end">
+                    <button class="btn btn-secondary btn-clear" onclick="clearFilters('closed')" data-tooltip="Clear Filters">↺</button>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th rowspan="2">Created</th>
+                        <th rowspan="2">Version</th>
+                        <th rowspan="2">Total Jira</th>
+                        <th colspan="4" class="text-center">Analysis Status</th>
+                        <th colspan="2" class="text-center">Jira Status</th>
+                        <th rowspan="2">Status (Analyst)</th>
+                        <th rowspan="2">Status (Mentor)</th>
+                        <th rowspan="2">Status (Lead)</th>
+                        <th rowspan="2">Assigned To</th>
+                        <th rowspan="2">IR #</th>
+                        <th rowspan="2">Action</th>
+                    </tr>
+                    <tr>
+                        <th>Completed</th>
+                        <th>Pending</th>
+                        <th>On Hold</th>
+                        <th>Rejected</th>
+                        <th>Doable Jira</th>
+                        <th>Non-Doable Jira</th>
+                    </tr>
+                </thead>
+                <tbody id="closedEngagementsTable"></tbody>
+            </table>
+
+            <div class="pagination" id="closedPagination"></div>
+        </div>
+
+        <div id="alertBox" class="alert"></div>
+        <div id="modalOverlay" class="modal-overlay"></div>
+        <div id="closeModal" class="modal">
+            <p id="modalContent"></p>
+        </div>
+        <div id="testCasesModal" class="modal">
+            <h2>MCR Jira</h2>
+            <div class="row mb-2">
+                <div class="col-md-2-4">
+                    <select id="filterType" class="form-select" onchange="applyTestCasesFilters()">
+                        <option value="">Filter by Type</option>
+                    </select>
+                </div>
+                <div class="col-md-2-4">
+                    <select id="filterIssueType" class="form-select" onchange="applyTestCasesFilters()">
+                        <option value="">Filter by Issue Type</option>
+                    </select>
+                </div>
+                <div class="col-md-2-4">
+                    <select id="filterJiraStatus" class="form-select" onchange="applyTestCasesFilters()">
+                        <option value="">Filter by Jira Status</option>
+                    </select>
+                </div>
+                <div class="col-md-2-4">
+                    <select id="filterStatus" class="form-select" onchange="applyTestCasesFilters()">
+                        <option value="">Filter by Status</option>
+                    </select>
+                </div>
+                <div class="col-md-2-4">
+                    <select id="filterAssignedTo" class="form-select" onchange="applyTestCasesFilters()">
+                        <option value="">Filter by Assigned To</option>
+                    </select>
+                </div>
+            </div>
+            <div class="total-count" id="testCasesCount">Total Jira: 0</div>
+            <table id="testCasesTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Jira</th>
+                        <th>Description</th>
+                        <th>Version</th>
+                        <th>Status</th>
+                        <th>Assigned To</th>
+                        <th>Type</th>
+                        <th>Issue Type</th>
+                        <th>Jira Status</th>
+                    </tr>
+                </thead>
+                <tbody id="testCasesTableBody"></tbody>
+            </table>
+            <div class="pagination" id="testCasesPagination"></div>
+            <button class="btn btn-secondary" onclick="closeTestCasesModal()">Close</button>
+        </div>
+		
+		
+		<div id="trendViewModal" class="modal large-modal">
+    <h2>MCR Version and Jira Trend</h2>
+    <div class="row mb-2">
+        <div class="col-md-3">
+            <input type="date" id="trendDate1" class="form-control" onchange="applyTrendFilters()">
+        </div>
+        <div class="col-md-3">
+            <input type="date" id="trendDate2" class="form-control" onchange="applyTrendFilters()">
+        </div>
+    </div>
+    <canvas id="trendChart" width="800" height="400"></canvas>
+    <button class="btn btn-secondary mt-2" onclick="closeTrendViewModal()">Close</button>
+</div>
+		
+		
+<!-- Reassignment Modal -->
+<div id="reassignmentModal" class="modal large-modal">
+    <h2>Reassignment</h2>
+    <div class="row mb-2">
+        <div class="col-md-2">
+            <select id="reassignTypeFilter" class="form-select" onchange="applyReassignmentFilters()">
+                <option value="">Filter by Type</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select id="reassignVersionFilter" class="form-select" onchange="applyReassignmentFilters()">
+                <option value="">Filter by Version</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select id="reassignIssueTypeFilter" class="form-select" onchange="applyReassignmentFilters()">
+                <option value="">Filter by Issue Type</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select id="reassignJiraStatusFilter" class="form-select" onchange="applyReassignmentFilters()">
+                <option value="">Filter by Jira Status</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select id="reassignStatusFilter" class="form-select" onchange="applyReassignmentFilters()">
+                <option value="">Filter by Status</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select id="reassignAssignedToFilter" class="form-select" onchange="applyReassignmentFilters()">
+                <option value="">Filter by Assigned To</option>
+            </select>
+        </div>
+    </div>
+    <table id="reassignmentTable">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+                <th>ID</th>
+                <th>Jira</th>
+                <th>Type</th>
+                <th>Version</th>
+                <th>Issue Type</th>
+                <th>Jira Status</th>
+                <th>Status</th>
+                <th>Assigned To</th>
+            </tr>
+        </thead>
+        <tbody id="reassignmentTableBody"></tbody>
+    </table>
+    <div class="pagination" id="reassignmentPagination"></div>
+    <div id="reassignButtonContainer" style="display: none;" class="mt-2">
+        <button class="btn btn-primary" onclick="showReassignConfirmModal()">Reassign</button>
+    </div>
+    <button class="btn btn-secondary mt-2" onclick="closeReassignmentModal()">Close</button>
+</div>
+
+<!-- Reassign Confirmation Modal -->
+<div id="reassignConfirmModal" class="modal">
+    <h2>Reassign Selected Jira(s)</h2>
+    <div class="mb-2">
+        <select id="reassignToUser" class="form-select">
+            <option value="">Select User to Reassign To</option>
+        </select>
+    </div>
+    <div class="mb-2">
+        <label>Or Divide Among Multiple Users:</label>
+        <input type="number" id="divideAmongUsers" class="form-control" min="1" placeholder="Number of users to divide among" onchange="showUserCheckboxes()">
+    </div>
+    <div id="userCheckboxContainer" class="mb-2" style="display: none; max-height: 200px; overflow-y: auto;">
+        <h3>Select Users</h3>
+        <input type="text" id="userSearch" class="form-control mb-2" placeholder="Search users..." oninput="filterUsers()">
+        <div id="userCheckboxes"></div>
+        <div class="pagination mt-2" id="userPagination"></div>
+    </div>
+    <div class="d-flex justify-content-between">
+        <button class="btn btn-primary" onclick="confirmReassignment()">Confirm</button>
+        <button class="btn btn-secondary" onclick="closeReassignConfirmModal()">Cancel</button>
+    </div>
+</div>	
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+        <div id="analystViewModal" class="modal large-modal">
+            <h2>View by Assignment</h2>
+            <div class="row mb-2">
+                <div class="col-md-3">
+                    <select id="analystAssignedToFilter" class="form-select" onchange="applyAnalystFilters()">
+                        <option value="">Filter by Assigned To</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="analystTypeFilter" class="form-select" onchange="applyAnalystFilters()">
+                        <option value="">Filter by Type</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="analystVersionFilter" class="form-select" onchange="applyAnalystFilters()">
+                        <option value="">Filter by Version</option>
+                    </select>
+                </div>
+                <div class="col-md-3 text-end">
+                    <button class="btn btn-secondary btn-clear" onclick="clearAnalystFilters()" data-tooltip="Clear Filters">↺</button>
+                </div>
+            </div>
+            <table id="analystTable">
+                <thead>
+                    <tr>
+                        <th>Assigned To</th>
+                        <th>Type</th>
+                        <th>Version</th>
+                        <th>Pending</th>
+                        <th>On Hold</th>
+                        <th>Completed</th>
+                        <th>Rejected</th>
+                        <th>Doable</th>
+                        <th>Non Doable</th>
+                    </tr>
+                </thead>
+                <tbody id="analystTableBody"></tbody>
+            </table>
+            <button class="btn btn-secondary mt-2" onclick="closeAnalystViewModal()">Close</button>
+        </div>
+		
+		
+<div id="completedSummaryModal" class="modal large-modal">
+    <h2>Completed Summary</h2>
+    <div class="row mb-2">
+        <div class="col-md-3">
+            <input type="date" id="completedDate1" class="form-control" onchange="applyCompletedFilters()">
+        </div>
+        <div class="col-md-3">
+            <input type="date" id="completedDate2" class="form-control" onchange="applyCompletedFilters()">
+        </div>
+    </div>
+    <table id="completedSummaryTable">
+        <thead>
+            <tr>
+                <th>Assigned To</th>
+                <th>Version</th>
+                <th>Completed Count</th>
+            </tr>
+        </thead>
+        <tbody id="completedSummaryTableBody"></tbody>
+    </table>
+    <button class="btn btn-secondary mt-2" onclick="closeCompletedSummaryModal()">Close</button>
+</div>
+
+<div id="createSCTModal" class="modal">
+    <h2>Create SCT Task</h2>
+    <div class="mb-2">
+        <textarea id="engagementNames" class="form-control" rows="5" placeholder="Enter comma-separated version(s)"></textarea>
+    </div>
+    <div class="d-flex justify-content-between mb-2">
+        <button class="btn btn-primary" onclick="createEngagements()">Create</button>
+        <button class="btn btn-secondary" onclick="closeCreateSCTModal()">Cancel</button>
+    </div>
+    <div id="createSummary" style="display: none;">
+        <h3>Summary</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan="2">Engagements Created</th>
+                </tr>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                </tr>
+            </thead>
+            <tbody id="createdTableBody"></tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Skipped (Already Exists)</th>
+                </tr>
+            </thead>
+            <tbody id="skippedTableBody"></tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Error</th>
+                </tr>
+            </thead>
+            <tbody id="errorTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+
+
+<!-- Modify the totalTestCountsModal to include Type filter -->
+<div id="totalTestCountsModal" class="modal">
+    <h2>Total Jira Counts (Open SCT)</h2>
+    <div class="row mb-2">
+        <div class="col-md-3">
+            <select id="totalTypeFilter" class="form-select" onchange="updateTotalTestCounts()">
+                <option value="">Filter by Type</option>
+            </select>
+        </div>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Completed</th>
+                <th>Pending</th>
+                <th>On Hold</th>
+                <th>Rejected</th>
+                <th>Doable Jira</th>
+                <th>Non-Doable Jira</th>
+            </tr>
+        </thead>
+        <tbody id="totalTestCountsBody">
+            <tr>
+                <td id="totalCompleted">0</td>
+                <td id="totalPending">0</td>
+                <td id="totalOnHold">0</td>
+                <td id="totalRejected">0</td>
+                <td id="totalDoable">0</td>
+                <td id="totalNonDoable">0</td>
+            </tr>
+        </tbody>
+    </table>
+    <button class="btn btn-secondary mt-2" onclick="closeTotalTestCountsModal()">Close</button>
+</div>
+
+
+
+
+<!-- The HTML remains unchanged as it only defines the structure -->
+<div id="overallSummaryModal" class="modal large-modal">
+    <div style="text-align: left; padding: 20px; font-family: 'Segoe UI', sans-serif; line-height: 1.6;">
+        <h2 style="color: var(--bs-dark); border-bottom: 2px solid var(--bs-blue); padding-bottom: 10px;">Overall Summary</h2>
+        <div id="summaryContent" style="background: #f8f9fa; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);"></div>
+        <button class="btn btn-secondary mt-3" onclick="closeOverallSummaryModal()">Close</button>
+    </div>
+</div>
+
+
+<!-- Report Modal -->
+<div id="reportModal" class="modal large-modal">
+    <div style="text-align: left; padding: 20px; font-family: 'Segoe UI', sans-serif; line-height: 1.6;">
+        <h2 style="color: var(--bs-dark); border-bottom: 2px solid var(--bs-blue); padding-bottom: 10px;">Version Report</h2>
+        <div class="mb-2">
+            <select id="reportEngagementSelect" class="form-select" onchange="generateReport()">
+                <option value="">Select an Version</option>
+            </select>
+        </div>
+        <div id="reportContent" style="background: #f8f9fa; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); overflow-y: auto; max-height: 60vh;"></div>
+        <button class="btn btn-secondary mt-3" onclick="closeReportModal()">Close</button>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+<!--Report fetch Modal -->
+<div id="configModal" class="modal">
+    <h2>Fetch Report</h2>
+    <div class="mb-2">
+        <p>Use this only if urgent</p>
+    </div>
+    <div class="mb-2">
+        <button class="btn btn-primary" id="confirmBtn" onclick="confirmFetchReport()">Confirm</button>
+    </div>
+    <div class="console" style="background: #f0f4f8; padding: 10px; border-radius: 5px; min-height: 100px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9rem;">
+        <div id="consoleOutput"></div>
+        <button class="btn btn-secondary mt-2" onclick="closeConfigModal()">Close</button>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+<!-- Description Edit Modal -->
+<div id="editDescriptionModal" class="modal">
+    <h2>Comments</h2>
+    <div class="mb-2">
+        <label for="engagementDescription" style="display: block; margin-bottom: 5px;"></label>
+        <textarea id="engagementDescription" class="form-control" rows="10" cols="80" placeholder="Enter comments..."></textarea>
+    </div>
+    <div class="d-flex justify-content-between">
+        <button class="btn btn-secondary" onclick="closeEditDescriptionModal()">Close</button>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+		
+    </div>
+
+    <script>
+        const BASE_URL = "https://demo.defectdojo.org/api/v2";
+        let csrfToken = '';
+        let usersList = [];
+        let debounceTimeout;
+        const ROWS_PER_PAGE = 20;
+        const TEST_CASES_PER_PAGE = 200;
+        let currentPageOpen = 1;
+        let currentPageClosed = 1;
+        let currentTestCasesPage = 1;
+        let allEngagements = [];
+        let openEngagements = [];
+        let closedEngagements = [];
+        let testCases = [];
+        let filteredTestCases = [];
+        let environmentCache = {};
+        let currentEngagementId = null;
+        let analystData = []; // Store original analyst data for filtering
+		let completedSummaryData = []; // Store original completed summary data for filtering
+		let trendChart = null;
+		let reassignmentTests = [];
+		let filteredReassignmentTests = [];
+		let reassignmentPage = 1;
+		const REASSIGNMENT_ROWS_PER_PAGE = 200;
+		const USERS_PER_PAGE = 5;
+		let userPage = 1;
+
+let currentEditingEngagementId = null;
+
+
+
+
+function showEditDescriptionModal(engagementId, description) {
+    currentEditingEngagementId = engagementId;
+    const modal = document.getElementById("editDescriptionModal");
+    const overlay = document.getElementById("modalOverlay");
+    const descriptionTextarea = document.getElementById("engagementDescription");
+
+    descriptionTextarea.value = description || '';
+    modal.style.display = "block";
+    overlay.style.display = "block";
+
+    // Autosave on input
+    descriptionTextarea.addEventListener("input", debounce(() => {
+        saveDescription(engagementId, descriptionTextarea.value);
+    }, 500));
+}
+
+function closeEditDescriptionModal() {
+    const modal = document.getElementById("editDescriptionModal");
+    const overlay = document.getElementById("modalOverlay");
+    modal.style.display = "none";
+    overlay.style.display = "none";
+    currentEditingEngagementId = null;
+}
+
+async function saveDescription(engagementId, description) {
+    try {
+        const engagement = openEngagements.find(eng => eng.id === engagementId);
+        if (!engagement) {
+            showAlert("Engagement not found!", "danger");
+            return;
+        }
+
+        const payload = {
+            id: engagementId,
+            name: engagement.name,
+            target_start: engagement.target_start,
+            target_end: engagement.target_end,
+            product: engagement.product,
+            lead: engagement.lead,
+            status: engagement.status,
+            commit_hash: engagement.commit_hash,
+            build_id: engagement.build_id,
+            version: engagement.version,
+            active: engagement.active,
+            description: description // Update description
+        };
+
+        const response = await fetch(`${BASE_URL}/engagements/${engagementId}/`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+            body: JSON.stringify(payload),
+            credentials: "include"
+        });
+
+        if (response.ok) {
+            engagement.description = description; // Update local data
+            showAlert("Description saved successfully", "success", engagement.name);
+            fetchEngagements(); // Refresh engagements
+        } else {
+            showAlert("Failed to save description!", "danger");
+        }
+    } catch (error) {
+        showAlert("Error saving description!", "danger");
+        console.error("Error:", error);
+    }
+}
+
+// Debounce function to limit API calls during typing
+function debounce(func, wait) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+
+
+
+
+
+function showReportModal() {
+    const modal = document.getElementById("reportModal");
+    const overlay = document.getElementById("modalOverlay");
+    const select = document.getElementById("reportEngagementSelect");
+
+    // Populate dropdown with Open SCT engagements
+    select.innerHTML = '<option value="">Select Version</option>' + 
+        openEngagements.map(eng => `<option value="${eng.id}">${eng.name}</option>`).join('');
+
+    // Clear previous report content
+    document.getElementById("reportContent").innerHTML = '';
+
+    modal.style.display = "block";
+    overlay.style.display = "block";
+}
+
+function closeReportModal() {
+    const modal = document.getElementById("reportModal");
+    const overlay = document.getElementById("modalOverlay");
+    modal.style.display = "none";
+    overlay.style.display = "none";
+}
+
+
+
+
+// Global CSRF token cache
+let cachedCsrfToken = null;
+
+// Fetch CSRF token from DefectDojo
+async function fetchCsrfToken() {
+    if (cachedCsrfToken) return cachedCsrfToken;
+
+    try {
+        const response = await fetch('https://demo.defectdojo.org/api/key-v2', {
+            method: "GET",
+            credentials: "include"
+        });
+        if (!response.ok) throw new Error("Failed to fetch CSRF token page");
+
+        const htmlText = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlText, 'text/html');
+        const csrfInput = doc.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (!csrfInput) throw new Error("CSRF token not found in HTML");
+
+        cachedCsrfToken = csrfInput.value;
+        return cachedCsrfToken;
+    } catch (error) {
+        console.error("[appsecvm] Error fetching CSRF token:", error);
+        throw error;
+    }
+}
+
+async function generateReport() {
+    const engagementId = document.getElementById("reportEngagementSelect").value;
+    if (!engagementId) {
+        document.getElementById("reportContent").innerHTML = '<p style="color: #721c24;">Please select an version to generate the report.</p>';
+        return;
+    }
+
+    // Fetch version data (for basic info)
+    let engagement;
+    try {
+        const response = await fetch(`${BASE_URL}/engagements/${engagementId}/`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include"
+        });
+        if (!response.ok) throw new Error("Failed to fetch version data");
+        engagement = await response.json();
+    } catch (error) {
+        console.error("[appsecvm] Error fetching version:", error);
+        document.getElementById("reportContent").innerHTML = '<p style="color: #721c24;">Error fetching version data!</p>';
+        return;
+    }
+
+    // Fetch test data for description and commit_hash
+    let reportingTest;
+    try {
+        const response = await fetch(`${BASE_URL}/tests/?engagement=${engagementId}&tags=reporting&limit=100000`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include"
+        });
+        if (!response.ok) throw new Error("Failed to fetch reporting test data");
+        const data = await response.json();
+        reportingTest = data.results && data.results.length > 0 ? data.results[0] : null;
+        if (!reportingTest) throw new Error("No test found with tag 'reporting'");
+    } catch (error) {
+        console.error("[appsecvm] Error fetching reporting test:", error);
+        document.getElementById("reportContent").innerHTML = '<p style="color: #721c24;">Error fetching reporting test data!</p>';
+        return;
+    }
+
+    // Fetch test cases for Build section
+    if (!engagement.testCases || engagement.testCases.length === 0) {
+        const response = await fetch(`${BASE_URL}/tests/?engagement=${engagement.id}&tags=mcr_jira&limit=100000`);
+        const data = await response.json();
+        engagement.testCases = data.results || [];
+    }
+
+    const testCases = engagement.testCases;
+    const today = new Date().toISOString().split('T')[0]; // e.g., "2025-03-26"
+    const functionalJiras = testCases.filter(tc => tc.commit_hash !== "Security").length;
+    const securityJiras = testCases.filter(tc => tc.commit_hash === "Security").length;
+
+    // Section 1: Summary
+    let summaryContent = `
+        <h3 style="color: var(--bs-blue); margin-top: 20px;">Summary</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; border: 2px solid #5AC1E8;">
+            <thead>
+                <tr style="background: var(--bs-gray-200);">
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Build</th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Date</th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;" colspan="2">Total Changelog</th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Contrast Verification</th>
+                </tr>
+                <tr style="background: var(--bs-gray-200);">
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;"></th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;"></th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Functional Jira</th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Security Jira</th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="background: #fafafa;">
+                    <td style="padding: 8px; border: 1px solid #e0e0e0;">${engagement.name}</td>
+                    <td style="padding: 8px; border: 1px solid #e0e0e0;">${today}</td>
+                    <td style="padding: 8px; border: 1px solid #e0e0e0;">${functionalJiras}</td>
+                    <td style="padding: 8px; border: 1px solid #e0e0e0;">${securityJiras}</td>
+                    <td style="padding: 8px; border: 1px solid #e0e0e0;">
+                        <select class="form-select contrast-verification-dropdown" data-id="${reportingTest.id}">
+                            <option value="No" ${!reportingTest.commit_hash || reportingTest.commit_hash === "No" ? 'selected' : ''}>No</option>
+                            <option value="Yes" ${reportingTest.commit_hash === "Yes" ? 'selected' : ''}>Yes</option>
+                        </select>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px; border: 2px solid #5AC1E8;">
+            <thead>
+                <tr style="background: var(--bs-gray-200);">
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="background: #fafafa;">
+                    <td style="padding: 8px; border: 1px solid #e0e0e0;">
+                        <textarea class="form-control engagement-description-textarea" data-id="${reportingTest.id}" style="width: 20cm; height: 10cm; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">${reportingTest.description || ''}</textarea>
+                        <button class="btn btn-primary mt-2 save-description-btn" data-id="${reportingTest.id}">Save</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    `;
+
+    // Section 2: Build
+    let buildOverviewContent = `
+        <h3 style="color: var(--bs-blue); margin-top: 20px;">Build</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; border: 2px solid #5AC1E8;">
+            <thead>
+                <tr style="background: var(--bs-gray-200);">
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Build</th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Date</th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Total No. of Jiras</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="background: #fafafa;">
+                    <td style="padding: 8px; border: 1px solid #e0e0e0;">${engagement.name}</td>
+                    <td style="padding: 8px; border: 1px solid #e0e0e0;">${today}</td>
+                    <td style="padding: 8px; border: 1px solid #e0e0e0;">${testCases.length}</td>
+                </tr>
+            </tbody>
+        </table>
+    `;
+
+    let buildDetailsContent = `
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px; border: 2px solid #5AC1E8;">
+            <thead>
+                <tr style="background: var(--bs-gray-200);">
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Changelog Reviewers</th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Issue Key</th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Test Approach</th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Manual Secure Code Review</th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Manual Security Testing</th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Remark/Comment</th>
+         
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    testCases.forEach(tc => {
+        const lead = usersList.find(user => user.id == tc.lead);
+        const reviewer = lead ? `${lead.first_name} ${lead.last_name}` : 'Unassigned';
+        const testApproach = tc.issue_type && tc.issue_type.toLowerCase().includes("security") ? "Security Jira" : "Functional Jira";
+        const descriptionLower = tc.description ? tc.description.toLowerCase() : "";
+        const secureCodeReview = descriptionLower.includes("secure code review: done") ? "Done" : 
+                                 (descriptionLower.includes("secure code review: na") ? "NA" : "Not Done");
+        const manualSecurityTesting = descriptionLower.includes("manual security code testing: done") ? "Done" : 
+                                      (descriptionLower.includes("manual security code testing: na") ? "NA" : "Not Done");
+
+        buildDetailsContent += `
+            <tr style="background: #fafafa;" data-id="${tc.id}">
+                <td style="padding: 8px; border: 1px solid #e0e0e0;">${reviewer}</td>
+                <td style="padding: 8px; border: 1px solid #e0e0e0;">${tc.title}</td>
+                <td style="padding: 8px; border: 1px solid #e0e0e0;">${testApproach}</td>
+                <td style="padding: 8px; border: 1px solid #e0e0e0;">${secureCodeReview}</td>
+                <td style="padding: 8px; border: 1px solid #e0e0e0;">${manualSecurityTesting}</td>
+                <td style="padding: 8px; border: 1px solid #e0e0e0; max-width: 5cm; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; text-align: justify;">${tc.description || 'N/A'}</td>
+             
+            </tr>
+        `;
+    });
+    buildDetailsContent += `</tbody></table>`;
+    const buildContent = buildOverviewContent + buildDetailsContent;
+
+    // Section 3: Security Analysis
+    const securityResponse = await fetch(`${BASE_URL}/tests/?engagement=${engagementId}&tags=risk_register&limit=100000`);
+    const securityData = await securityResponse.json();
+    const securityTests = securityData.results || [];
+
+    let securityAnalysisContent = `
+        <h3 style="color: var(--bs-blue); margin-top: 20px;">Security Analysis</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; border: 2px solid #5AC1E8;">
+            <thead>
+                <tr style="background: var(--bs-gray-200);">
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Sr. No.</th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Category</th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Status</th>
+                    <th style="padding: 8px; border: 1px solid #e0e0e0;">Comment</th>
+                </tr>
+            </thead>
+            <tbody id="securityAnalysisTableBody">
+    `;
+    securityTests.forEach((test, index) => {
+        const statusOptions = ["NA", "Found by code review", "Found by Manual Testing", "Not found"];
+        const selectedStatus = test.commit_hash || "NA";
+        securityAnalysisContent += `
+            <tr style="background: #fafafa;" data-id="${test.id}">
+                <td style="padding: 8px; border: 1px solid #e0e0e0;">${index + 1}</td>
+                <td style="padding: 8px; border: 1px solid #e0e0e0;">${test.title || 'N/A'}</td>
+                <td style="padding: 8px; border: 1px solid #e0e0e0;">
+                    <select class="form-select security-status-dropdown" data-id="${test.id}">
+                        ${statusOptions.map(option => `<option value="${option}" ${option === selectedStatus ? 'selected' : ''}>${option}</option>`).join('')}
+                    </select>
+                </td>
+                <td style="padding: 8px; border: 1px solid #e0e0e0;">
+                    <input type="text" class="form-control security-comment-input" data-id="${test.id}" value="${test.branch_tag || ''}" />
+                </td>
+            </tr>
+        `;
+    });
+    securityAnalysisContent += `</tbody></table>`;
+
+    // Combine sections with Print button
+    const reportContent = `
+        <div class="report-container" style="padding: 20px; background: #fff; border: 3px solid #5AC1E8; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            ${summaryContent}${buildContent}${securityAnalysisContent}
+            <button class="btn btn-success mt-3 print-report-btn" onclick="printReport()">Print Report</button>
+        </div>
+        <style>
+            @media print {
+                .report-container { width: 100%; margin: 0; padding: 10mm; border: 2px solid #5AC1E8; box-shadow: none; }
+                table { page-break-inside: auto; width: 100%; }
+                tr { page-break-inside: avoid; page-break-after: auto; }
+                th, td { font-size: 12pt; }
+                .btn, .form-select, .form-control { display: none; }
+                h3 { color: #5AC1E8; font-size: 16pt; }
+                @page { margin: 10mm; }
+            }
+        </style>
+    `;
+    document.getElementById("reportContent").innerHTML = reportContent;
+
+    // Event listeners for Section 1 (Contrast Verification and Description)
+    const contrastDropdown = document.querySelector('.contrast-verification-dropdown');
+    if (contrastDropdown) {
+        contrastDropdown.addEventListener('change', async () => {
+            const testId = contrastDropdown.dataset.id;
+            const newValue = contrastDropdown.value;
+            await updateReportingTest(testId, { commit_hash: newValue }, reportingTest, engagement.name);
+            showAlert("Contrast Verification Saved", "success", engagement.name);
+        });
+    }
+
+    const saveButton = document.querySelector('.save-description-btn');
+    const textarea = document.querySelector('.engagement-description-textarea');
+    if (saveButton && textarea) {
+        saveButton.addEventListener('click', async () => {
+            const testId = saveButton.dataset.id;
+            const newDescription = textarea.value;
+            await updateReportingTest(testId, { description: newDescription }, reportingTest, engagement.name);
+            showAlert("Description Saved", "success", engagement.name);
+        });
+    }
+
+    // Event listeners for Section 2
+    document.querySelectorAll('.manual-testing-reason').forEach(input => {
+        input.addEventListener('blur', async () => {
+            const testId = input.dataset.id;
+            const newReason = input.value;
+            await updateSecurityTest(testId, { build_id: newReason }, engagement.name);
+            showAlert("Manual Testing Reason Saved", "success", engagement.name);
+        });
+    });
+
+    // Event listeners for Section 3
+    document.querySelectorAll('.security-status-dropdown').forEach(dropdown => {
+        dropdown.addEventListener('change', async () => {
+            const testId = dropdown.dataset.id;
+            const newStatus = dropdown.value;
+            await updateSecurityTest(testId, { commit_hash: newStatus }, engagement.name);
+            showAlert("Status Saved", "success", engagement.name);
+        });
+    });
+
+    document.querySelectorAll('.security-comment-input').forEach(input => {
+        input.addEventListener('blur', async () => {
+            const testId = input.dataset.id;
+            const newComment = input.value;
+            await updateSecurityTest(testId, { branch_tag: newComment }, engagement.name);
+            showAlert("Comment Saved", "success", engagement.name);
+        });
+    });
+}
+
+// appsecvm Edition: Updated PUT request for reporting test
+async function updateReportingTest(testId, updates, testData, engagementName) {
+    try {
+        const csrfToken = await fetchCsrfToken();
+        if (!csrfToken) throw new Error("[appsecvm] CSRF token not retrieved");
+
+        const today = new Date().toISOString().split('T')[0]; // Current date, e.g., "2025-03-26"
+
+        // Construct payload with mandatory fields and updates
+        const payload = {
+            id: testData.id,
+            title: testData.title || "Reporting Test", // Fallback if null
+            engagement: testData.engagement || testData.engagement_id, // Adjust based on API structure
+            target_start: testData.target_start || today, // Use today if not set
+            target_end: testData.target_end || today, // Use today if not set
+            lead: testData.lead || 2, // Default to 2 as specified
+            test_type: testData.test_type || 207, // Default to 207 as specified
+            description: testData.description || "", // Default from existing data
+            commit_hash: testData.commit_hash || "No", // Default from existing data
+            ...updates // Override with new values (commit_hash or description)
+        };
+
+        const response = await fetch(`${BASE_URL}/tests/${testId}/`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken
+            },
+            body: JSON.stringify(payload),
+            credentials: "include"
+        });
+
+        if (response.ok) {
+            console.log(`[appsecvm] Updated reporting test ${testId} with ${JSON.stringify(payload)}`);
+            Object.assign(testData, updates); // Update local test data
+        } else {
+            const errorText = await response.text();
+            console.error(`[appsecvm] Failed to update test ${testId}: ${errorText}`);
+            showAlert(`Failed to update test: ${response.statusText}`, "danger");
+        }
+    } catch (error) {
+        console.error("[appsecvm] Error updating reporting test:", error);
+        showAlert("Error updating test: " + error.message, "danger");
+    }
+}
+
+// Function to update security test via PATCH
+async function updateSecurityTest(testId, payload, engagementName) {
+    try {
+        const csrfToken = await fetchCsrfToken();
+        if (!csrfToken) throw new Error("[appsecvm] CSRF token not retrieved");
+
+        const response = await fetch(`${BASE_URL}/tests/${testId}/`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken
+            },
+            body: JSON.stringify(payload),
+            credentials: "include"
+        });
+
+        if (response.ok) {
+            console.log(`[appsecvm] Updated test ${testId} with ${JSON.stringify(payload)}`);
+        } else {
+            const errorText = await response.text();
+            console.error(`[appsecvm] Failed to update test ${testId}: ${errorText}`);
+            showAlert(`Failed to update test: ${response.statusText}`, "danger");
+        }
+    } catch (error) {
+        console.error("[appsecvm] Error updating test:", error);
+        showAlert("Error updating test: " + error.message, "danger");
+    }
+}
+
+// Function to print the report
+function printReport() {
+    // Get the report container
+    const reportContent = document.getElementById("reportContent");
+    if (!reportContent) {
+        console.error("[appsecvm] Error: reportContent element not found");
+        alert("Unable to generate report: Content container missing.");
+        return;
+    }
+
+    const reportContainer = reportContent.querySelector('.report-container');
+    if (!reportContainer) {
+        console.error("[appsecvm] Error: .report-container not found in reportContent");
+        alert("Unable to generate report: Report container missing.");
+        return;
+    }
+
+    // Debug: Log the container’s structure
+    console.log("[appsecvm] Report container content:", reportContainer.innerHTML);
+
+    // Fetch all h3 and table elements
+    const headers = reportContainer.querySelectorAll('h3');
+    const tables = reportContainer.querySelectorAll('table');
+
+    // Validate structure: Expecting 3 headers and 5 tables
+    if (headers.length < 3 || tables.length < 5) {
+        console.error("[appsecvm] Error: Incomplete report structure", {
+            headersFound: headers.length,
+            tablesFound: tables.length,
+            expected: "3 headers, 5 tables"
+        });
+        alert("Unable to generate report: Incomplete structure. Expected 3 sections with 5 tables.");
+        return;
+    }
+
+    // Extract and modify sections with current values
+    // Summary Section
+    const summaryHeader = headers[0].outerHTML;
+    let summaryTable1 = tables[0].outerHTML;
+    let summaryTable2 = tables[1].outerHTML;
+
+    // Get current commit_hash (Contrast Verification) from dropdown
+    const contrastDropdown = reportContainer.querySelector('.contrast-verification-dropdown');
+    const currentCommitHash = contrastDropdown ? contrastDropdown.value : 'No'; // Default to 'No'
+    console.log("[appsecvm] Contrast Verification (commit_hash):", currentCommitHash);
+    summaryTable1 = summaryTable1.replace(
+        /<select[^>]*class="[^"]*contrast-verification-dropdown[^"]*"[^>]*>[\s\S]*?<\/select>/i,
+        `<span>${currentCommitHash}</span>`
+    );
+
+    // Get current description from textarea
+    const descriptionTextarea = reportContainer.querySelector('.engagement-description-textarea');
+    const currentDescription = descriptionTextarea ? descriptionTextarea.value : ''; // Default to empty
+    console.log("[appsecvm] Description:", currentDescription);
+    summaryTable2 = summaryTable2.replace(
+        /<textarea[^>]*class="[^"]*engagement-description-textarea[^"]*"[^>]*>[\s\S]*?<\/textarea>\s*<button[^>]*>[\s\S]*?<\/button>/i,
+        `<div style="text-align: justify; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">${currentDescription || 'N/A'}</div>`
+    );
+
+    const summarySection = `${summaryHeader}${summaryTable1}${summaryTable2}`;
+
+    // Build Section
+    const buildHeader = headers[1].outerHTML;
+    let buildTable1 = tables[2].outerHTML;
+    let buildTable2 = tables[3].outerHTML;
+
+    // Replace manual-testing-reason inputs with current values
+    const manualInputs = reportContainer.querySelectorAll('.manual-testing-reason');
+    manualInputs.forEach((input) => {
+        const currentValue = input.value || 'N/A';
+        buildTable2 = buildTable2.replace(
+            new RegExp(`<input[^>]*class="[^"]*manual-testing-reason[^"]*"[^>]*data-id="${input.dataset.id}"[^>]*value="[^"]*"[^>]*>`, 'i'),
+            `<span>${currentValue}</span>`
+        );
+    });
+
+    const buildSection = `${buildHeader}${buildTable1}${buildTable2}`;
+
+    // Security Analysis Section
+    const securityHeader = headers[2].outerHTML;
+    let securityTable = tables[4].outerHTML;
+
+    // Replace Status (commit_hash) dropdowns with current values
+    const statusDropdowns = reportContainer.querySelectorAll('.security-status-dropdown');
+    console.log("[appsecvm] Found", statusDropdowns.length, "security-status-dropdown elements");
+    statusDropdowns.forEach((dropdown, index) => {
+        const currentStatus = dropdown.value || 'NA';
+        console.log(`[appsecvm] Security Analysis Status (commit_hash) #${index + 1} (data-id=${dropdown.dataset.id}):`, currentStatus);
+        const dropdownHtml = dropdown.outerHTML.replace(/[.+*?^$()[\]{}\\|]/g, '\\$&'); // Escape special regex chars
+        const regex = new RegExp(dropdownHtml, 'i');
+        securityTable = securityTable.replace(regex, `<span>${currentStatus}</span>`);
+    });
+
+    // Replace Comment inputs with current values
+    const commentInputs = reportContainer.querySelectorAll('.security-comment-input');
+    commentInputs.forEach((input) => {
+        const currentComment = input.value || '';
+        console.log("[appsecvm] Security Analysis Comment (branch_tag) for data-id=" + input.dataset.id + ":", currentComment);
+        securityTable = securityTable.replace(
+            new RegExp(`<input[^>]*class="[^"]*security-comment-input[^"]*"[^>]*data-id="${input.dataset.id}"[^>]*value="[^"]*"[^>]*>`, 'i'),
+            `<span>${currentComment || 'N/A'}</span>`
+        );
+    });
+
+    const securitySection = `${securityHeader}${securityTable}`;
+
+    // Debug: Log modified sections
+    console.log("[appsecvm] Modified Summary Section:", summarySection);
+    console.log("[appsecvm] Modified Security Section:", securitySection);
+
+    // Create full HTML document with styling
+    const reportHtml = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Report</title>
+            <style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f8f9fa;
+        color: #212529;
+    }
+    .report-container {
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 20px;
+        background: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+        color: #5AC1E8;
+        font-size: 2.5rem;
+        text-align: center;
+        margin-bottom: 30px;
+        font-weight: 600;
+    }
+    h3 {
+        color: #0056b3;
+        font-size: 1.75rem;
+        margin-top: 40px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #5AC1E8;
+        padding-bottom: 5px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        background: #fff;
+        border: 1px solid #dee2e6;
+    }
+    th, td {
+        padding: 12px 15px;
+        text-align: left;
+        border: 1px solid #dee2e6;
+        font-size: 1rem;
+    }
+    th {
+        background-color: #5AC1E8;
+        color: #fff;
+        font-weight: 500;
+    }
+    tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+    tr:hover {
+        background-color: #e9ecef;
+    }
+    .btn, .form-select, .form-control {
+        display: none;
+    }
+    .print-btn {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        font-size: 1.1rem;
+        color: #fff;
+        background-color: #28a745;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    .print-btn:hover {
+        background-color: #218838;
+    }
+    @media print {
+        body {
+            background-color: #fff;
+        }
+        .report-container {
+            margin: 0;
+            padding: 10mm;
+            box-shadow: none;
+            border: none;
+        }
+        .summary-section {
+            page-break-after: always;
+        }
+        .security-section {
+            page-break-before: always;
+            page-break-after: always;
+        }
+        .build-section {
+            page-break-before: always;
+        }
+        table {
+            page-break-inside: auto;
+        }
+        tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+        h3 {
+            page-break-before: avoid;
+        }
+        th {
+            background-color: #5AC1E8 !important; /* Ensure header color persists in PDF */
+            color: #fff !important;
+        }
+        @page {
+            margin: 10mm;
+        }
+        .print-btn {
+            display: none;
+        }
+    }
+</style>
+     
+        </head>
+        <body>
+            <div class="report-container">
+                <!-- Summary Section -->
+                <div class="summary-section">
+                    <h1>Build Report</h1>
+                    ${summarySection}
+                </div>
+
+                <!-- Security Analysis Section -->
+                <div class="security-section">
+                    ${securitySection}
+                </div>
+
+                <!-- Build Section -->
+                <div class="build-section">
+                    ${buildSection}
+                </div>
+				
+		
+            </div>
+					  <button class="print-btn" onclick="window.print()">Save</button>
+        </body>
+        </html>
+    `;
+
+    // Open the report in a new tab
+    const newTab = window.open('', '_blank');
+    if (!newTab) {
+        console.error("[appsecvm] Error: Failed to open new tab (popup blocked?)");
+        alert("Unable to open report: Please allow popups for this site.");
+        return;
+    }
+
+    newTab.document.write(reportHtml);
+    newTab.document.close();
+
+    // Optional: Focus the new tab
+    newTab.focus();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Add this new function to fetch the logged-in user's name
+async function summary_greeting() {
+    try {
+        const response = await fetch("https://demo.defectdojo.org/api/v2/user_profile/", {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include"
+        });
+
+        if (response.ok) {
+            const userData = await response.json();
+            const firstName = userData.first_name || "";
+            const lastName = userData.last_name || "";
+            return `<strong>${firstName} ${lastName}</strong>`;
+        } else {
+            console.error("Failed to fetch user profile:", response.status);
+            return " <strong></strong>";
+        }
+    } catch (error) {
+        console.error("Error fetching user profile for greeting:", error);
+        return "<strong></strong>";
+    }
+}
+
+// Modified showOverallSummary function
+async function showOverallSummary() {
+    try {
+        // Fetch the greeting with the logged-in user's name
+        const greeting = await summary_greeting();
+
+        // Calculate today's date and yesterday's date (considering weekends)
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - (today.getDay() === 1 ? 3 : 1)); // If Monday, go back to Friday
+        const todayStr = today.toISOString().split('T')[0];
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        // Open Engagements Summary
+        let openEngagementsSummary = '';
+        openEngagements.forEach((engagement, index) => {
+            const testCases = engagement.testCases || [];
+            const totalKey = testCases.length;
+            const pending = testCases.filter(tc => tc.branch_tag === "Pending").length;
+            const onHold = testCases.filter(tc => tc.branch_tag === "On Hold").length;
+            const doable = testCases.filter(tc => tc.build_id === "Ready for Testing" || tc.build_id === "Ready for QA" || tc.build_id === "Ready for Security" || tc.build_id === "Done").length;
+            const nonDoable = totalKey - doable;
+
+            openEngagementsSummary += `
+                ${index + 1}. <strong>${engagement.name}</strong>   &nbsp;&nbsp;has a <u>total of <strong>${totalKey}</strong> jira</u>, 
+                out of which <u><strong>${pending}</strong> are in Pending</u>&nbsp;&nbsp;, <u><strong>${onHold}</strong> are in On Hold</u>, &nbsp;&nbsp;
+                <strong>${doable}</strong>: Doable, and <strong>${nonDoable}</strong>: Non-Doable.<br>`;
+        });
+
+        // Today's Received Engagements with sct tag
+        const todayEngagements = allEngagements.filter(e => e.created.split('T')[0] === todayStr && e.tags.includes('sct'));
+        let todayReceivedSummary = '';
+        todayEngagements.forEach((engagement, index) => {
+            const crmJiraTests = (engagement.testCases || []).filter(tc => tc.tags && tc.tags.includes('mcr_jira')).length;
+            todayReceivedSummary += `
+                ${index + 1}. <strong>${engagement.name}</strong>:  &nbsp;&nbsp;&nbsp;&nbsp;<strong>${crmJiraTests}</strong> Jira.<br>`;
+        });
+
+        // Work Completed Yesterday (or Friday if today is Monday) - Group by user
+        const completedYesterdayByUser = {};
+        allEngagements
+            .flatMap(e => e.testCases || [])
+            .filter(tc => tc.branch_tag === "Completed" && tc.updated && tc.updated.split('T')[0] === yesterdayStr)
+            .forEach(tc => {
+                const lead = usersList.find(user => user.id == tc.lead);
+                const leadName = lead ? `${lead.first_name} ${lead.last_name}` : 'Unassigned';
+                completedYesterdayByUser[leadName] = (completedYesterdayByUser[leadName] || 0) + 1;
+            });
+
+        let workCompletedSummary = '';
+        Object.entries(completedYesterdayByUser).forEach(([userName, count], index) => {
+            workCompletedSummary += `
+                ${index + 1}. On <strong>${yesterdayStr}</strong>&nbsp;&nbsp;<strong>${userName}</strong> completed <strong>${count}</strong> jira.<br>`;
+        });
+        if (!workCompletedSummary) {
+            workCompletedSummary = `No jira were validated on <strong>${yesterdayStr}</strong>.`;
+        }
+
+        // Construct the summary
+        const summaryContent = `
+            <p style="font-size: 1.1rem; color: #2c3e50;">${greeting}</p>
+            <p style="font-size: 1rem; color: #495057;"></p>
+            
+            <h3 style="color: var(--bs-blue); margin-top: 20px;">Open MCR Version(s) and Jira Counts</h3>
+            <p>In MCR, we have a total of <strong>${openEngagements.length}</strong> version(s) open. Below are the details:</p>
+            <div style="margin-left: 20px; color: #495057;">${openEngagementsSummary || 'No open versions(s) currently.'}</div>
+            
+            <h3 style="color: var(--bs-blue); margin-top: 20px;">Today’s Received Version(s)</h3>
+            <p>Today, we received a total of <strong>${todayEngagements.length}</strong> versions(s). Below are the details:</p>
+            <div style="margin-left: 20px; color: #495057;">${todayReceivedSummary || 'No versions(s) received today.'}</div>
+            
+            <h3 style="color: var(--bs-blue); margin-top: 20px;">Completed</h3>
+            <div style="margin-left: 20px; color: #495057;">${workCompletedSummary}</div>
+        `;
+
+        // Display the summary
+        document.getElementById("summaryContent").innerHTML = summaryContent;
+
+        const modal = document.getElementById("overallSummaryModal");
+        const overlay = document.getElementById("modalOverlay");
+        modal.style.display = "block";
+        overlay.style.display = "block";
+    } catch (error) {
+        console.error("Error generating overall summary:", error);
+        showAlert("Error loading overall summary!", "danger");
+    }
+}
+
+// The closeOverallSummaryModal function remains unchanged
+function closeOverallSummaryModal() {
+    const modal = document.getElementById("overallSummaryModal");
+    const overlay = document.getElementById("modalOverlay");
+    modal.style.display = "none";
+    overlay.style.display = "none";
+}
+
+
+
+
+
+
+async function showTotalTestCounts() {
+    try {
+        // Populate Type filter
+        const typeFilter = document.getElementById("totalTypeFilter");
+        let allTestCases = [];
+        
+        // Fetch all test cases if not already available
+        for (const engagement of openEngagements) {
+            if (!engagement.testCases || engagement.testCases.length === 0) {
+                const response = await fetch(`${BASE_URL}/tests/?limit=1000000&tags=mcr_jira&engagement=${engagement.id}`);
+                const data = await response.json();
+                engagement.testCases = data.results || [];
+            }
+            allTestCases = allTestCases.concat(engagement.testCases);
+        }
+
+        // Get unique environment names (Types)
+        await Promise.all(allTestCases.map(async tc => {
+            tc.environmentName = await fetchEnvironmentName(tc.environment);
+        }));
+        
+        const uniqueTypes = [...new Set(allTestCases.map(tc => tc.environmentName || 'N/A'))].sort();
+        typeFilter.innerHTML = '<option value="">Filter by Type</option>' + 
+            uniqueTypes.map(val => `<option value="${val}">${val}</option>`).join('');
+
+        // Update counts
+        updateTotalTestCounts();
+
+        // Show modal
+        const modal = document.getElementById("totalTestCountsModal");
+        const overlay = document.getElementById("modalOverlay");
+        modal.style.display = "block";
+        overlay.style.display = "block";
+    } catch (error) {
+        console.error("Error showing total test counts:", error);
+        showAlert("Error loading total test counts!", "danger");
+    }
+}
+
+function updateTotalTestCounts() {
+    const jiraAssignedFilter = document.getElementById("jiraAssignedFilterOpen").value;
+    const typeFilter = document.getElementById("totalTypeFilter").value;
+    
+    let totalCompleted = 0;
+    let totalPending = 0;
+    let totalOnHold = 0;
+    let totalRejected = 0;
+    let totalDoable = 0;
+    let totalNonDoable = 0;
+
+    openEngagements.forEach(engagement => {
+        let filteredTestCases = engagement.testCases || [];
+        
+        if (jiraAssignedFilter) {
+            filteredTestCases = filteredTestCases.filter(tc => tc.lead == jiraAssignedFilter);
+        }
+        
+        if (typeFilter) {
+            filteredTestCases = filteredTestCases.filter(tc => tc.environmentName === typeFilter);
+        }
+
+        const completed = filteredTestCases.filter(tc => tc.branch_tag === "Completed").length;
+        const pending = filteredTestCases.filter(tc => tc.branch_tag === "Pending").length;
+        const onHold = filteredTestCases.filter(tc => tc.branch_tag === "On Hold").length;
+        const rejected = filteredTestCases.filter(tc => tc.branch_tag === "Rejected").length;
+        const doable = filteredTestCases.filter(tc => tc.build_id === "Ready for Testing" || tc.build_id === "Ready for QA" || tc.build_id === "Ready for Security" || tc.build_id === "Done").length;
+        const nonDoable = filteredTestCases.length - doable;
+
+        totalCompleted += completed;
+        totalPending += pending;
+        totalOnHold += onHold;
+        totalRejected += rejected;
+        totalDoable += doable;
+        totalNonDoable += nonDoable;
+    });
+
+    document.getElementById("totalCompleted").textContent = totalCompleted;
+    document.getElementById("totalPending").textContent = totalPending;
+    document.getElementById("totalOnHold").textContent = totalOnHold;
+    document.getElementById("totalRejected").textContent = totalRejected;
+    document.getElementById("totalDoable").textContent = totalDoable;
+    document.getElementById("totalNonDoable").textContent = totalNonDoable;
+}
+
+// Keep the close function unchanged
+function closeTotalTestCountsModal() {
+    const modal = document.getElementById("totalTestCountsModal");
+    const overlay = document.getElementById("modalOverlay");
+    modal.style.display = "none";
+    overlay.style.display = "none";
+}
+
+
+
+
+
+async function showReassignmentModal() {
+    try {
+        let allTestCases = [];
+        for (const engagement of openEngagements) {
+            const response = await fetch(`${BASE_URL}/tests/?limit=1000000&tags=mcr_jira&engagement=${engagement.id}`);
+            const data = await response.json();
+            allTestCases = allTestCases.concat(data.results || []);
+        }
+
+        reassignmentTests = await Promise.all(allTestCases.map(async tc => {
+            const lead = usersList.find(user => user.id == tc.lead);
+            tc.leadName = lead ? `${lead.first_name} ${lead.last_name}` : 'Unassigned';
+            tc.environmentName = await fetchEnvironmentName(tc.environment);
+            return tc;
+        }));
+
+        filteredReassignmentTests = [...reassignmentTests];
+        reassignmentPage = 1;
+
+        populateReassignmentFilters();
+        renderReassignmentTable(reassignmentPage);
+
+        const modal = document.getElementById("reassignmentModal");
+        const overlay = document.getElementById("modalOverlay");
+        modal.style.display = "block";
+        overlay.style.display = "block";
+    } catch (error) {
+        console.error("Error loading reassignment modal:", error);
+        showAlert("Error loading reassignment data!", "danger");
+    }
+}
+
+function populateReassignmentFilters() {
+    const typeFilter = document.getElementById("reassignTypeFilter");
+    const versionFilter = document.getElementById("reassignVersionFilter");
+    const issueTypeFilter = document.getElementById("reassignIssueTypeFilter");
+    const jiraStatusFilter = document.getElementById("reassignJiraStatusFilter");
+    const statusFilter = document.getElementById("reassignStatusFilter");
+    const assignedToFilter = document.getElementById("reassignAssignedToFilter");
+
+    const uniqueTypes = [...new Set(reassignmentTests.map(tc => tc.environmentName || 'N/A'))].sort();
+    const uniqueVersions = [...new Set(reassignmentTests.map(tc => tc.version || 'N/A'))].sort();
+    const uniqueIssueTypes = [...new Set(reassignmentTests.map(tc => tc.commit_hash || 'N/A'))].sort();
+    const uniqueJiraStatuses = [...new Set(reassignmentTests.map(tc => tc.build_id || 'N/A'))].sort();
+    const uniqueStatuses = [...new Set(reassignmentTests.map(tc => tc.branch_tag || 'N/A'))].sort();
+    const uniqueAssignedTos = [...new Set(reassignmentTests.map(tc => tc.leadName || 'Unassigned'))].sort();
+
+    typeFilter.innerHTML = '<option value="">Filter by Type</option>' + uniqueTypes.map(val => `<option value="${val}">${val}</option>`).join('');
+    versionFilter.innerHTML = '<option value="">Filter by Version</option>' + uniqueVersions.map(val => `<option value="${val}">${val}</option>`).join('');
+    issueTypeFilter.innerHTML = '<option value="">Filter by Issue Type</option>' + uniqueIssueTypes.map(val => `<option value="${val}">${val}</option>`).join('');
+    jiraStatusFilter.innerHTML = '<option value="">Filter by Jira Status</option>' + uniqueJiraStatuses.map(val => `<option value="${val}">${val}</option>`).join('');
+    statusFilter.innerHTML = '<option value="">Filter by Status</option>' + uniqueStatuses.map(val => `<option value="${val}">${val}</option>`).join('');
+    assignedToFilter.innerHTML = '<option value="">Filter by Assigned To</option>' + uniqueAssignedTos.map(val => `<option value="${val}">${val}</option>`).join('');
+}
+
+function applyReassignmentFilters() {
+    const typeFilter = document.getElementById("reassignTypeFilter").value;
+    const versionFilter = document.getElementById("reassignVersionFilter").value;
+    const issueTypeFilter = document.getElementById("reassignIssueTypeFilter").value;
+    const jiraStatusFilter = document.getElementById("reassignJiraStatusFilter").value;
+    const statusFilter = document.getElementById("reassignStatusFilter").value;
+    const assignedToFilter = document.getElementById("reassignAssignedToFilter").value;
+
+    filteredReassignmentTests = reassignmentTests.filter(tc => {
+        return (!typeFilter || tc.environmentName === typeFilter) &&
+               (!versionFilter || tc.version === versionFilter) &&
+               (!issueTypeFilter || tc.commit_hash === issueTypeFilter) &&
+               (!jiraStatusFilter || tc.build_id === jiraStatusFilter) &&
+               (!statusFilter || tc.branch_tag === statusFilter) &&
+               (!assignedToFilter || tc.leadName === assignedToFilter);
+    });
+
+    reassignmentPage = 1;
+    renderReassignmentTable(reassignmentPage);
+}
+
+function renderReassignmentTable(page) {
+    const tableBody = document.getElementById("reassignmentTableBody");
+    tableBody.innerHTML = "";
+    const start = (page - 1) * REASSIGNMENT_ROWS_PER_PAGE;
+    const end = start + REASSIGNMENT_ROWS_PER_PAGE;
+    const paginatedTests = filteredReassignmentTests.slice(start, end);
+
+    paginatedTests.forEach(tc => {
+        const row = document.createElement("tr");
+        row.dataset.id = tc.id;
+        row.innerHTML = `
+            <td><input type="checkbox" class="rowCheckbox" onchange="updateReassignButton()"></td>
+            <td>${tc.id}</td>
+            <td>${tc.title || ''}</td>
+            <td>${tc.environmentName || 'N/A'}</td>
+            <td>${tc.version || 'N/A'}</td>
+            <td>${tc.commit_hash || 'N/A'}</td>
+            <td>${tc.build_id || 'N/A'}</td>
+            <td>${tc.branch_tag || 'N/A'}</td>
+            <td>${tc.leadName}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+
+    renderReassignmentPagination();
+    updateReassignButton();
+}
+
+function renderReassignmentPagination() {
+    const totalPages = Math.ceil(filteredReassignmentTests.length / REASSIGNMENT_ROWS_PER_PAGE);
+    const pagination = document.getElementById("reassignmentPagination");
+    pagination.innerHTML = "";
+
+    const firstItem = document.createElement("div");
+    firstItem.className = `page-item ${reassignmentPage === 1 ? 'active' : ''}`;
+    firstItem.textContent = "First";
+    firstItem.onclick = () => { reassignmentPage = 1; renderReassignmentTable(reassignmentPage); };
+    pagination.appendChild(firstItem);
+
+    const prevItem = document.createElement("div");
+    prevItem.className = "page-item";
+    prevItem.textContent = "Previous";
+    prevItem.onclick = () => { if (reassignmentPage > 1) { reassignmentPage--; renderReassignmentTable(reassignmentPage); } };
+    pagination.appendChild(prevItem);
+
+    const nextItem = document.createElement("div");
+    nextItem.className = "page-item";
+    nextItem.textContent = "Next";
+    nextItem.onclick = () => { if (reassignmentPage < totalPages) { reassignmentPage++; renderReassignmentTable(reassignmentPage); } };
+    pagination.appendChild(nextItem);
+
+    const lastItem = document.createElement("div");
+    lastItem.className = `page-item ${reassignmentPage === totalPages ? 'active' : ''}`;
+    lastItem.textContent = "Last";
+    lastItem.onclick = () => { reassignmentPage = totalPages; renderReassignmentTable(reassignmentPage); };
+    pagination.appendChild(lastItem);
+}
+
+function toggleSelectAll() {
+    const selectAll = document.getElementById("selectAll");
+    const checkboxes = document.querySelectorAll(".rowCheckbox");
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    updateReassignButton();
+}
+
+function updateReassignButton() {
+    const checkedCount = document.querySelectorAll(".rowCheckbox:checked").length;
+    const reassignButtonContainer = document.getElementById("reassignButtonContainer");
+    reassignButtonContainer.style.display = checkedCount > 0 ? "block" : "none";
+}
+
+function showReassignConfirmModal() {
+    const modal = document.getElementById("reassignConfirmModal");
+    const reassignToUser = document.getElementById("reassignToUser");
+    reassignToUser.innerHTML = '<option value="">Select User to Reassign To</option>' + 
+        usersList.map(user => `<option value="${user.id}">${user.first_name} ${user.last_name}</option>`).join('');
+    document.getElementById("divideAmongUsers").value = '';
+    const userCheckboxContainer = document.getElementById("userCheckboxContainer");
+    userCheckboxContainer.style.display = "none";
+    document.getElementById("userSearch").value = ''; // Clear search input
+    userPage = 1; // Reset pagination
+    showUserCheckboxes(); // Initial call to populate users
+    modal.style.display = "block";
+}
+
+function showUserCheckboxes() {
+    const divideAmongUsers = parseInt(document.getElementById("divideAmongUsers").value) || 0;
+    const userCheckboxContainer = document.getElementById("userCheckboxContainer");
+    const userCheckboxes = document.getElementById("userCheckboxes");
+
+    if (divideAmongUsers > 0) {
+        renderUserCheckboxes();
+        userCheckboxContainer.style.display = "block";
+    } else {
+        userCheckboxContainer.style.display = "none";
+    }
+}
+
+function renderUserCheckboxes(searchTerm = '') {
+    const userCheckboxes = document.getElementById("userCheckboxes");
+    const existingChecks = new Set(
+        Array.from(document.querySelectorAll("#userCheckboxes input:checked")).map(input => input.value)
+    );
+
+    // Split users into selected and unselected
+    const selectedUsers = usersList.filter(user => existingChecks.has(user.id.toString()));
+    const unselectedUsers = usersList.filter(user => !existingChecks.has(user.id.toString()));
+    let filteredUsers = [...selectedUsers, ...unselectedUsers];
+
+    // Apply search filter
+    if (searchTerm) {
+        const lowerSearch = searchTerm.toLowerCase();
+        filteredUsers = filteredUsers.filter(user => 
+            `${user.first_name} ${user.last_name}`.toLowerCase().includes(lowerSearch)
+        );
+    }
+
+    // Pagination logic
+    const start = (userPage - 1) * USERS_PER_PAGE;
+    const end = start + USERS_PER_PAGE;
+    const paginatedUsers = filteredUsers.slice(start, end);
+
+    userCheckboxes.innerHTML = paginatedUsers.map(user => `
+        <div>
+            <input type="checkbox" id="user_${user.id}" value="${user.id}" ${existingChecks.has(user.id.toString()) ? 'checked' : ''}>
+            <label for="user_${user.id}">${user.first_name} ${user.last_name}</label>
+        </div>
+    `).join('');
+
+    renderUserPagination(filteredUsers.length);
+}
+
+function renderUserPagination(totalUsers) {
+    const totalPages = Math.ceil(totalUsers / USERS_PER_PAGE);
+    const pagination = document.getElementById("userPagination");
+    pagination.innerHTML = "";
+
+    if (totalPages <= 1) return; // No pagination needed for 5 or fewer users
+
+    const firstItem = document.createElement("div");
+    firstItem.className = `page-item ${userPage === 1 ? 'active' : ''}`;
+    firstItem.textContent = "First";
+    firstItem.onclick = () => { userPage = 1; renderUserCheckboxes(document.getElementById("userSearch").value); };
+    pagination.appendChild(firstItem);
+
+    const prevItem = document.createElement("div");
+    prevItem.className = "page-item";
+    prevItem.textContent = "Previous";
+    prevItem.onclick = () => { if (userPage > 1) { userPage--; renderUserCheckboxes(document.getElementById("userSearch").value); } };
+    pagination.appendChild(prevItem);
+
+    const nextItem = document.createElement("div");
+    nextItem.className = "page-item";
+    nextItem.textContent = "Next";
+    nextItem.onclick = () => { if (userPage < totalPages) { userPage++; renderUserCheckboxes(document.getElementById("userSearch").value); } };
+    pagination.appendChild(nextItem);
+
+    const lastItem = document.createElement("div");
+    lastItem.className = `page-item ${userPage === totalPages ? 'active' : ''}`;
+    lastItem.textContent = "Last";
+    lastItem.onclick = () => { userPage = totalPages; renderUserCheckboxes(document.getElementById("userSearch").value); };
+    pagination.appendChild(lastItem);
+}
+
+function filterUsers() {
+    userPage = 1; // Reset to first page on filter
+    const searchTerm = document.getElementById("userSearch").value;
+    renderUserCheckboxes(searchTerm);
+}
+
+async function confirmReassignment() {
+    const selectedUserId = document.getElementById("reassignToUser").value;
+    const divideAmongUsers = parseInt(document.getElementById("divideAmongUsers").value) || 0;
+    const selectedTests = Array.from(document.querySelectorAll(".rowCheckbox:checked")).map(cb => {
+        return filteredReassignmentTests.find(tc => tc.id == cb.closest('tr').dataset.id);
+    });
+
+    if (!selectedUserId && divideAmongUsers <= 0) {
+        showAlert("Please select a user or specify number of users to divide among!", "danger");
+        return;
+    }
+
+    try {
+        if (divideAmongUsers > 0) {
+            const selectedUserIds = Array.from(document.querySelectorAll("#userCheckboxes input:checked")).map(cb => cb.value);
+            if (selectedUserIds.length !== divideAmongUsers) {
+                showAlert(`Please select ${divideAmongUsers} users!`, "danger");
+                return;
+            }
+            if (selectedUserIds.length > selectedTests.length) {
+                showAlert("More users selected than jira available!", "danger");
+                return;
+            }
+
+            const testsPerUser = Math.floor(selectedTests.length / divideAmongUsers);
+            const extraTests = selectedTests.length % divideAmongUsers;
+
+            let testIndex = 0;
+            for (let i = 0; i < divideAmongUsers; i++) {
+                const userTests = selectedTests.slice(testIndex, testIndex + testsPerUser + (i < extraTests ? 1 : 0));
+                const userId = selectedUserIds[i];
+
+                for (const test of userTests) {
+                    await reassignTest(test.id, userId);
+                }
+                testIndex += testsPerUser + (i < extraTests ? 1 : 0);
+            }
+        } else {
+            // Reassign to single user
+            for (const test of selectedTests) {
+                await reassignTest(test.id, selectedUserId);
+            }
+        }
+
+        showAlert(`${selectedTests.length} jira(s) reassigned successfully!`, "success");
+        closeReassignConfirmModal();
+        await showReassignmentModal(); // Refresh the reassignment modal
+        fetchEngagements(); // Refresh main table
+    } catch (error) {
+        console.error("Error reassigning jira:", error);
+        showAlert("Error reassigning jira!", "danger");
+    }
+}
+
+async function reassignTest(testId, userId) {
+    const payload = { lead: userId };
+    const response = await fetch(`${BASE_URL}/tests/${testId}/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+        body: JSON.stringify(payload),
+        credentials: "include"
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to reassign jira ${testId}`);
+    }
+}
+
+function closeReassignmentModal() {
+    const modal = document.getElementById("reassignmentModal");
+    const overlay = document.getElementById("modalOverlay");
+    modal.style.display = "none";
+    overlay.style.display = "none";
+}
+
+function closeReassignConfirmModal() {
+    const modal = document.getElementById("reassignConfirmModal");
+    modal.style.display = "none";
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+async function showTrendView(tab) {
+    try {
+        const isOpenTabActive = tab === 'open';
+        const engagements = isOpenTabActive ? openEngagements : closedEngagements;
+
+        // Set default date range (last 7 days)
+        const today = new Date();
+        const defaultDate2 = today.toISOString().split('T')[0];
+        const defaultDate1 = new Date(today);
+        defaultDate1.setDate(today.getDate() - 6); // 7 days including today
+        document.getElementById("trendDate1").value = defaultDate1.toISOString().split('T')[0];
+        document.getElementById("trendDate2").value = defaultDate2;
+
+        renderTrendChart(engagements);
+
+        const modal = document.getElementById("trendViewModal");
+        const overlay = document.getElementById("modalOverlay");
+        modal.style.display = "block";
+        overlay.style.display = "block";
+    } catch (error) {
+        console.error("Error showing trend view:", error);
+        showAlert("Error loading trend view!", "danger");
+    }
+}
+
+function applyTrendFilters() {
+    const isOpenTabActive = document.getElementById("open-tab").classList.contains("active");
+    const engagements = isOpenTabActive ? openEngagements : closedEngagements;
+    renderTrendChart(engagements);
+}
+
+async function renderTrendChart(engagements) {
+    const date1 = document.getElementById("trendDate1").value;
+    const date2 = document.getElementById("trendDate2").value;
+
+    let filteredEngagements = engagements;
+    if (date1 || date2) {
+        const date1Obj = date1 ? new Date(date1) : null;
+        const date2Obj = date2 ? new Date(date2) : null;
+        
+        if (date1Obj) date1Obj.setHours(0, 0, 0, 0);
+        if (date2Obj) date2Obj.setHours(23, 59, 59, 999);
+
+        filteredEngagements = engagements.filter(engagement => {
+            const createdDate = new Date(engagement.created.split("T")[0]);
+            return (!date1 || createdDate >= date1Obj) && (!date2 || createdDate <= date2Obj);
+        });
+    }
+
+    // Prepare data for trend with version and jira counts
+    const dateData = {};
+    for (const engagement of filteredEngagements) {
+        const date = engagement.created.split("T")[0];
+        if (!dateData[date]) {
+            dateData[date] = { 
+                versions: new Set(), 
+                jiras: 0, 
+                engagements: [] 
+            };
+        }
+        dateData[date].versions.add(engagement.version || 'N/A');
+        const jiraCount = (engagement.testCases || []).filter(tc => tc.tags && tc.tags.includes('mcr_jira')).length;
+        dateData[date].jiras += jiraCount;
+        dateData[date].engagements.push({
+            name: engagement.name,
+            jiraCount: jiraCount
+        });
+    }
+
+    const dates = Object.keys(dateData).sort();
+    const counts = dates.map(date => dateData[date].engagements.length);
+    const tooltips = dates.map(date => ({
+        versionCount: dateData[date].versions.size,
+        jiraCount: dateData[date].jiras,
+        engagements: dateData[date].engagements
+    }));
+
+    // Destroy existing chart if it exists
+    if (trendChart) {
+        trendChart.destroy();
+    }
+
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Engagements Created',
+                data: counts,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Count'
+                    },
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: function(context) {
+                            return context[0].label; // Date
+                        },
+                        label: function(context) {
+                            const index = context.dataIndex;
+                            const tooltipData = tooltips[index];
+                            return `Versions: ${tooltipData.versionCount}, Jiras: ${tooltipData.jiraCount}`;
+                        },
+                        afterLabel: function(context) {
+                            const index = context.dataIndex;
+                            const tooltipData = tooltips[index];
+                            return tooltipData.engagements.map(eng => 
+                                `${eng.name}: ${eng.jiraCount}`
+                            ).join('\n');
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function closeTrendViewModal() {
+    const modal = document.getElementById("trendViewModal");
+    const overlay = document.getElementById("modalOverlay");
+    modal.style.display = "none";
+    overlay.style.display = "none";
+    if (trendChart) {
+        trendChart.destroy();
+        trendChart = null;
+    }
+}
+
+async function showCompletedSummary(tab) {
+    try {
+        const isOpenTabActive = tab === 'open';
+        const engagements = isOpenTabActive ? openEngagements : closedEngagements;
+        const jiraAssignedFilter = isOpenTabActive 
+            ? document.getElementById("jiraAssignedFilterOpen").value 
+            : document.getElementById("jiraAssignedFilterClosed").value;
+
+        let allTestCases = [];
+        for (const engagement of engagements) {
+            const response = await fetch(`${BASE_URL}/tests/?limit=1000000&engagement=${engagement.id}&branch_tag=Completed`);
+            const data = await response.json();
+            allTestCases = allTestCases.concat(data.results || []);
+        }
+
+        if (jiraAssignedFilter) {
+            allTestCases = allTestCases.filter(tc => tc.lead == jiraAssignedFilter);
+        }
+
+        await Promise.all(allTestCases.map(async tc => {
+            const lead = usersList.find(user => user.id == tc.lead);
+            tc.leadName = lead ? `${lead.first_name} ${lead.last_name}` : 'Unassigned';
+            tc.updatedDate = tc.updated ? tc.updated.split("T")[0] : '';
+        }));
+
+        const summaryStats = {};
+
+        allTestCases.forEach(tc => {
+            const key = `${tc.leadName}|${tc.version || 'N/A'}`;
+            if (!summaryStats[key]) {
+                summaryStats[key] = { count: 0 };
+            }
+            summaryStats[key].count++;
+        });
+
+        completedSummaryData = Object.keys(summaryStats).map(key => {
+            const [assignedTo, version] = key.split('|');
+            return { assignedTo, version, count: summaryStats[key].count };
+        });
+
+        document.getElementById("completedDate1").value = '';
+        document.getElementById("completedDate2").value = '';
+        renderCompletedSummaryTable();
+
+        const modal = document.getElementById("completedSummaryModal");
+        const overlay = document.getElementById("modalOverlay");
+        modal.style.display = "block";
+        overlay.style.display = "block";
+    } catch (error) {
+        console.error("Error showing completed summary:", error);
+        showAlert("Error loading completed summary!", "danger");
+    }
+}
+
+function applyCompletedFilters() {
+    renderCompletedSummaryTable();
+}
+
+function renderCompletedSummaryTable() {
+    const tableBody = document.getElementById("completedSummaryTableBody");
+    tableBody.innerHTML = '';
+
+    const date1 = document.getElementById("completedDate1").value;
+    const date2 = document.getElementById("completedDate2").value;
+
+    let filteredData = [...completedSummaryData];
+
+    if (date1 || date2) {
+        filteredData = filteredData.filter(item => {
+            const testCasesForItem = testCases.filter(tc => {
+                const lead = usersList.find(user => user.id == tc.lead);
+                const leadName = lead ? `${lead.first_name} ${lead.last_name}` : 'Unassigned';
+                const updatedDate = tc.updated ? tc.updated.split("T")[0] : '';
+                return leadName === item.assignedTo && 
+                       tc.version === item.version && 
+                       tc.branch_tag === "Completed";
+            });
+
+            return testCasesForItem.some(tc => {
+                const updatedDate = tc.updated ? tc.updated.split("T")[0] : '';
+                const dateObj = new Date(updatedDate);
+                const date1Obj = date1 ? new Date(date1) : null;
+                const date2Obj = date2 ? new Date(date2) : null;
+
+                if (date1Obj) date1Obj.setHours(0, 0, 0, 0);
+                if (date2Obj) date2Obj.setHours(23, 59, 59, 999);
+
+                return (!date1 || dateObj >= date1Obj) && 
+                       (!date2 || dateObj <= date2Obj);
+            });
+        });
+
+        filteredData = filteredData.map(item => {
+            const testCasesForItem = testCases.filter(tc => {
+                const lead = usersList.find(user => user.id == tc.lead);
+                const leadName = lead ? `${lead.first_name} ${lead.last_name}` : 'Unassigned';
+                const updatedDate = tc.updated ? tc.updated.split("T")[0] : '';
+                const dateObj = new Date(updatedDate);
+                const date1Obj = date1 ? new Date(date1) : null;
+                const date2Obj = date2 ? new Date(date2) : null;
+
+                if (date1Obj) date1Obj.setHours(0, 0, 0, 0);
+                if (date2Obj) date2Obj.setHours(23, 59, 59, 999);
+
+                return leadName === item.assignedTo && 
+                       tc.version === item.version && 
+                       tc.branch_tag === "Completed" &&
+                       (!date1 || dateObj >= date1Obj) && 
+                       (!date2 || dateObj <= date2Obj);
+            });
+            return { ...item, count: testCasesForItem.length };
+        }).filter(item => item.count > 0);
+    }
+
+    filteredData.forEach(item => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${item.assignedTo}</td>
+            <td>${item.version}</td>
+            <td>${item.count}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+
+    // Add Total Row
+    const totalRow = document.createElement("tr");
+    totalRow.className = "total-row";
+    const totalCount = filteredData.reduce((sum, item) => sum + item.count, 0);
+    totalRow.innerHTML = `
+        <td>Total</td>
+        <td>-</td>
+        <td>${totalCount}</td>
+    `;
+    tableBody.appendChild(totalRow);
+}
+
+function closeCompletedSummaryModal() {
+    const modal = document.getElementById("completedSummaryModal");
+    const overlay = document.getElementById("modalOverlay");
+    modal.style.display = "none";
+    overlay.style.display = "none";
+}
+		
+		
+		
+		
+		
+		
+		
+
+        async function fetchCSRF() {
+            try {
+                const response = await fetch("https://demo.defectdojo.org/api/key-v2", { credentials: "include" });
+                const text = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, "text/html");
+                const csrfInput = doc.querySelector("input[name='csrfmiddlewaretoken']");
+                if (csrfInput) {
+                    csrfToken = csrfInput.value;
+                    document.getElementById("csrfToken").innerText = csrfToken;
+                } else {
+                    console.error("CSRF token not found.");
+                }
+            } catch (error) {
+                console.error("Error fetching CSRF Token:", error);
+            }
+        }
+
+        function showAlert(message, type, name = null) {
+            const alertBox = document.getElementById("alertBox");
+            alertBox.className = `alert alert-${type}`;
+            alertBox.innerHTML = type === "success" && name ? `${name} ${message}` : message;
+            alertBox.style.display = "block";
+            setTimeout(() => { alertBox.style.display = "none"; }, 3000);
+        }
+
+        function showModal(name, isReopen = false) {
+            const modal = document.getElementById("closeModal");
+            const overlay = document.getElementById("modalOverlay");
+            const modalContent = document.getElementById("modalContent");
+            modalContent.innerHTML = `${name} ${isReopen ? 'reopened' : 'closed'} successfully`;
+            modal.style.display = "block";
+            overlay.style.display = "block";
+            setTimeout(() => {
+                modal.style.display = "none";
+                overlay.style.display = "none";
+            }, 2000);
+        }
+
+        async function fetchLoggedInUser() {
+            try {
+                const response = await fetch(`${BASE_URL}/user_profile/`, { credentials: "include" });
+                const data = await response.json();
+                return data.id;
+            } catch (error) {
+                console.error("Error fetching logged-in user:", error);
+                return null;
+            }
+        }
+
+        async function fetchUsers() {
+            try {
+                const loggedInUserId = await fetchLoggedInUser();
+                const response = await fetch(`${BASE_URL}/users/?is_active=true&limit=1000`);
+                const data = await response.json();
+                usersList = data.results || [];
+
+                const leadFilterOpen = document.getElementById("leadFilterOpen");
+                const leadFilterClosed = document.getElementById("leadFilterClosed");
+                const jiraAssignedFilterOpen = document.getElementById("jiraAssignedFilterOpen");
+                const jiraAssignedFilterClosed = document.getElementById("jiraAssignedFilterClosed");
+
+                if (leadFilterOpen && leadFilterClosed) {
+                    [leadFilterOpen, leadFilterClosed].forEach(leadFilter => {
+                        leadFilter.innerHTML = `<option value="">Filter by SCT assigned</option>`;
+                        usersList.forEach(user => {
+                            const option = document.createElement("option");
+                            option.value = user.id;
+                            option.textContent = `${user.first_name} ${user.last_name}`;
+                            leadFilter.appendChild(option);
+                        });
+                        if (loggedInUserId) leadFilter.value = loggedInUserId;
+                    });
+                }
+
+                if (jiraAssignedFilterOpen && jiraAssignedFilterClosed) {
+                    [jiraAssignedFilterOpen, jiraAssignedFilterClosed].forEach(filter => {
+                        filter.innerHTML = `<option value="">View for All</option>`;
+                        usersList.forEach(user => {
+                            const option = document.createElement("option");
+                            option.value = user.id;
+                            option.textContent = `${user.first_name} ${user.last_name}`;
+                            filter.appendChild(option);
+                        });
+                    });
+                }
+
+                fetchEngagements();
+            } catch (error) {
+                console.error("Error fetching users:", error);
+            }
+        }
+
+        async function fetchEnvironmentName(envId) {
+            if (!envId) return 'N/A';
+            if (environmentCache[envId]) return environmentCache[envId];
+
+            try {
+                const response = await fetch(`${BASE_URL}/development_environments/${envId}/`);
+                const data = await response.json();
+                environmentCache[envId] = data.name || 'Unknown';
+                return environmentCache[envId];
+            } catch (error) {
+                console.error(`Error fetching environment ${envId}:`, error);
+                environmentCache[envId] = 'Error';
+                return 'Error';
+            }
+        }
+
+        function clearFilters(tab) {
+            if (tab === 'open') {
+                document.getElementById("jiraAssignedFilterOpen").value = "";
+                document.getElementById("nameSearchOpen").value = "";
+                document.getElementById("leadFilterOpen").value = "";
+                document.getElementById("date1Open").value = "";
+                document.getElementById("date2Open").value = "";
+            } else {
+                document.getElementById("jiraAssignedFilterClosed").value = "";
+                document.getElementById("nameSearchClosed").value = "";
+                document.getElementById("leadFilterClosed").value = "";
+                document.getElementById("date1Closed").value = "";
+                document.getElementById("date2Closed").value = "";
+            }
+            fetchEngagements();
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+            document.getElementById(`${tab}-tab`).classList.add('active');
+            if (tab === 'open') {
+                renderTableOpen(currentPageOpen);
+            } else {
+                renderTableClosed(currentPageClosed);
+            }
+            updateTotalCount();
+        }
+
+        function updateTotalCount() {
+            const activeTab = document.querySelector('.tab.active').textContent.trim();
+            const count = activeTab === 'Open SCT' ? openEngagements.length : closedEngagements.length;
+            document.getElementById("totalCount").textContent = `Total Version(s): ${count}`;
+        }
+
+        function renderTableOpen(page) {
+            const tableBody = document.getElementById("engagementsTable");
+            tableBody.innerHTML = "";
+            const start = (page - 1) * ROWS_PER_PAGE;
+            const end = start + ROWS_PER_PAGE;
+            const paginatedEngagements = openEngagements.slice(start, end);
+            const jiraAssignedFilter = document.getElementById("jiraAssignedFilterOpen").value;
+
+            requestAnimationFrame(() => {
+                paginatedEngagements.forEach((engagement, index) => {
+                    const createdDate = engagement.created.split("T")[0];
+                    const testCases = engagement.testCases || [];
+
+                    let totalJiras, completed, pending, onHold, rejected, doableJiras, nonDoableJiras;
+                    if (jiraAssignedFilter) {
+                        const filteredTestCases = testCases.filter(tc => tc.lead == jiraAssignedFilter);
+                        totalJiras = filteredTestCases.length;
+                        completed = filteredTestCases.filter(tc => tc.branch_tag === "Completed").length;
+                        pending = filteredTestCases.filter(tc => tc.branch_tag === "Pending").length;
+                        onHold = filteredTestCases.filter(tc => tc.branch_tag === "On Hold").length;
+                        rejected = filteredTestCases.filter(tc => tc.branch_tag === "Rejected").length;
+                        doableJiras = filteredTestCases.filter(tc => tc.build_id === "Ready for Testing" || tc.build_id === "Ready for QA" || tc.build_id === "Ready for Security" || tc.build_id === "Done").length;
+                        nonDoableJiras = totalJiras - doableJiras;
+                    } else {
+                        totalJiras = testCases.length;
+                        completed = testCases.filter(tc => tc.branch_tag === "Completed").length;
+                        pending = testCases.filter(tc => tc.branch_tag === "Pending").length;
+                        onHold = testCases.filter(tc => tc.branch_tag === "On Hold").length;
+                        rejected = testCases.filter(tc => tc.branch_tag === "Rejected").length;
+                        doableJiras = testCases.filter(tc => tc.build_id === "Ready for Testing" || tc.build_id === "Ready for QA" || tc.build_id === "Ready for Security" || tc.build_id === "Done").length;
+                        nonDoableJiras = totalJiras - doableJiras;
+                    }
+
+                    const row = document.createElement("tr");
+                    row.dataset.id = engagement.id;
+                    row.innerHTML = `
+                        <td>${createdDate}</td>
+                        <td class="${!jiraAssignedFilter && totalJiras === (completed + rejected) ? 'highlight-name' : ''}">${engagement.name}</td>
+                        <td class="clickable" onclick="showTestCases(${engagement.id}, 'all')">${totalJiras}</td>
+                        <td class="clickable" onclick="showTestCases(${engagement.id}, 'Completed')">${completed}</td>
+                        <td class="clickable" onclick="showTestCases(${engagement.id}, 'Pending')">${pending}</td>
+                        <td class="clickable" onclick="showTestCases(${engagement.id}, 'On Hold')">${onHold}</td>
+                        <td class="clickable" onclick="showTestCases(${engagement.id}, 'Rejected')">${rejected}</td>
+                        <td>${doableJiras}</td>
+                        <td>${nonDoableJiras}</td>
+                        <td>${createDropdown(engagement.status)}</td>
+                        <td>${createDropdown(engagement.commit_hash)}</td>
+                        <td>${createDropdown(engagement.build_id)}</td>
+                        <td>${createLeadDropdown(engagement.lead)}</td>
+                        <td><input type="text" class="version-input" value="${engagement.version || ''}" data-id="${engagement.id}"></td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="updateEngagement(${engagement.id}, '${engagement.name}', '${engagement.target_start}', '${engagement.target_end}', '${engagement.product}', '${engagement.lead}')">Save</button>
+                            <button class="btn btn-danger btn-sm close-btn" data-id="${engagement.id}" disabled onclick="closeEngagement(${engagement.id}, '${engagement.name}', '${engagement.target_start}', '${engagement.target_end}', '${engagement.product}', '${engagement.lead}')">Close</button>
+							
+							<button class="btn btn-secondary btn-sm" onclick="showEditDescriptionModal(${engagement.id}, '${engagement.description || ''}')">Comment</button>
+
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+
+                    // Real-time saving for dropdowns and version input
+                    const analystStatus = row.querySelector("td:nth-child(10) select");
+                    const mentorStatus = row.querySelector("td:nth-child(11) select");
+                    const leadStatus = row.querySelector("td:nth-child(12) select");
+                    const versionInput = row.querySelector(".version-input");
+                    const closeBtn = row.querySelector(".close-btn");
+
+                    function updateCloseButton() {
+                        const allCompleted = analystStatus.value === "Completed" && 
+                                            mentorStatus.value === "Completed" && 
+                                            leadStatus.value === "Completed";
+                        closeBtn.disabled = !allCompleted;
+                    }
+
+                    // Save on change and alert on blur
+                    [analystStatus, mentorStatus, leadStatus, versionInput].forEach(element => {
+                        element.addEventListener("change", () => {
+                            updateEngagement(engagement.id, engagement.name, engagement.target_start, engagement.target_end, engagement.product, engagement.lead);
+                            updateCloseButton();
+                        });
+                        element.addEventListener("blur", () => {
+                            showAlert("saved", "success", engagement.name);
+                        });
+                    });
+
+                    updateCloseButton(); // Initial check
+                });
+            });
+
+            renderPagination('open');
+        }
+
+        function renderTableClosed(page) {
+            const tableBody = document.getElementById("closedEngagementsTable");
+            tableBody.innerHTML = "";
+            const start = (page - 1) * ROWS_PER_PAGE;
+            const end = start + ROWS_PER_PAGE;
+            const paginatedEngagements = closedEngagements.slice(start, end);
+            const jiraAssignedFilter = document.getElementById("jiraAssignedFilterClosed").value;
+
+            requestAnimationFrame(() => {
+                paginatedEngagements.forEach(engagement => {
+                    const createdDate = engagement.created.split("T")[0];
+                    const testCases = engagement.testCases || [];
+
+                    let totalJiras, completed, pending, onHold, rejected, doableJiras, nonDoableJiras;
+                    if (jiraAssignedFilter) {
+                        const filteredTestCases = testCases.filter(tc => tc.lead == jiraAssignedFilter);
+                        totalJiras = filteredTestCases.length;
+                        completed = filteredTestCases.filter(tc => tc.branch_tag === "Completed").length;
+                        pending = filteredTestCases.filter(tc => tc.branch_tag === "Pending").length;
+                        onHold = filteredTestCases.filter(tc => tc.branch_tag === "On Hold").length;
+                        rejected = filteredTestCases.filter(tc => tc.branch_tag === "Rejected").length;
+                        doableJiras = filteredTestCases.filter(tc => tc.build_id === "Ready for Testing" || tc.build_id === "Ready for QA" || tc.build_id === "Ready for Security" || tc.build_id === "Done").length;
+                        nonDoableJiras = totalJiras - doableJiras;
+                    } else {
+                        totalJiras = testCases.length;
+                        completed = testCases.filter(tc => tc.branch_tag === "Completed").length;
+                        pending = testCases.filter(tc => tc.branch_tag === "Pending").length;
+                        onHold = testCases.filter(tc => tc.branch_tag === "On Hold").length;
+                        rejected = testCases.filter(tc => tc.branch_tag === "Rejected").length;
+                        doableJiras = testCases.filter(tc => tc.build_id === "Ready for Testing" || tc.build_id === "Ready for QA" || tc.build_id === "Ready for Security" || tc.build_id === "Done").length;
+                        nonDoableJiras = totalJiras - doableJiras;
+                    }
+
+                    const row = document.createElement("tr");
+                    row.dataset.id = engagement.id;
+                    row.innerHTML = `
+                        <td>${createdDate}</td>
+                        <td class="${!jiraAssignedFilter && totalJiras === (completed + rejected) ? 'highlight-name' : ''}">${engagement.name}</td>
+                        <td class="clickable" onclick="showTestCases(${engagement.id}, 'all')">${totalJiras}</td>
+                        <td class="clickable" onclick="showTestCases(${engagement.id}, 'Completed')">${completed}</td>
+                        <td class="clickable" onclick="showTestCases(${engagement.id}, 'Pending')">${pending}</td>
+                        <td class="clickable" onclick="showTestCases(${engagement.id}, 'On Hold')">${onHold}</td>
+                        <td class="clickable" onclick="showTestCases(${engagement.id}, 'Rejected')">${rejected}</td>
+                        <td>${doableJiras}</td>
+                        <td>${nonDoableJiras}</td>
+                        <td>${engagement.status}</td>
+                        <td>${engagement.commit_hash}</td>
+                        <td>${engagement.build_id}</td>
+                        <td>${usersList.find(user => user.id == engagement.lead)?.first_name || ''} ${usersList.find(user => user.id == engagement.lead)?.last_name || ''}</td>
+                        <td>${engagement.version || ''}</td>
+                        <td><button class="btn btn-success btn-sm" onclick="reopenEngagement(${engagement.id}, '${engagement.name}', '${engagement.target_start}', '${engagement.target_end}', '${engagement.product}', '${engagement.lead}')">Reopen</button></td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            });
+
+            renderPagination('closed');
+        }
+
+        function renderPagination(tab) {
+            const totalPages = Math.ceil((tab === 'open' ? openEngagements : closedEngagements).length / ROWS_PER_PAGE);
+            const pagination = document.getElementById(tab === 'open' ? 'pagination' : 'closedPagination');
+            pagination.innerHTML = "";
+
+            const firstItem = document.createElement("div");
+            firstItem.className = `page-item ${(tab === 'open' ? currentPageOpen : currentPageClosed) === 1 ? 'active' : ''}`;
+            firstItem.textContent = "First";
+            firstItem.onclick = () => {
+                if ((tab === 'open' ? currentPageOpen : currentPageClosed) !== 1) {
+                    if (tab === 'open') currentPageOpen = 1; else currentPageClosed = 1;
+                    tab === 'open' ? renderTableOpen(currentPageOpen) : renderTableClosed(currentPageClosed);
+                    updatePaginationHighlight(tab);
+                }
+            };
+            pagination.appendChild(firstItem);
+
+            const prevItem = document.createElement("div");
+            prevItem.className = `page-item`;
+            prevItem.textContent = "Previous";
+            prevItem.onclick = () => {
+                if ((tab === 'open' ? currentPageOpen : currentPageClosed) > 1) {
+                    if (tab === 'open') currentPageOpen--; else currentPageClosed--;
+                    tab === 'open' ? renderTableOpen(currentPageOpen) : renderTableClosed(currentPageClosed);
+                    updatePaginationHighlight(tab);
+                }
+            };
+            pagination.appendChild(prevItem);
+
+            const nextItem = document.createElement("div");
+            nextItem.className = `page-item`;
+            nextItem.textContent = "Next";
+            nextItem.onclick = () => {
+                if ((tab === 'open' ? currentPageOpen : currentPageClosed) < totalPages) {
+                    if (tab === 'open') currentPageOpen++; else currentPageClosed++;
+                    tab === 'open' ? renderTableOpen(currentPageOpen) : renderTableClosed(currentPageClosed);
+                    updatePaginationHighlight(tab);
+                }
+            };
+            pagination.appendChild(nextItem);
+
+            const lastItem = document.createElement("div");
+            lastItem.className = `page-item ${(tab === 'open' ? currentPageOpen : currentPageClosed) === totalPages ? 'active' : ''}`;
+            lastItem.textContent = "Last";
+            lastItem.onclick = () => {
+                if ((tab === 'open' ? currentPageOpen : currentPageClosed) !== totalPages) {
+                    if (tab === 'open') currentPageOpen = totalPages; else currentPageClosed = totalPages;
+                    tab === 'open' ? renderTableOpen(currentPageOpen) : renderTableClosed(currentPageClosed);
+                    updatePaginationHighlight(tab);
+                }
+            };
+            pagination.appendChild(lastItem);
+        }
+
+        function updatePaginationHighlight(tab) {
+            const totalPages = Math.ceil((tab === 'open' ? openEngagements : closedEngagements).length / ROWS_PER_PAGE);
+            document.querySelectorAll(`#${tab === 'open' ? 'pagination' : 'closedPagination'} .page-item`).forEach(item => {
+                item.classList.remove('active');
+                if (item.textContent === "First" && (tab === 'open' ? currentPageOpen : currentPageClosed) === 1) item.classList.add('active');
+                if (item.textContent === "Last" && (tab === 'open' ? currentPageOpen : currentPageClosed) === totalPages) item.classList.add('active');
+            });
+        }
+
+        async function fetchEngagements() {
+            try {
+                if (debounceTimeout) clearTimeout(debounceTimeout);
+
+                debounceTimeout = setTimeout(async () => {
+                    const response = await fetch(`${BASE_URL}/engagements/?tags=sct&o=-created&limit=2000`);
+                    const data = await response.json();
+                    if (!data.results) return;
+
+                    const date1Open = document.getElementById("date1Open").value;
+                    const date2Open = document.getElementById("date2Open").value;
+                    const selectedLeadOpen = document.getElementById("leadFilterOpen").value;
+                    const nameSearchOpen = document.getElementById("nameSearchOpen").value.toLowerCase().trim();
+
+                    const date1Closed = document.getElementById("date1Closed").value;
+                    const date2Closed = document.getElementById("date2Closed").value;
+                    const selectedLeadClosed = document.getElementById("leadFilterClosed").value;
+                    const nameSearchClosed = document.getElementById("nameSearchClosed").value.toLowerCase().trim();
+
+                    allEngagements = data.results.filter(engagement => {
+                        const createdDate = engagement.created ? engagement.created.split("T")[0] : "";
+                        if (!createdDate || new Date(createdDate) <= new Date("2025-02-28")) return false;
+                        return true;
+                    });
+
+                    const testCasesResults = await Promise.all(
+                        allEngagements.map(engagement => fetchTestCases(engagement.id))
+                    );
+
+                    allEngagements = allEngagements.map((engagement, index) => ({
+                        ...engagement,
+                        testCases: testCasesResults[index]
+                    }));
+
+                    openEngagements = allEngagements.filter(engagement => {
+                        const isCompleted = engagement.status === "Completed" && 
+                                           engagement.commit_hash === "Completed" && 
+                                           engagement.build_id === "Completed";
+                        return (!isCompleted || engagement.active !== false) && engagement.active === true;
+                    }).filter(engagement => {
+                        const createdDate = engagement.created.split("T")[0];
+                        const engagementName = engagement.name.toLowerCase();
+                        if (date1Open && createdDate < date1Open) return false;
+                        if (date2Open && createdDate > date2Open) return false;
+                        if (selectedLeadOpen && engagement.lead != selectedLeadOpen) return false;
+                        if (nameSearchOpen && !engagementName.includes(nameSearchOpen)) return false;
+                        return true;
+                    });
+
+                    closedEngagements = allEngagements.filter(engagement => {
+                        const isCompleted = engagement.status === "Completed" && 
+                                           engagement.commit_hash === "Completed" && 
+                                           engagement.build_id === "Completed";
+                        return (isCompleted && engagement.active === false) && engagement.active === false;
+                    }).filter(engagement => {
+                        const createdDate = engagement.created.split("T")[0];
+                        const engagementName = engagement.name.toLowerCase();
+                        if (date1Closed && createdDate < date1Closed) return false;
+                        if (date2Closed && createdDate > date2Closed) return false;
+                        if (selectedLeadClosed && engagement.lead != selectedLeadClosed) return false;
+                        if (nameSearchClosed && !engagementName.includes(nameSearchClosed)) return false;
+                        return true;
+                    });
+
+                    currentPageOpen = 1;
+                    currentPageClosed = 1;
+                    renderTableOpen(currentPageOpen);
+                    renderTableClosed(currentPageClosed);
+                    updateTotalCount();
+                }, 500);
+            } catch (error) {
+                console.error("Error fetching engagements:", error);
+                showAlert("Error fetching engagements!", "danger");
+            }
+        }
+
+        async function fetchTestCases(engagementId) {
+            try {
+                const response = await fetch(`${BASE_URL}/tests/?limit=1000000&engagement=${engagementId}&tags=mcr_jira`);
+                const data = await response.json();
+                return data.results || [];
+            } catch (error) {
+                console.error("Error fetching test cases:", error);
+                return [];
+            }
+        }
+
+        async function showTestCases(engagementId, filter) {
+            currentEngagementId = engagementId;
+            try {
+                const response = await fetch(`${BASE_URL}/tests/?limit=1000000&tags=mcr_jira&&engagement=${engagementId}`);
+                let data = await response.json();
+                testCases = data.results || [];
+
+                const isOpenTabActive = document.getElementById("open-tab").classList.contains("active");
+                const jiraAssignedFilter = isOpenTabActive 
+                    ? document.getElementById("jiraAssignedFilterOpen").value 
+                    : document.getElementById("jiraAssignedFilterClosed").value;
+
+                if (jiraAssignedFilter) {
+                    testCases = testCases.filter(tc => tc.lead == jiraAssignedFilter);
+                }
+
+                if (filter !== 'all') {
+                    testCases = testCases.filter(tc => tc.branch_tag === filter);
+                }
+
+                await Promise.all(testCases.map(async tc => {
+                    tc.environmentName = await fetchEnvironmentName(tc.environment);
+                    const lead = usersList.find(user => user.id == tc.lead);
+                    tc.leadName = lead ? `${lead.first_name} ${lead.last_name}` : 'Unassigned';
+                }));
+
+                filteredTestCases = [...testCases];
+                currentTestCasesPage = 1;
+                populateTestCasesFilters();
+                renderTestCasesTable(currentTestCasesPage);
+
+                const modal = document.getElementById("testCasesModal");
+                const overlay = document.getElementById("modalOverlay");
+                modal.style.display = "block";
+                overlay.style.display = "block";
+            } catch (error) {
+                console.error("Error fetching test cases for modal:", error);
+                showAlert("Error loading test cases!", "danger");
+            }
+        }
+
+        async function showTestCasesForAnalyst(assignedTo, type, version, filter) {
+            try {
+                const isOpenTabActive = document.getElementById("open-tab").classList.contains("active");
+                const engagements = isOpenTabActive ? openEngagements : closedEngagements;
+                let allTestCases = [];
+                for (const engagement of engagements) {
+                    const response = await fetch(`${BASE_URL}/tests/?limit=1000000&engagement=${engagement.id}`);
+                    const data = await response.json();
+                    allTestCases = allTestCases.concat(data.results || []);
+                }
+
+                testCases = allTestCases.filter(tc => {
+                    const lead = usersList.find(user => user.id == tc.lead);
+                    const leadName = lead ? `${lead.first_name} ${lead.last_name}` : 'Unassigned';
+                    return leadName === assignedTo;
+                });
+
+                const jiraAssignedFilter = isOpenTabActive 
+                    ? document.getElementById("jiraAssignedFilterOpen").value 
+                    : document.getElementById("jiraAssignedFilterClosed").value;
+
+                if (jiraAssignedFilter) {
+                    testCases = testCases.filter(tc => tc.lead == jiraAssignedFilter);
+                }
+
+                await Promise.all(testCases.map(async tc => {
+                    tc.environmentName = await fetchEnvironmentName(tc.environment);
+                }));
+
+                testCases = testCases.filter(tc => tc.environmentName === type && (!version || tc.version === version));
+
+                if (filter === 'Doable') {
+                    testCases = testCases.filter(tc => tc.build_id === "Ready for Testing" || tc.build_id === "Ready for QA" || tc.build_id === "Ready for Security" || tc.build_id === "Done");
+                } else if (filter === 'Non Doable') {
+                    const doable = testCases.filter(tc => tc.build_id === "Ready for Testing" || tc.build_id === "Ready for QA" || tc.build_id === "Ready for Security" || tc.build_id === "Done").map(tc => tc.id);
+                    testCases = testCases.filter(tc => !doable.includes(tc.id));
+                } else if (filter !== 'all') {
+                    testCases = testCases.filter(tc => tc.branch_tag === filter);
+                }
+
+                await Promise.all(testCases.map(async tc => {
+                    const lead = usersList.find(user => user.id == tc.lead);
+                    tc.leadName = lead ? `${lead.first_name} ${lead.last_name}` : 'Unassigned';
+                }));
+
+                filteredTestCases = [...testCases];
+                currentTestCasesPage = 1;
+                populateTestCasesFilters();
+                renderTestCasesTable(currentTestCasesPage);
+
+                const modal = document.getElementById("testCasesModal");
+                const overlay = document.getElementById("modalOverlay");
+                modal.style.display = "block";
+                overlay.style.display = "block";
+            } catch (error) {
+                console.error("Error fetching test cases for analyst:", error);
+                showAlert("Error loading test cases!", "danger");
+            }
+        }
+
+        async function showAnalystView(tab) {
+            try {
+                const isOpenTabActive = tab === 'open';
+                const engagements = isOpenTabActive ? openEngagements : closedEngagements;
+                const jiraAssignedFilter = isOpenTabActive 
+                    ? document.getElementById("jiraAssignedFilterOpen").value 
+                    : document.getElementById("jiraAssignedFilterClosed").value;
+
+                let allTestCases = [];
+                for (const engagement of engagements) {
+                    const response = await fetch(`${BASE_URL}/tests/?limit=1000000&tags=mcr_jira&engagement=${engagement.id}`);
+                    const data = await response.json();
+                    allTestCases = allTestCases.concat(data.results || []);
+                }
+
+                if (jiraAssignedFilter) {
+                    allTestCases = allTestCases.filter(tc => tc.lead == jiraAssignedFilter);
+                }
+
+                await Promise.all(allTestCases.map(async tc => {
+                    tc.environmentName = await fetchEnvironmentName(tc.environment);
+                    const lead = usersList.find(user => user.id == tc.lead);
+                    tc.leadName = lead ? `${lead.first_name} ${lead.last_name}` : 'Unassigned';
+                }));
+
+                const analystStats = {};
+
+                allTestCases.forEach(tc => {
+                    const key = `${tc.leadName}|${tc.environmentName}|${tc.version || 'N/A'}`;
+                    if (!analystStats[key]) {
+                        analystStats[key] = { 
+                            pending: 0, 
+                            onHold: 0, 
+                            completed: 0, 
+                            rejected: 0, 
+                            doable: 0, 
+                            nonDoable: 0 
+                        };
+                    }
+                    if (tc.branch_tag === 'Pending') analystStats[key].pending++;
+                    if (tc.branch_tag === 'On Hold') analystStats[key].onHold++;
+                    if (tc.branch_tag === 'Completed') analystStats[key].completed++;
+                    if (tc.branch_tag === 'Rejected') analystStats[key].rejected++;
+                    if (tc.build_id === 'Ready for Testing' || tc.build_id === 'Ready for QA' || tc.build_id === 'Ready for Security' || tc.build_id === 'Done') analystStats[key].doable++;
+                    else analystStats[key].nonDoable++;
+                });
+
+                // Store data for filtering
+                analystData = Object.keys(analystStats).map(key => {
+                    const [assignedTo, type, version] = key.split('|');
+                    return { assignedTo, type, version, ...analystStats[key] };
+                }).filter(stats => 
+                    stats.pending || stats.onHold || stats.completed || stats.rejected || stats.doable || stats.nonDoable
+                );
+
+                populateAnalystFilters();
+                renderAnalystTable();
+
+                const modal = document.getElementById("analystViewModal");
+                const overlay = document.getElementById("modalOverlay");
+                modal.style.display = "block";
+                overlay.style.display = "block";
+            } catch (error) {
+                console.error("Error showing analyst view:", error);
+                showAlert("Error loading analyst view!", "danger");
+            }
+        }
+
+        function populateAnalystFilters() {
+            const assignedToFilter = document.getElementById("analystAssignedToFilter");
+            const typeFilter = document.getElementById("analystTypeFilter");
+            const versionFilter = document.getElementById("analystVersionFilter");
+
+            const uniqueAssignedTos = [...new Set(analystData.map(data => data.assignedTo))].sort();
+            const uniqueTypes = [...new Set(analystData.map(data => data.type))].sort();
+            const uniqueVersions = [...new Set(analystData.map(data => data.version))].sort();
+
+            assignedToFilter.innerHTML = '<option value="">Filter by Assigned To</option>' + 
+                uniqueAssignedTos.map(val => `<option value="${val}">${val}</option>`).join('');
+            typeFilter.innerHTML = '<option value="">Filter by Type</option>' + 
+                uniqueTypes.map(val => `<option value="${val}">${val}</option>`).join('');
+            versionFilter.innerHTML = '<option value="">Filter by Version</option>' + 
+                uniqueVersions.map(val => `<option value="${val}">${val}</option>`).join('');
+        }
+
+        function applyAnalystFilters() {
+            renderAnalystTable();
+        }
+
+        function clearAnalystFilters() {
+            document.getElementById("analystAssignedToFilter").value = "";
+            document.getElementById("analystTypeFilter").value = "";
+            document.getElementById("analystVersionFilter").value = "";
+            renderAnalystTable();
+        }
+
+        function renderAnalystTable() {
+            const analystTableBody = document.getElementById("analystTableBody");
+            analystTableBody.innerHTML = '';
+
+            const assignedToFilter = document.getElementById("analystAssignedToFilter").value;
+            const typeFilter = document.getElementById("analystTypeFilter").value;
+            const versionFilter = document.getElementById("analystVersionFilter").value;
+
+            let filteredData = analystData.filter(data => 
+                (!assignedToFilter || data.assignedTo === assignedToFilter) &&
+                (!typeFilter || data.type === typeFilter) &&
+                (!versionFilter || data.version === versionFilter)
+            );
+
+            filteredData.forEach(stats => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${stats.assignedTo}</td>
+                    <td>${stats.type}</td>
+                    <td>${stats.version}</td>
+                    <td class="clickable" onclick="showTestCasesForAnalyst('${stats.assignedTo}', '${stats.type}', '${stats.version}', 'Pending')">${stats.pending}</td>
+                    <td class="clickable" onclick="showTestCasesForAnalyst('${stats.assignedTo}', '${stats.type}', '${stats.version}', 'On Hold')">${stats.onHold}</td>
+                    <td class="clickable" onclick="showTestCasesForAnalyst('${stats.assignedTo}', '${stats.type}', '${stats.version}', 'Completed')">${stats.completed}</td>
+                    <td class="clickable" onclick="showTestCasesForAnalyst('${stats.assignedTo}', '${stats.type}', '${stats.version}', 'Rejected')">${stats.rejected}</td>
+                    <td class="clickable" onclick="showTestCasesForAnalyst('${stats.assignedTo}', '${stats.type}', '${stats.version}', 'Doable')">${stats.doable}</td>
+                    <td class="clickable" onclick="showTestCasesForAnalyst('${stats.assignedTo}', '${stats.type}', '${stats.version}', 'Non Doable')">${stats.nonDoable}</td>
+                `;
+                analystTableBody.appendChild(row);
+            });
+
+            // Add Total row
+            const totalRow = document.createElement("tr");
+            totalRow.className = "total-row";
+            const totals = {
+                pending: filteredData.reduce((sum, data) => sum + data.pending, 0),
+                onHold: filteredData.reduce((sum, data) => sum + data.onHold, 0),
+                completed: filteredData.reduce((sum, data) => sum + data.completed, 0),
+                rejected: filteredData.reduce((sum, data) => sum + data.rejected, 0),
+                doable: filteredData.reduce((sum, data) => sum + data.doable, 0),
+                nonDoable: filteredData.reduce((sum, data) => sum + data.nonDoable, 0)
+            };
+            totalRow.innerHTML = `
+                <td>Total</td>
+                <td>-</td>
+                <td>-</td>
+                <td>${totals.pending}</td>
+                <td>${totals.onHold}</td>
+                <td>${totals.completed}</td>
+                <td>${totals.rejected}</td>
+                <td>${totals.doable}</td>
+                <td>${totals.nonDoable}</td>
+            `;
+            analystTableBody.appendChild(totalRow);
+        }
+
+        function closeAnalystViewModal() {
+            const modal = document.getElementById("analystViewModal");
+            const overlay = document.getElementById("modalOverlay");
+            modal.style.display = "none";
+            overlay.style.display = "none";
+            analystData = []; // Clear data when closing
+        }
+
+        function populateTestCasesFilters() {
+            const typeFilter = document.getElementById("filterType");
+            const issueTypeFilter = document.getElementById("filterIssueType");
+            const jiraStatusFilter = document.getElementById("filterJiraStatus");
+            const statusFilter = document.getElementById("filterStatus");
+            const assignedToFilter = document.getElementById("filterAssignedTo");
+
+            const uniqueTypes = [...new Set(testCases.map(tc => tc.environmentName || 'N/A'))].sort();
+            const uniqueIssueTypes = [...new Set(testCases.map(tc => tc.commit_hash || 'N/A'))].sort();
+            const uniqueJiraStatuses = [...new Set(testCases.map(tc => tc.build_id || 'N/A'))].sort();
+            const uniqueStatuses = [...new Set(testCases.map(tc => tc.branch_tag || 'N/A'))].sort();
+            const uniqueAssignedTos = [...new Set(testCases.map(tc => tc.leadName || 'Unassigned'))].sort();
+
+            typeFilter.innerHTML = '<option value="">Filter by Type</option>' + uniqueTypes.map(val => `<option value="${val}">${val}</option>`).join('');
+            issueTypeFilter.innerHTML = '<option value="">Filter by Issue Type</option>' + uniqueIssueTypes.map(val => `<option value="${val}">${val}</option>`).join('');
+            jiraStatusFilter.innerHTML = '<option value="">Filter by Jira Status</option>' + uniqueJiraStatuses.map(val => `<option value="${val}">${val}</option>`).join('');
+            statusFilter.innerHTML = '<option value="">Filter by Status</option>' + uniqueStatuses.map(val => `<option value="${val}">${val}</option>`).join('');
+            assignedToFilter.innerHTML = '<option value="">Filter by Assigned To</option>' + uniqueAssignedTos.map(val => `<option value="${val}">${val}</option>`).join('');
+        }
+
+        function applyTestCasesFilters() {
+            const typeFilter = document.getElementById("filterType").value;
+            const issueTypeFilter = document.getElementById("filterIssueType").value;
+            const jiraStatusFilter = document.getElementById("filterJiraStatus").value;
+            const statusFilter = document.getElementById("filterStatus").value;
+            const assignedToFilter = document.getElementById("filterAssignedTo").value;
+
+            filteredTestCases = testCases.filter(tc => {
+                return (!typeFilter || tc.environmentName === typeFilter) &&
+                       (!issueTypeFilter || tc.commit_hash === issueTypeFilter) &&
+                       (!jiraStatusFilter || tc.build_id === jiraStatusFilter) &&
+                       (!statusFilter || tc.branch_tag === statusFilter) &&
+                       (!assignedToFilter || tc.leadName === assignedToFilter);
+            });
+
+            currentTestCasesPage = 1;
+            renderTestCasesTable(currentTestCasesPage);
+        }
+
+        function createTestCaseStatusDropdown(selectedValue) {
+            const options = ["Pending", "On Hold", "Completed", "Rejected"];
+            let dropdown = `<select class="form-select status-dropdown">`;
+            options.forEach(option => {
+                dropdown += `<option value="${option}" ${option === selectedValue ? "selected" : ""}>${option}</option>`;
+            });
+            dropdown += `</select>`;
+            return dropdown;
+        }
+
+        function renderTestCasesTable(page) {
+            const tableBody = document.getElementById("testCasesTableBody");
+            tableBody.innerHTML = "";
+            const start = (page - 1) * TEST_CASES_PER_PAGE;
+            const end = start + TEST_CASES_PER_PAGE;
+            const paginatedTestCases = filteredTestCases.slice(start, end);
+
+            document.getElementById("testCasesCount").textContent = `Total Jira: ${filteredTestCases.length}`;
+
+            requestAnimationFrame(() => {
+                paginatedTestCases.forEach(tc => {
+                    const row = document.createElement("tr");
+                    row.dataset.id = tc.id;
+                    row.innerHTML = `
+                        <td>${tc.id}</td>
+                        <td>${tc.title || ''}</td>
+                        <td style="padding: 8px; border: 1px solid #e0e0e0; max-width: 5cm; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; text-align: justify;">${tc.description || ''}</td>
+                        <td>${tc.version || ''}</td>
+                        <td>${createTestCaseStatusDropdown(tc.branch_tag || 'Pending')}</td>
+                        <td>${tc.leadName}</td>
+                        <td>${tc.environmentName || 'N/A'}</td>
+                        <td>${tc.commit_hash || 'N/A'}</td>
+                        <td>${tc.build_id || 'N/A'}</td>
+                    `;
+                    tableBody.appendChild(row);
+
+                    const statusDropdown = row.querySelector(".status-dropdown");
+                    statusDropdown.addEventListener("change", async () => {
+                        await updateTestCase(tc.id, tc.title, statusDropdown.value);
+                        renderTestCasesTable(currentTestCasesPage);
+                    });
+                    statusDropdown.addEventListener("blur", () => {
+                        showAlert("saved", "success", tc.title || `Test Case ${tc.id}`);
+                    });
+                });
+            });
+
+            renderTestCasesPagination();
+        }
+
+        async function updateTestCase(testId, title, newStatus) {
+            try {
+                const payload = {
+                    branch_tag: newStatus
+                };
+                const response = await fetch(`${BASE_URL}/tests/${testId}/`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                    body: JSON.stringify(payload),
+                    credentials: "include"
+                });
+
+                if (response.ok) {
+                    const updatedTestCase = await response.json();
+                    testCases = testCases.map(tc => tc.id === testId ? { ...tc, branch_tag: updatedTestCase.branch_tag } : tc);
+                    filteredTestCases = filteredTestCases.map(tc => tc.id === testId ? { ...tc, branch_tag: updatedTestCase.branch_tag } : tc);
+                    fetchEngagements();
+                } else {
+                    showAlert("Failed to update test case!", "danger");
+                }
+            } catch (error) {
+                showAlert("Error updating test case!", "danger");
+                console.error("Error:", error);
+            }
+        }
+
+        function renderTestCasesPagination() {
+            const totalPages = Math.ceil(filteredTestCases.length / TEST_CASES_PER_PAGE);
+            const pagination = document.getElementById("testCasesPagination");
+            pagination.innerHTML = "";
+
+            const firstItem = document.createElement("div");
+            firstItem.className = `page-item ${currentTestCasesPage === 1 ? 'active' : ''}`;
+            firstItem.textContent = "First";
+            firstItem.onclick = () => {
+                if (currentTestCasesPage !== 1) {
+                    currentTestCasesPage = 1;
+                    renderTestCasesTable(currentTestCasesPage);
+                    updateTestCasesPaginationHighlight();
+                }
+            };
+            pagination.appendChild(firstItem);
+
+            const prevItem = document.createElement("div");
+            prevItem.className = "page-item";
+            prevItem.textContent = "Previous";
+            prevItem.onclick = () => {
+                if (currentTestCasesPage > 1) {
+                    currentTestCasesPage--;
+                    renderTestCasesTable(currentTestCasesPage);
+                    updateTestCasesPaginationHighlight();
+                }
+            };
+            pagination.appendChild(prevItem);
+
+            const nextItem = document.createElement("div");
+            nextItem.className = "page-item";
+            nextItem.textContent = "Next";
+            nextItem.onclick = () => {
+                if (currentTestCasesPage < totalPages) {
+                    currentTestCasesPage++;
+                    renderTestCasesTable(currentTestCasesPage);
+                    updateTestCasesPaginationHighlight();
+                }
+            };
+            pagination.appendChild(nextItem);
+
+            const lastItem = document.createElement("div");
+            lastItem.className = `page-item ${currentTestCasesPage === totalPages ? 'active' : ''}`;
+            lastItem.textContent = "Last";
+            lastItem.onclick = () => {
+                if (currentTestCasesPage !== totalPages) {
+                    currentTestCasesPage = totalPages;
+                    renderTestCasesTable(currentTestCasesPage);
+                    updateTestCasesPaginationHighlight();
+                }
+            };
+            pagination.appendChild(lastItem);
+        }
+
+        function updateTestCasesPaginationHighlight() {
+            const totalPages = Math.ceil(filteredTestCases.length / TEST_CASES_PER_PAGE);
+            document.querySelectorAll("#testCasesPagination .page-item").forEach(item => {
+                item.classList.remove('active');
+                if (item.textContent === "First" && currentTestCasesPage === 1) item.classList.add('active');
+                if (item.textContent === "Last" && currentTestCasesPage === totalPages) item.classList.add('active');
+            });
+        }
+
+        function closeTestCasesModal() {
+            const modal = document.getElementById("testCasesModal");
+            const overlay = document.getElementById("modalOverlay");
+            modal.style.display = "none";
+            overlay.style.display = "none";
+            currentEngagementId = null;
+        }
+
+        function createDropdown(selectedValue) {
+            const options = ["Not Started", "On Hold", "Completed"];
+            let dropdown = `<select class="form-select status-dropdown">`;
+            options.forEach(option => {
+                dropdown += `<option value="${option}" ${option === selectedValue ? "selected" : ""}>${option}</option>`;
+            });
+            dropdown += `</select>`;
+            return dropdown;
+        }
+
+        function createLeadDropdown(selectedLeadId) {
+            let dropdown = `<select class="form-select lead-dropdown">`;
+            usersList.forEach(user => {
+                dropdown += `<option value="${user.id}" ${user.id == selectedLeadId ? "selected" : ""}>${user.first_name} ${user.last_name}</option>`;
+            });
+            dropdown += `</select>`;
+            return dropdown;
+        }
+
+        async function updateEngagement(engagementId, name, targetStart, targetEnd, product, lead) {
+            try {
+                const row = document.querySelector(`tr[data-id="${engagementId}"]`);
+                if (!row || !document.getElementById("open-tab").classList.contains("active")) {
+                    console.error("Update called outside Open SCT tab or row not found");
+                    return;
+                }
+
+                const status = row.querySelector("td:nth-child(10) select").value;
+                const commitHash = row.querySelector("td:nth-child(11) select").value;
+                const buildId = row.querySelector("td:nth-child(12) select").value;
+                const version = row.querySelector(".version-input").value;
+                const updatedLead = row.querySelector(".lead-dropdown").value;
+
+                const isCompleted = status === "Completed" && commitHash === "Completed" && buildId === "Completed";
+                console.log(`Engagement ${engagementId} - Status: ${status}, Commit Hash: ${commitHash}, Build ID: ${buildId}, Is Completed: ${isCompleted}`);
+
+                const payload = {
+                    id: engagementId,
+                    name,
+                    target_start: targetStart,
+                    target_end: targetEnd,
+                    product,
+                    lead: updatedLead,
+                    status,
+					commit_hash: commitHash,
+                    build_id: buildId,
+                    version,
+                    active: isCompleted ? false : true
+                };
+
+                console.log("Sending payload:", payload);
+
+                const response = await fetch(`${BASE_URL}/engagements/${engagementId}/`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                    body: JSON.stringify(payload),
+                    credentials: "include"
+                });
+
+                if (response.ok) {
+                    if (event && event.type === "click") {
+                        showAlert("saved successfully", "success", name);
+                    }
+                } else {
+                    showAlert("Failed to update engagement!", "danger");
+                }
+
+                fetchEngagements();
+            } catch (error) {
+                showAlert("Error updating engagement!", "danger");
+                console.error("Error:", error);
+            }
+        }
+
+        async function closeEngagement(engagementId, name, targetStart, targetEnd, product, lead) {
+            try {
+                fetch(`https://demo.defectdojo.org/engagement/${engagementId}/close`, {
+                    method: "GET",
+                    credentials: "include"
+                }).catch(error => console.error("Background URL fetch failed:", error));
+
+                showModal(name);
+
+                const getResponse = await fetch(`${BASE_URL}/engagements/${engagementId}/`, {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include"
+                });
+
+                if (!getResponse.ok) {
+                    showAlert("Failed to fetch engagement data!", "danger");
+                    return;
+                }
+
+                const engagementData = await getResponse.json();
+
+                const payload = {
+                    id: engagementId,
+                    name: engagementData.name,
+                    target_start: engagementData.target_start,
+                    target_end: engagementData.target_end,
+                    active: false,
+                    status: engagementData.status || "Completed",
+                    lead: engagementData.lead,
+                    product: engagementData.product
+                };
+
+                console.log("Closing payload:", payload);
+
+                const putResponse = await fetch(`${BASE_URL}/engagements/${engagementId}/`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                    body: JSON.stringify(payload),
+                    credentials: "include"
+                });
+
+                if (putResponse.ok) {
+                    fetchEngagements();
+                } else {
+                    showAlert("Failed to close engagement!", "danger");
+                }
+            } catch (error) {
+                showAlert("Error closing engagement!", "danger");
+                console.error("Error:", error);
+            }
+        }
+
+        async function reopenEngagement(engagementId, name, targetStart, targetEnd, product, lead) {
+            try {
+                fetch(`https://demo.defectdojo.org/engagement/${engagementId}/reopen`, {
+                    method: "GET",
+                    credentials: "include"
+                }).catch(error => console.error("Background URL fetch failed:", error));
+
+                showModal(name, true);
+
+                const getResponse = await fetch(`${BASE_URL}/engagements/${engagementId}/`, {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include"
+                });
+
+                if (!getResponse.ok) {
+                    showAlert("Failed to fetch engagement data!", "danger");
+                    return;
+                }
+
+                const engagementData = await getResponse.json();
+
+                const payload = {
+                    id: engagementId,
+                    name: engagementData.name,
+                    target_start: engagementData.target_start,
+                    target_end: engagementData.target_end,
+                    active: true,
+                    status: "Not Started",
+                    lead: engagementData.lead,
+                    product: engagementData.product
+                };
+
+                console.log("Reopening payload:", payload);
+
+                const putResponse = await fetch(`${BASE_URL}/engagements/${engagementId}/`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                    body: JSON.stringify(payload),
+                    credentials: "include"
+                });
+
+                if (putResponse.ok) {
+                    fetchEngagements();
+                } else {
+                    showAlert("Failed to reopen engagement!", "danger");
+                }
+            } catch (error) {
+                showAlert("Error reopening engagement!", "danger");
+                console.error("Error:", error);
+            }
+        }
+		
+		function showCreateSCTModal() {
+    const modal = document.getElementById("createSCTModal");
+    const overlay = document.getElementById("modalOverlay");
+    document.getElementById("engagementNames").value = '';
+    document.getElementById("createSummary").style.display = 'none';
+    modal.style.display = "block";
+    overlay.style.display = "block";
+}
+
+function closeCreateSCTModal() {
+    const modal = document.getElementById("createSCTModal");
+    const overlay = document.getElementById("modalOverlay");
+    modal.style.display = "none";
+    overlay.style.display = "none";
+}
+
+
+
+
+
+async function createEngagements() {
+    const namesInput = document.getElementById("engagementNames").value.trim();
+    if (!namesInput) {
+        showAlert("Please enter at least one version name!", "danger");
+        return;
+    }
+
+    const names = namesInput.split(',').map(name => name.trim()).filter(name => name);
+    const today = new Date().toISOString().split('T')[0];
+    const created = [];
+    const skipped = [];
+    const errors = [];
+
+    // Check existing engagements
+    const existingNames = new Set(allEngagements.map(eng => eng.name.toLowerCase()));
+
+    for (const name of names) {
+        if (existingNames.has(name.toLowerCase())) {
+            skipped.push(name);
+            continue;
+        }
+
+        const engagementPayload = {
+            name: name,
+            target_start: today,
+            target_end: today,
+            lead: 2,
+            status: "Not Started",
+            tags: ["sct"],
+            product: 190,
+            active: true
+        };
+
+        try {
+            // Step 1: Create the engagement
+            const engagementResponse = await fetch(`${BASE_URL}/engagements/`, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json", 
+                    "X-CSRFToken": csrfToken 
+                },
+                body: JSON.stringify(engagementPayload),
+                credentials: "include"
+            });
+
+            if (engagementResponse.ok) {
+                const engagementData = await engagementResponse.json();
+                created.push({ id: engagementData.id, name: engagementData.name });
+                existingNames.add(name.toLowerCase()); // Add to prevent duplicates in this batch
+
+                // Step 2: Create tests for the engagement
+                const tests = [
+                    { title: "SQL Injection", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "XSS - Cross Site Scripting", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Path Traversal", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Command Injection", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "XXE", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "ReadiLine vulnerability", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Header Injection", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Insecure deserialization", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Session test on the product", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Out of band communication", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Sensitive information in queryString", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Vulnerable Cryptographic algorithms", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Sensitive information in logs", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Trust boundary violation", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Sensitive data disclosure in response", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Hardcoded credentials", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "CSV Injection", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Unrestricted File Upload", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Unnecessary files present in the distribution ( e.g .py,.exe,.rb)", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Server-side request forgery", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Vulnerable Components (Jar/JS)", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Root detection/Jailbreak detection bypaas", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Improper Error Handling &Testing for Stack Traces", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Testing for Reverse Tabnabbing", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "weak access control", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "weak random number/weak random generator", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "sessionless js", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Removal of jcryption files", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Loginjection", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+{ title: "Avoid inline javascript and add all your scripts, including inline event handlers (e.g., onclick), as external js file.  ", tags: ["risk_register"], scan_type: "risk_register", test_type: 206 },
+                    { title: "reporting", tags: ["reporting"], scan_type: "mcr_jira", test_type: 207 }
+                ];
+
+                for (const test of tests) {
+                    const testPayload = {
+                        title: test.title,
+                        tags: test.tags,
+                        scan_type: test.scan_type,
+                        target_start: today,
+                        target_end: today,
+                        commit_hash: test.title === "reporting" ? "" : "NA", // Blank for reporting, NA for others
+                        branch_tag: test.title === "reporting" ? "" : "NA", // Blank for reporting, NA for others
+                        lead: engagementData.lead, // Fetch lead from the created engagement
+                        test_type: test.test_type,
+                        environment: 10,
+                        engagement: engagementData.id // Link to the newly created engagement
+                    };
+
+                    try {
+                        const testResponse = await fetch(`${BASE_URL}/tests/`, {
+                            method: "POST",
+                            headers: { 
+                                "Content-Type": "application/json", 
+                                "X-CSRFToken": csrfToken 
+                            },
+                            body: JSON.stringify(testPayload),
+                            credentials: "include"
+                        });
+
+                        if (!testResponse.ok) {
+                            console.error(`Failed to create test '${test.title}' for engagement ${name}`);
+                            // Optionally add to errors if you want to track test creation failures separately
+                        }
+                    } catch (testError) {
+                        console.error(`Error creating test '${test.title}' for engagement ${name}:`, testError);
+                    }
+                }
+            } else {
+                errors.push(name);
+            }
+        } catch (error) {
+            console.error(`Error creating engagement ${name}:`, error);
+            errors.push(name);
+        }
+    }
+
+    // Render summary
+    const createdTableBody = document.getElementById("createdTableBody");
+    const skippedTableBody = document.getElementById("skippedTableBody");
+    const errorTableBody = document.getElementById("errorTableBody");
+
+    createdTableBody.innerHTML = created.map(item => `
+        <tr>
+            <td>${item.id}</td>
+            <td>${item.name}</td>
+        </tr>
+    `).join('') || '<tr><td colspan="2">None</td></tr>';
+
+    skippedTableBody.innerHTML = skipped.map(name => `
+        <tr>
+            <td>${name}</td>
+        </tr>
+    `).join('') || '<tr><td>None</td></tr>';
+
+    errorTableBody.innerHTML = errors.map(name => `
+        <tr>
+            <td>${name}</td>
+        </tr>
+    `).join('') || '<tr><td>None</td></tr>';
+
+    document.getElementById("createSummary").style.display = 'block';
+
+    if (created.length > 0) {
+        fetchEngagements(); // Refresh the main table
+        showAlert(`${created.length} engagement(s) created successfully with tests!`, "success");
+    }
+    if (errors.length > 0) {
+        showAlert(`${errors.length} engagement(s) failed to create!`, "danger");
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            await fetchCSRF();
+            await fetchUsers();
+            await fetchEngagements();
+        });
+    </script>
+	
+	
+	    <!-- Side Menu Start -->
+		
+		<script>
+    function toggleNav() {
+        var sidebar = document.getElementById("mySidebar");
+        if (sidebar.style.width === "250px") {
+            sidebar.style.width = "0";
+        } else {
+            sidebar.style.width = "250px";
+        }
+    }
+</script>
+		
+		    <!-- Side Menu End -->
+	
+<!-- Report fetch-->
+<script>
+function showConfigModal() {
+    const modal = document.getElementById("configModal");
+    const overlay = document.getElementById("modalOverlay");
+    document.getElementById("consoleOutput").innerHTML = ""; // Clear console
+    modal.style.display = "block";
+    overlay.style.display = "block";
+}
+
+function closeConfigModal() {
+    const modal = document.getElementById("configModal");
+    const overlay = document.getElementById("modalOverlay");
+    modal.style.display = "none";
+    overlay.style.display = "none";
+}
+
+function fetchReportImmediately() {
+    showConfigModal(); // Show confirmation modal
+}
+
+async function confirmFetchReport() {
+    const consoleOutput = document.getElementById("consoleOutput");
+    const fetchReportBtn = document.getElementById("fetchReportBtn");
+    const confirmBtn = document.getElementById("confirmBtn");
+    const engagementId = 63476; // Static for now; make dynamic if needed
+    
+    try {
+        // Step 1: Fetch current engagement data using GET
+        const getResponse = await fetch(`${BASE_URL}/engagements/${engagementId}/`, {
+            method: "GET",
+            headers: { 
+                "Content-Type": "application/json" 
+            },
+            credentials: "include"
+        });
+
+        if (!getResponse.ok) {
+            consoleOutput.innerHTML = "Failed to fetch engagement data!";
+            showAlert("Failed to fetch engagement data!", "danger");
+            return;
+        }
+
+        const engagementData = await getResponse.json();
+
+        // Step 2: Prepare payload with fetched data and commit_hash set to 0
+        const payload = {
+            id: engagementData.id,              // Use fetched ID
+            name: engagementData.name,          // Preserve existing name
+            target_start: engagementData.target_start || new Date().toISOString().split('T')[0], // Use existing or now()
+            target_end: engagementData.target_end || new Date().toISOString().split('T')[0],     // Use existing or now()
+            lead: engagementData.lead || 2,     // Use existing or default to 2
+            product: engagementData.product || 325, // Use existing or default to 325
+            commit_hash: "1"                    // Set to "0" as requested
+        };
+
+        // Step 3: Send PUT request with updated data
+        const putResponse = await fetch(`${BASE_URL}/engagements/${engagementId}/`, {
+            method: "PUT",
+            headers: { 
+                "Content-Type": "application/json", 
+                "X-CSRFToken": csrfToken 
+            },
+            body: JSON.stringify(payload),
+            credentials: "include"
+        });
+
+        if (putResponse.ok) {
+            consoleOutput.innerHTML = `
+                Request sent to server.......
+
+            `;
+            showAlert("Report fetch initiated successfully!", "success");
+            fetchReportBtn.disabled = true; // Disable outer button
+            confirmBtn.disabled = true;     // Disable Confirm button
+            fetchEngagements(); // Refresh engagements to reflect the change
+        } else {
+            consoleOutput.innerHTML = "Failed to initiate report fetch!";
+            showAlert("Failed to initiate report fetch!", "danger");
+        }
+    } catch (error) {
+        consoleOutput.innerHTML = "Error initiating report fetch!";
+        showAlert("Error initiating report fetch!", "danger");
+        console.error("Error:", error);
+    }
+}
+
+// Function to check and update button state based on commit_hash
+async function updateFetchButtonState() {
+    const fetchReportBtn = document.getElementById("fetchReportBtn");
+    const confirmBtn = document.getElementById("confirmBtn");
+    const engagementId = 63476; // Static for now; make dynamic if needed
+
+    try {
+        const response = await fetch(`${BASE_URL}/engagements/${engagementId}/`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include"
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const isDisabled = data.commit_hash === "0";
+            fetchReportBtn.disabled = isDisabled; // Disable if commit_hash is "0"
+            confirmBtn.disabled = isDisabled;     // Sync Confirm button state
+        }
+    } catch (error) {
+        console.error("Error checking commit_hash:", error);
+    }
+}
+
+// Update button state on page load and after engagements refresh
+document.addEventListener("DOMContentLoaded", () => {
+    updateFetchButtonState();
+});
+
+// Hook into fetchEngagements to update button state after refresh
+const originalFetchEngagements = fetchEngagements;
+fetchEngagements = async function() {
+    await originalFetchEngagements.apply(this, arguments);
+    updateFetchButtonState();
+};
+</script>
+	
+</body>
+</html>
