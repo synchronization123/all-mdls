@@ -1,85 +1,68 @@
-async function updateTestFromJiraInput(engagementId, input) {
-    const field = input.dataset.field;
-    const value = input.value;
-    const tests = await fetchTests(engagementId);
-    const today = new Date().toISOString().split("T")[0];
+Modified HTML (Add the View Summary Button)Add this button within the <div class="d-flex justify-content-between mb-2"> section in the container:<div class="d-flex justify-content-between mb-2">
+    <div>
+        <button class="btn btn-primary btn-sm" onclick="showAddTaskModal()">Add Task</button>
+        <button class="btn btn-primary btn-sm" onclick="showReassignmentModal()">Reassignment</button>
+        <button class="btn btn-primary btn-sm" onclick="showBulkUpdateModal()">Bulk Update</button>
+        <button class="btn btn-primary btn-sm" onclick="showSummaryModal()">View Summary</button> <!-- Added View Summary Button -->
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="fetchEngagements()">🔄 Refresh</button>
+    <span class="csrf-label" style="color: #ffffff;">CSRF Token: <strong id="csrfToken">Fetching...</strong></span>
+</div>Added HTML (Summary Modal)Add this new modal just before the closing </div> of the .container:<!-- Summary Modal -->
+<div id="summaryModal" class="modal mid-size-modal" data-z-index="1001">
+    <h2>Open Tasks Summary</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Assigned To</th>
+                <th>Status (Analyst)</th>
+                <th>Count</th>
+            </tr>
+        </thead>
+        <tbody id="summaryTable"></tbody>
+    </table>
+    <button class="btn btn-secondary mt-2" onclick="closeModal('summaryModal')">Close</button>
+</div>Modified JavaScript (Add Functions for Summary Modal)Add these new functions within the <script> tag, ideally after the existing modal-related functions (e.g., after showTestsModal):function showSummaryModal() {
+    const summaryData = {};
     
-    let test = tests[0];
-    if (!test) {
-        // Create a new test if none exist
-        const newTestPayload = {
-            engagement: engagementId,
-            title: `Jira Bifurcation for Engagement ${engagementId}`,
-            tags: ["patch_jira_count"],
-            test_type_name: "Patch Validation",
-            scan_type: "Patch Validation",
-            target_start: today,
-            target_end: today,
-            lead: 2,
-            test_type: 202,
-            environment: 7,
-            [field]: value
-        };
-        try {
-            const response = await fetch(`${BASE_URL}/tests/`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
-                body: JSON.stringify(newTestPayload),
-                credentials: "include"
-            });
-            if (!response.ok) showAlert("Failed to create test!", "danger");
-            fetchEngagements();
-        } catch (error) {
-            console.error("Error creating test:", error);
-            showAlert("Error creating test!", "danger");
+    // Aggregate data from openTasks
+    openTasks.forEach(task => {
+        const assignedTo = getAssignedToName(task.lead);
+        const statusAnalyst = task.status || 'Not Started';
+        
+        if (!summaryData[assignedTo]) {
+            summaryData[assignedTo] = {};
         }
-    } else {
-        // Fetch existing test details first
-        let existingTest;
-        try {
-            const response = await fetch(`${BASE_URL}/tests/${test.id}/`, {
-                method: "GET",
-                headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
-                credentials: "include"
-            });
-            if (!response.ok) throw new Error("Failed to fetch test");
-            existingTest = await response.json();
-        } catch (error) {
-            console.error("Error fetching test:", error);
-            showAlert("Error fetching test!", "danger");
-            return;
+        if (!summaryData[assignedTo][statusAnalyst]) {
+            summaryData[assignedTo][statusAnalyst] = [];
         }
+        summaryData[assignedTo][statusAnalyst].push(task.id);
+    });
 
-        // Update existing test with mandatory fields
-        const payload = {
-            ...existingTest,
-            test_type_name: "Patch Validation",
-            scan_type: "Patch Validation",
-            title: existingTest.title, // Keep current title
-            target_start: today,
-            target_end: today,
-            lead: 2,
-            test_type: 202,
-            environment: 7,
-            [field]: value
-        };
-        try {
-            const response = await fetch(`${BASE_URL}/tests/${test.id}/`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
-                body: JSON.stringify(payload),
-                credentials: "include"
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error("Error details:", errorData);
-                showAlert("Failed to update test!", "danger");
-            } else {
-                fetchEngagements();
-            }
-        } catch (error) {
-            console.error("Error updating test:", error);
-            showAlert("Error updating test!", "danger");
+    // Render the summary table
+    const tableBody = document.getElementById("summaryTable");
+    tableBody.innerHTML = "";
+    
+    for (const assignedTo in summaryData) {
+        for (const status in summaryData[assignedTo]) {
+            const count = summaryData[assignedTo][status].length;
+            const taskIds = summaryData[assignedTo][status];
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${assignedTo}</td>
+                <td>${status}</td>
+                <td><a href="#" onclick="openEditModalForTasks([${taskIds.join(',')}]); return false;">${count}</a></td>
+            `;
+            tableBody.appendChild(row);
         }
+    }
+    
+    showModal("summaryModal");
+}
+
+function openEditModalForTasks(taskIds) {
+    if (taskIds.length > 0) {
+        // Open the edit modal for the first task in the list as an example
+        // You could enhance this to handle multiple tasks if needed
+        showEditModal(taskIds[0]);
     }
 }
