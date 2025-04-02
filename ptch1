@@ -17,10 +17,11 @@
 
 
 
-
-
 function showSummaryModal() {
     const summaryData = {};
+    let totalNotStarted = 0;
+    let totalInProgress = 0;
+    let totalOnHold = 0;
     
     // Aggregate data from openTasks
     openTasks.forEach(task => {
@@ -29,13 +30,16 @@ function showSummaryModal() {
         
         if (!summaryData[assignedTo]) {
             summaryData[assignedTo] = {
-                'Not Started': [],
-                'In Progress': [],
-                'On Hold': []
+                'Not Started': 0,
+                'In Progress': 0,
+                'On Hold': 0
             };
         }
         if (['Not Started', 'In Progress', 'On Hold'].includes(statusAnalyst)) {
-            summaryData[assignedTo][statusAnalyst].push(task.id);
+            summaryData[assignedTo][statusAnalyst]++;
+            if (statusAnalyst === 'Not Started') totalNotStarted++;
+            else if (statusAnalyst === 'In Progress') totalInProgress++;
+            else if (statusAnalyst === 'On Hold') totalOnHold++;
         }
     });
 
@@ -44,26 +48,30 @@ function showSummaryModal() {
     tableBody.innerHTML = "";
     
     for (const assignedTo in summaryData) {
-        const notStartedIds = summaryData[assignedTo]['Not Started'];
-        const inProgressIds = summaryData[assignedTo]['In Progress'];
-        const onHoldIds = summaryData[assignedTo]['On Hold'];
+        const notStartedCount = summaryData[assignedTo]['Not Started'];
+        const inProgressCount = summaryData[assignedTo]['In Progress'];
+        const onHoldCount = summaryData[assignedTo]['On Hold'];
         
         const row = document.createElement("tr");
         row.innerHTML = `
             <td>${assignedTo}</td>
-            <td><a href="#" onclick="openEditModalForTasks([${notStartedIds.join(',')}]); return false;">${notStartedIds.length}</a></td>
-            <td><a href="#" onclick="openEditModalForTasks([${inProgressIds.join(',')}]); return false;">${inProgressIds.length}</a></td>
-            <td><a href="#" onclick="openEditModalForTasks([${onHoldIds.join(',')}]); return false;">${onHoldIds.length}</a></td>
+            <td>${notStartedCount}</td>
+            <td>${inProgressCount}</td>
+            <td>${onHoldCount}</td>
         `;
         tableBody.appendChild(row);
     }
+
+    // Add total row
+    const totalRow = document.createElement("tr");
+    totalRow.style.fontWeight = "bold";
+    totalRow.innerHTML = `
+        <td>Total</td>
+        <td>${totalNotStarted}</td>
+        <td>${totalInProgress}</td>
+        <td>${totalOnHold}</td>
+    `;
+    tableBody.appendChild(totalRow);
     
     showModal("summaryModal");
-}
-
-function openEditModalForTasks(taskIds) {
-    if (taskIds.length > 0) {
-        // Open the edit modal for the first task in the list
-        showEditModal(taskIds[0]);
-    }
 }
