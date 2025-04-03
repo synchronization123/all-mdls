@@ -1,0 +1,24 @@
+import requests
+
+DefectDojo API Configuration
+
+DEFECTDOJO_BASE_URL = "https://demo.defectdojo.org/api/v2" DEFECTDOJO_API_KEY = "your_defectdojo_api_key" JIRA_API_URL = "https://your-jira-instance.atlassian.net/rest/api/2/search" JIRA_API_TOKEN = "your_jira_api_token"
+
+def get_defectdojo_tests(): url = f"{DEFECTDOJO_BASE_URL}/tests/?tags=crm_jira&limit=100000" headers = {"Authorization": f"Token {DEFECTDOJO_API_KEY}"} response = requests.get(url, headers=headers) return [test for test in response.json().get("results", []) if "dual_mode" not in test.get("tags", [])]
+
+def check_jira_component(jira_id, version): jql = f'component = "dual mode" AND "Build(s)" IN ({version})' params = {"jql": jql, "fields": "id,key,components"} headers = {"Authorization": f"Bearer {JIRA_API_TOKEN}"} response = requests.get(JIRA_API_URL, params=params, headers=headers) issues = response.json().get("issues", []) return any(issue["key"] == jira_id for issue in issues)
+
+def update_defectdojo_environment_and_tags(test_id): url = f"{DEFECTDOJO_BASE_URL}/tests/{test_id}/" headers = {"Authorization": f"Token {DEFECTDOJO_API_KEY}", "Content-Type": "application/json"} data = {"environment": 11, "tags": ["dual_mode"]} response = requests.patch(url, json=data, headers=headers) return response.status_code == 200
+
+def main(): tests = get_defectdojo_tests() for test in tests: jira_id = test.get("title", "").strip()  # Title contains only the JIRA ID version = test.get("version") test_id = test.get("id")
+
+if jira_id and version:
+        if check_jira_component(jira_id, version):
+            success = update_defectdojo_environment_and_tags(test_id)
+            if success:
+                print(f"Updated environment and added tag for test ID {test_id}")
+            else:
+                print(f"Failed to update environment for test ID {test_id}")
+
+if name == "main": main()
+
