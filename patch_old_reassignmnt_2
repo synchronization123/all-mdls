@@ -1,4 +1,4 @@
-<!-- Update the Reassignment Modal -->
+<!-- Reassignment Modal (unchanged HTML from previous version) -->
 <div class="modal fade" id="reassignmentModal" tabindex="-1" aria-labelledby="reassignmentModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-xl">
     <div class="modal-content">
@@ -68,35 +68,56 @@
 
 <!-- Updated JavaScript -->
 <script>
-  // ... existing variables ...
+  // Variables (unchanged)
+  let reassignmentModal;
+  let reassignEngagements = [];
+  let filteredReassignEngagements = [];
 
   // Update DOMContentLoaded
   document.addEventListener('DOMContentLoaded', function() {
-    // ... existing code ...
     reassignmentModal = new bootstrap.Modal(document.getElementById('reassignmentModal'), { backdrop: 'static', keyboard: false });
     document.getElementById('reassignEngagements').addEventListener('click', openReassignmentModal);
     document.getElementById('applyReassignFilters').addEventListener('click', applyReassignFilters);
     document.getElementById('clearReassignFilters').addEventListener('click', clearReassignFilters);
     document.getElementById('selectAllReassign').addEventListener('change', toggleSelectAllReassign);
     document.getElementById('reassignLeads').addEventListener('click', reassignLeads);
-
-    // Remove real-time filter listeners to rely on Apply Filters button
-    // document.getElementById('reassignIdFilter').removeEventListener('input', applyReassignFilters);
-    // document.getElementById('reassignNameFilter').removeEventListener('change', applyReassignFilters);
-    // document.getElementById('reassignStatusFilter').removeEventListener('change', applyReassignFilters);
-    // document.getElementById('reassignProductFilter').removeEventListener('change', applyReassignFilters);
-    // document.getElementById('reassignLeadFilter').removeEventListener('change', applyReassignFilters);
   });
 
   async function openReassignmentModal() {
     await fetchReassignmentData();
     await populateReassignFilters();
     filteredReassignEngagements = [...reassignEngagements];
-    renderReassignmentTable();
+    renderReassignmentTable(); // Initial render with all data
     reassignmentModal.show();
   }
 
-  // ... fetchReassignmentData and enrichReassignWithNames remain unchanged ...
+  async function fetchReassignmentData() {
+    loadingModal.show();
+    try {
+      const response = await fetch('https://demo.defectdojo.org/api/v2/engagements/?tags=patches&active=true');
+      if (response.ok) {
+        const data = await response.json();
+        reassignEngagements = data.results;
+        await enrichReassignWithNames(reassignEngagements);
+      } else {
+        showToast('Failed to fetch engagements for reassignment', 'error');
+      }
+    } catch (error) {
+      console.error('Error fetching reassignment data:', error);
+      showToast('Error fetching reassignment data', 'error');
+    } finally {
+      loadingModal.hide();
+    }
+  }
+
+  async function enrichReassignWithNames(engagements) {
+    await fetchAllUsers();
+    await fetchAllProducts();
+    engagements.forEach(e => {
+      e.lead_name = e.lead ? usersCache[e.lead]?.name || 'Unassigned' : 'Unassigned';
+      e.product_name = e.product ? productsCache[e.product]?.name || 'Unknown' : 'Unknown';
+    });
+  }
 
   async function populateReassignFilters() {
     // Name Filter
@@ -130,14 +151,14 @@
       leadFilter.appendChild(option);
     });
 
-    // Initialize Select2 with larger dropdown width for better UX
+    // Initialize Select2 with larger dropdown width
     $('#reassignNameFilter').select2({
       theme: 'bootstrap-5',
       width: '100%',
       dropdownParent: $('#reassignmentModal'),
       placeholder: 'All Patch Names',
       allowClear: true,
-      dropdownCssClass: 'select2-dropdown-wide' // Custom class for wider dropdown
+      dropdownCssClass: 'select2-dropdown-wide'
     });
 
     $('#reassignProductFilter').select2({
@@ -147,7 +168,7 @@
       placeholder: 'All Products',
       allowClear: true,
       closeOnSelect: false,
-      dropdownCssClass: 'select2-dropdown-wide' // Custom class for wider dropdown
+      dropdownCssClass: 'select2-dropdown-wide'
     });
 
     $('#reassignLeadFilter').select2({
@@ -157,7 +178,7 @@
       placeholder: 'All Leads',
       allowClear: true,
       closeOnSelect: false,
-      dropdownCssClass: 'select2-dropdown-wide' // Custom class for wider dropdown
+      dropdownCssClass: 'select2-dropdown-wide'
     });
   }
 
@@ -169,12 +190,13 @@
     const leadFilter = $('#reassignLeadFilter').val() || [];
 
     filteredReassignEngagements = reassignEngagements.filter(e => {
-      if (idFilter && !e.id.toString().includes(idFilter)) return false;
-      if (nameFilter && e.name !== nameFilter) return false;
-      if (statusFilter && e.status !== statusFilter) return false;
-      if (productFilter.length > 0 && !productFilter.includes(e.product.toString())) return false;
-      if (leadFilter.length > 0 && !leadFilter.includes(e.lead?.toString())) return false;
-      return true;
+      const matchesId = !idFilter || e.id.toString().includes(idFilter);
+      const matchesName = !nameFilter || e.name === nameFilter;
+      const matchesStatus = !statusFilter || e.status === statusFilter;
+      const matchesProduct = productFilter.length === 0 || productFilter.includes(e.product.toString());
+      const matchesLead = leadFilter.length === 0 || leadFilter.includes(e.lead?.toString());
+
+      return matchesId && matchesName && matchesStatus && matchesProduct && matchesLead;
     });
 
     renderReassignmentTable();
@@ -206,7 +228,12 @@
     document.getElementById('selectAllReassign').checked = false;
   }
 
-  // ... toggleSelectAllReassign remains unchanged ...
+  function toggleSelectAllReassign(event) {
+    const isChecked = event.target.checked;
+    document.querySelectorAll('.reassign-checkbox').forEach(checkbox => {
+      checkbox.checked = isChecked;
+    });
+  }
 
   async function reassignLeads() {
     const selectedEngagements = Array.from(document.querySelectorAll('.reassign-checkbox:checked')).map(cb => parseInt(cb.getAttribute('data-id')));
@@ -223,7 +250,6 @@
 
     loadingModal.show();
     try {
-      // Distribute engagements equally among selected leads
       const assignments = {};
       selectedEngagements.forEach((engagementId, index) => {
         const leadId = newLeads[index % newLeads.length];
@@ -282,17 +308,17 @@
   }
 </script>
 
-<!-- Add this CSS to your stylesheet -->
+<!-- CSS (unchanged from previous version) -->
 <style>
   .select2-dropdown-wide {
-    min-width: 300px !important; /* Increase dropdown width for better UX */
+    min-width: 300px !important;
   }
   .select2-container .select2-selection--single,
   .select2-container .select2-selection--multiple {
-    height: 38px; /* Match Bootstrap input height */
+    height: 38px;
   }
   .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__rendered {
-    max-height: 100px; /* Allow some vertical scrolling if many items selected */
+    max-height: 100px;
     overflow-y: auto;
   }
 </style>
