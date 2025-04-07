@@ -1,0 +1,2993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Patches</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <!-- Select2 for searchable dropdowns -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-5-theme/1.3.0/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f6f9;
+      margin: 0;
+    }
+
+    .sidebar {
+      width: 240px;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      background-color: #343a40;
+      padding: 20px 15px;
+      color: white;
+      z-index: 1030;
+    }
+
+    .sidebar h4 {
+      color: #fff;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .sidebar .nav-link {
+      color: #adb5bd;
+      padding: 10px 15px;
+      margin-bottom: 5px;
+      border-radius: 4px;
+    }
+
+    .sidebar .nav-link:hover, .sidebar .nav-link.active {
+      background-color: #495057;
+      color: #fff;
+    }
+
+    .main-content {
+      margin-left: 240px;
+      padding: 2rem 2rem;
+    }
+
+    .card {
+      border: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .table thead {
+      background-color: #343a40;
+      color: #fff;
+    }
+
+    .table-hover tbody tr:hover {
+      background-color: #f1f1f1;
+    }
+
+    .pagination-controls .btn {
+      margin-right: 6px;
+    }
+
+    .spinner-border {
+      width: 3rem;
+      height: 3rem;
+    }
+
+    #loadingModal .modal-dialog {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .filters-section {
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .filter-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    
+    .filter-item {
+      flex: 1 1 12%;
+      min-width: 110px;
+      margin-right: 5px;
+    }
+    
+    .filter-label {
+      font-size: 0.8rem;
+      margin-bottom: 2px;
+      font-weight: 500;
+    }
+    
+    .filter-input {
+      height: 36px;
+      font-size: 0.9rem;
+    }
+    
+    .filter-buttons {
+      display: flex;
+      gap: 8px;
+      align-self: flex-end;
+    }
+
+    .select2-container--bootstrap-5 .select2-selection {
+      height: 36px;
+      font-size: 0.9rem;
+    }
+    
+    .table-container {
+      max-height: 70vh;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+    }
+    
+    .table-container thead th {
+      position: sticky;
+      top: 0;
+      background-color: #343a40;
+      color: #fff;
+      z-index: 1;
+    }
+
+    .status-counts {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .status-counts h3 {
+      display: inline-block;
+      margin: 0 20px;
+    }
+
+    .highlight-today {
+      background-color: #780E12;
+      color: #fff;
+    }
+
+    .highlight-upcoming {
+      background-color: #D9AB0C;
+      color: #000;
+    }
+
+    .total-row {
+      font-weight: bold;
+      background-color: #e9ecef;
+    }
+
+    .total-column {
+      font-weight: bold;
+    }
+
+    @media (max-width: 1199px) {
+      .filter-item {
+        flex: 1 1 20%;
+        min-width: 140px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+      }
+
+      .main-content {
+        margin-left: 0;
+      }
+      
+      .filter-item {
+        flex: 1 1 30%;
+        min-width: 180px;
+      }
+    }
+	
+	
+	/* Add this to your existing CSS */
+.filters-section {
+  width: 100%;
+}
+
+.filter-buttons-left, .filter-buttons-right {
+  display: flex;
+  gap: 10px; /* Adjust spacing between buttons as needed */
+}
+
+.filter-buttons-left {
+  flex-grow: 1; /* Allows left buttons to take available space */
+}
+
+.filter-buttons-right {
+  flex-shrink: 0; /* Prevents right buttons from shrinking */
+}
+
+
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar Menu -->
+  <div class="sidebar">
+    <h4><i class="bi bi-shield-lock"></i> Team AppSec</h4>
+    <nav class="nav flex-column">
+      <a href="https://demo.defectdojo.org/access_file/4385/63476/Engagement" class="nav-link active"><i class="bi bi-table"></i> Patch</a>
+      <a href="https://demo.defectdojo.org/access_file/4432/63476/Engagement" class="nav-link"><i class="bi bi-table"></i> MCR</a>
+      <a href="https://demo.defectdojo.org/access_file/4550/63476/Engagement" class="nav-link"><i class="bi bi-table"></i> SCA</a>
+      <a href="https://demo.defectdojo.org/access_file/4551/63476/Engagement" class="nav-link"><i class="bi bi-table"></i> Contrast</a>
+	  <a href="https://demo.defectdojo.org/access_file/4552/63476/Engagement" class="nav-link"><i class="bi bi-table"></i> Sonar</a>
+	  <a href="https://demo.defectdojo.org/access_file/4553/63476/Engagement" class="nav-link"><i class="bi bi-table"></i> Cases</a>
+    </nav>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="card p-4">
+      <h3 class="mb-4 text-primary fw-bold">Patches</h3>
+
+      <!-- Status Counts -->
+      <div class="status-counts">
+        <h3>Not Started: <span id="notStartedCount">0</span></h3>
+        <h3>In Progress: <span id="inProgressCount">0</span></h3>
+        <h3>On Hold: <span id="onHoldCount">0</span></h3>
+      </div>
+
+      <!-- Filters Section - Two Rows -->
+      <div class="filters-section">
+        <!-- First Row -->
+        <div class="filter-container mb-3">
+          <div class="filter-item">
+            <label class="filter-label" for="idFilter">ID</label>
+            <input type="number" class="form-control form-control-sm filter-input" id="idFilter" placeholder="ID">
+          </div>
+          <div class="filter-item">
+            <label class="filter-label" for="createdFilter">Created On</label>
+            <input type="date" class="form-control form-control-sm filter-input" id="createdFilter">
+          </div>
+          <div class="filter-item">
+            <label class="filter-label" for="agingFilter">Aging</label>
+            <div class="input-group input-group-sm">
+              <select class="form-select filter-input" id="agingCondition">
+                <option value="lt"><</option>
+                <option value="gt">></option>
+                <option value="eq">=</option>
+              </select>
+              <input type="number" class="form-control filter-input" id="agingFilter" placeholder="Days">
+            </div>
+          </div>
+          <div class="filter-item">
+            <label class="filter-label" for="createdByFilter">Created By</label>
+            <select class="form-select form-select-sm filter-input searchable-select" id="createdByFilter">
+              <option value="">All</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label class="filter-label" for="statusAnalystFilter">Status (Analyst)</label>
+            <select class="form-select form-select-sm filter-input" id="statusAnalystFilter">
+              <option value="">All</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label class="filter-label" for="statusMentorFilter">Status (Mentor)</label>
+            <select class="form-select form-select-sm filter-input" id="statusMentorFilter">
+              <option value="">All</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label class="filter-label" for="statusLeadFilter">Status (Lead)</label>
+            <select class="form-select form-select-sm filter-input" id="statusLeadFilter">
+              <option value="">All</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Second Row -->
+        <div class="filter-container">
+          <div class="filter-item">
+            <label class="filter-label" for="nameFilter">Name</label>
+            <input type="text" class="form-control form-control-sm filter-input" id="nameFilter" placeholder="Name">
+          </div>
+          <div class="filter-item">
+            <label class="filter-label" for="assignedToFilter">Assigned To</label>
+            <select class="form-select form-select-sm filter-input searchable-select" id="assignedToFilter">
+              <option value="">All</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label class="filter-label" for="appSecETAFilter">AppSec ETA</label>
+            <input type="date" class="form-control form-control-sm filter-input" id="appSecETAFilter">
+          </div>
+          <div class="filter-item">
+            <label class="filter-label" for="rmETAFilter">RM ETA</label>
+            <input type="date" class="form-control form-control-sm filter-input" id="rmETAFilter">
+          </div>
+          <div class="filter-item">
+            <label class="filter-label" for="irFilter">IR</label>
+            <input type="text" class="form-control form-control-sm filter-input" id="irFilter" placeholder="IR">
+          </div>
+          
+		  
+		  
+		  
+		  
+		  <div class="filter-buttons">
+<button id="newEngagement" class="btn btn-success btn-sm">
+    <i class="bi bi-plus-circle"></i> New
+  </button>
+
+  <button id="viewSummary" class="btn btn-info btn-sm">
+    <i class="bi bi-eye"></i> View Summary
+  </button>
+  <button id="completedSummary" class="btn btn-primary btn-sm">
+    <i class="bi bi-check-circle"></i> Completed Summary
+  </button>
+  <button id="viewClosed" class="btn btn-warning btn-sm">
+    <i class="bi bi-archive"></i> View Closed
+  </button>
+  <button id="viewJiras" class="btn btn-info btn-sm">
+    <i class="bi bi-ticket-detailed"></i> View Jiras
+  </button>
+  <button id="reportEngagements" class="btn btn-primary btn-sm">
+    <i class="bi bi-file-earmark-text"></i> Report
+  </button>
+    <button id="refreshTable" class="btn btn-primary btn-sm">
+    <i class="bi bi-arrow-repeat"></i> Refresh
+  </button>
+  <button id="applyFilters" class="btn btn-primary btn-sm">
+    <i class="bi bi-search"></i> Go
+  </button>
+  <button id="resetFilters" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-x-circle"></i> Reset
+  </button>
+  
+          </div>
+        </div>
+      </div>
+
+      <!-- Pagination Controls -->
+      <div class="d-flex justify-content-between align-items-center mb-3 pagination-controls">
+        <div>
+          <button class="btn btn-sm btn-outline-primary" id="firstPage"><i class="bi bi-skip-start-fill"></i> First</button>
+          <button class="btn btn-sm btn-outline-secondary" id="prevPage"><i class="bi bi-caret-left-fill"></i> Prev</button>
+          <button class="btn btn-sm btn-outline-secondary" id="nextPage">Next <i class="bi bi-caret-right-fill"></i></button>
+          <button class="btn btn-sm btn-outline-primary" id="lastPage">Last <i class="bi bi-skip-end-fill"></i></button>
+        </div>
+        <div id="paginationStatus" class="text-muted small"></div>
+      </div>
+
+      <!-- Main Table -->
+      <div class="table-container">
+  <table class="table table-hover table-bordered align-middle">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Aging</th>
+        <th>Name</th>
+        <th colspan="5">Jira</th>
+        <th>Assigned To</th>
+        <th>AppSec ETA</th>
+        <th>RM ETA</th>
+        <th>Status (Analyst)</th>
+        <th>Status (Mentor)</th>
+        <th>Status (Lead)</th>
+        <th>IR</th>
+        <th>Action</th>
+      </tr>
+      <tr>
+        <th></th>
+        <th></th>
+        <th></th>
+        <th>Total</th>
+        <th>Security</th>
+        <th>Functional</th>
+        <th>Doable</th>
+        <th>Non Doable</th>
+        <th></th>
+        <th></th>
+        <th></th>
+        <th></th>
+        <th></th>
+        <th></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="engagementTableBody"></tbody>
+  </table>
+</div>
+    </div>
+  </div>
+
+  <!-- Loading Modal -->
+  <div class="modal show" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content text-center p-4">
+        <div class="spinner-border text-primary mb-3" role="status"></div>
+        <h5 class="modal-title fw-semibold">Loading Patches data, please wait...</h5>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Engagement Modal -->
+  <div class="modal fade" id="editEngagementModal" tabindex="-1" aria-labelledby="editEngagementModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title" id="editEngagementModalLabel">Edit Patch</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="modalCloseX"></button>
+        </div>
+        <div class="modal-body">
+          <form id="editEngagementForm">
+            <input type="hidden" name="csrfmiddlewaretoken" id="csrfToken" value="">
+            
+            <!-- Row 1: ID, Created, Created By -->
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label class="form-label">ID</label>
+                <input type="text" class="form-control" id="editId" readonly>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Created</label>
+                <input type="text" class="form-control" id="editCreated" readonly>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Created By</label>
+                <input type="text" class="form-control" id="editCreatedBy" readonly>
+              </div>
+            </div>
+            
+            <!-- Row 2: Name, Assigned To, Product -->
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label class="form-label">Name</label>
+                <input type="text" class="form-control fw-bold" id="editName" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Assigned To</label>
+                <select class="form-select searchable-select" id="editAssignedTo">
+                  <option value="">Unassigned</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Product</label>
+                <select class="form-select searchable-select" id="editProduct" required>
+                  <option value="">Select Product</option>
+                </select>
+              </div>
+            </div>
+            
+            <!-- Row 3: AppSec ETA, RM ETA, IR -->
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label class="form-label">AppSec ETA</label>
+                <input type="date" class="form-control" id="editAppSecETA" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">RM ETA</label>
+                <input type="date" class="form-control" id="editRmETA" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">IR</label>
+                <input type="text" class="form-control" id="editIR" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+              </div>
+            </div>
+            
+            <!-- Row 4: Status fields -->
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label class="form-label">Status (Analyst)</label>
+                <select class="form-select" id="editStatusAnalyst">
+                  <option value="Not Started">Not Started</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="On Hold">On Hold</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Status (Mentor)</label>
+                <select class="form-select" id="editStatusMentor">
+                  <option value="Not Started">Not Started</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="On Hold">On Hold</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Status (Lead)</label>
+                <select class="form-select" id="editStatusLead">
+                  <option value="Not Started">Not Started</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Approved with Exception">Approved with Exception</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+              </div>
+            </div>
+            
+            <!-- Row 5: Comment -->
+            <div class="row mb-3">
+              <div class="col-12">
+                <label class="form-label">Comment</label>
+                <textarea class="form-control" id="editComment" rows="5" style="height: 10cm; width: 100%;"></textarea>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="closeEditModal">Close</button>
+          <button type="button" class="btn btn-primary" id="saveEngagement">Save changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal for Edit -->
+  <div class="modal fade" id="confirmCloseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Unsaved Changes</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          Are you sure you don't want to save data?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="confirmNoBtn" data-bs-dismiss="modal">No</button>
+          <button type="button" class="btn btn-primary" id="confirmCloseBtn">Yes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Summary Modal -->
+  <div class="modal fade" id="summaryModal" tabindex="-1" aria-labelledby="summaryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header" style="background-color: #343a40; color: #fff;">
+          <h5 class="modal-title" id="summaryModalLabel">Patches Summary</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Assigned To</th>
+                <th>Not Started</th>
+                <th>In Progress</th>
+                <th>On Hold</th>
+                <th>Completed</th>
+                <th class="total-column">Total</th>
+              </tr>
+            </thead>
+            <tbody id="summaryTableBody"></tbody>
+          </table>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Engagement Modal -->
+  <div class="modal fade" id="newEngagementModal" tabindex="-1" aria-labelledby="newEngagementModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title" id="newEngagementModalLabel">New Patch</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="newModalCloseX"></button>
+        </div>
+        <div class="modal-body">
+          <form id="newEngagementForm">
+            <input type="hidden" name="csrfmiddlewaretoken" id="newCsrfToken" value="">
+            <div class="mb-3">
+              <label class="form-label">Name</label>
+              <input type="text" class="form-control" id="newName" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">AppSec ETA</label>
+              <input type="date" class="form-control" id="newTargetStart" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">RM ETA</label>
+              <input type="date" class="form-control" id="newTargetEnd" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Status</label>
+              <input type="text" class="form-control" id="newStatus" value="Not Started" readonly>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Assigned To</label>
+              <select class="form-select searchable-select" id="newLead">
+                <option value="">Unassigned</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Product</label>
+              <select class="form-select searchable-select" id="newProduct" required>
+                <option value="">Select Product</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Created By</label>
+              <input type="text" class="form-control" id="newCreatedBy" required>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="closeNewModal">Close</button>
+          <button type="button" class="btn btn-primary" id="saveNewEngagement">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal for Close -->
+  <div class="modal fade" id="confirmCloseEngagementModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirm Close</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          Are you sure you want to close this Patch?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+          <button type="button" class="btn btn-danger" id="confirmCloseEngagementBtn">Yes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Closed Engagements Modal -->
+  <div class="modal fade" id="viewClosedModal" tabindex="-1" aria-labelledby="viewClosedModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header" style="background-color: #343a40; color: #fff;">
+          <h5 class="modal-title" id="viewClosedModalLabel">Closed Patches</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <h6>Total Closed Patches: <span id="totalClosedCount">0</span></h6>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <button class="btn btn-sm btn-outline-primary" id="closedFirstPage"><i class="bi bi-skip-start-fill"></i> First</button>
+              <button class="btn btn-sm btn-outline-secondary" id="closedPrevPage"><i class="bi bi-caret-left-fill"></i> Prev</button>
+              <button class="btn btn-sm btn-outline-secondary" id="closedNextPage">Next <i class="bi bi-caret-right-fill"></i></button>
+              <button class="btn btn-sm btn-outline-primary" id="closedLastPage">Last <i class="bi bi-skip-end-fill"></i></button>
+            </div>
+            <div id="closedPaginationStatus" class="text-muted small"></div>
+          </div>
+          <div class="table-container">
+            <table class="table table-hover table-bordered align-middle">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Assigned To</th>
+                  <th>Created by</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="closedEngagementTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Completed Summary Modal -->
+  <div class="modal fade" id="completedSummaryModal" tabindex="-1" aria-labelledby="completedSummaryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header" style="background-color: #343a40; color: #fff;">
+          <h5 class="modal-title" id="completedSummaryModalLabel">Completed Summary</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Start Date (Updated)</label>
+              <input type="date" class="form-control" id="completedStartDate">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">End Date (Updated)</label>
+              <input type="date" class="form-control" id="completedEndDate">
+            </div>
+          </div>
+          <button id="fetchCompletedSummary" class="btn btn-primary mb-3">Fetch Summary</button>
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Total Completed</th>
+                <th>Approved</th>
+                <th>Approved with Exception</th>
+                <th>Rejected</th>
+              </tr>
+            </thead>
+            <tbody id="completedSummaryTableBody">
+              <tr>
+                <td id="totalCompleted">0</td>
+                <td id="approvedCount">0</td>
+                <td id="approvedWithExceptionCount">0</td>
+                <td id="rejectedCount">0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Add Jiras Modal -->
+<div class="modal fade" id="addJirasModal" tabindex="-1" aria-labelledby="addJirasModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title" id="addJirasModalLabel">Add Jiras</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="jirasModalCloseX"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addJirasForm">
+          <input type="hidden" id="jiraEngagementId">
+          <div class="mb-3">
+            <label class="form-label">Title</label>
+            <input type="text" class="form-control" id="jiraTitle">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Drag and Drop Files (txt, csv, xlsx, xls)</label>
+            <div id="dropZone" class="border p-3 text-center" style="background-color: #f8f9fa; cursor: pointer;">
+              Drop files here or click to upload
+              <input type="file" id="jiraFileInput" accept=".txt,.csv,.xlsx,.xls" multiple hidden>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Comma-Separated Jira Keys</label>
+            <textarea class="form-control" id="jiraKeysTextarea" rows="3" placeholder="e.g., JIRA-123, JIRA-456"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="closeJirasModal">Close</button>
+        <button type="button" class="btn btn-primary" id="saveJiras">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+  
+  
+ 
+
+<div class="modal fade" id="viewJirasModal" tabindex="-1" aria-labelledby="viewJirasModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: #343a40; color: #fff;">
+        <h5 class="modal-title" id="viewJirasModalLabel">View Jiras</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <select class="form-select searchable-select" id="engagementSelect">
+              <option value="">Select a Patch</option>
+            </select>
+          </div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-3">
+            <input type="text" class="form-control" id="jiraTitleSearch" placeholder="Search Jira...">
+          </div>
+          <div class="col-md-2">
+            <select class="form-select" id="jiraTypeFilter">
+              <option value="">All Jira Types</option>
+              <option value="Security">Security</option>
+              <option value="Functional">Functional</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <select class="form-select" id="analysisStatusFilter">
+              <option value="">All Analysis Status</option>
+              <option value="Not Started">Not Started</option>
+              <option value="In Progress">In Progress</option>
+              <option value="On Hold">On Hold</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <select class="form-select" id="jiraStatusFilter">
+              <option value="">All Jira Status</option>
+              <option value="To Do">To Do</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Ready for Testing">Ready for Testing</option>
+              <option value="Done">Done</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <select class="form-select searchable-select" id="assignedToFilterJira">
+              <option value="">All Assigned To</option>
+            </select>
+          </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <button class="btn btn-sm btn-outline-primary" id="jiraFirstPage"><i class="bi bi-skip-start-fill"></i> First</button>
+            <button class="btn btn-sm btn-outline-secondary" id="jiraPrevPage"><i class="bi bi-caret-left-fill"></i> Prev</button>
+            <button class="btn btn-sm btn-outline-secondary" id="jiraNextPage">Next <i class="bi bi-caret-right-fill"></i></button>
+            <button class="btn btn-sm btn-outline-primary" id="jiraLastPage">Last <i class="bi bi-skip-end-fill"></i></button>
+          </div>
+          <div id="jiraPaginationStatus" class="text-muted small"></div>
+        </div>
+        <div class="table-container">
+          <table class="table table-hover table-bordered align-middle">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Jira Type</th>
+                <th>Analysis Status</th>
+                <th>Jira Status</th>
+                <th>Assigned To</th>
+              </tr>
+            </thead>
+            <tbody id="jiraTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+	  
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+<!-- Add Report Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: #343a40; color: #fff;">
+        <h5 class="modal-title" id="reportModalLabel">Patch Report</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <button id="riskRegister" class="btn btn-primary btn-sm mb-2">
+            <i class="bi bi-shield-exclamation"></i> Risk Register
+          </button>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Select Patch</label>
+          <select class="form-select searchable-select" id="reportEngagementSelect">
+            <option value="">Select a Patch</option>
+          </select>
+        </div>
+        <!-- Summary Table -->
+        <h6>Summary</h6>
+        <div class="table-container mb-4">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Prepared By</th>
+                <th>Total Changelogs</th>
+              </tr>
+            </thead>
+            <tbody id="summaryReportBody"></tbody>
+          </table>
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Contrast Verification</th>
+                <th>Conclusion</th>
+              </tr>
+            </thead>
+            <tbody id="contrastReportBody"></tbody>
+          </table>
+        </div>
+        <!-- Build Analysis Table -->
+        <h6>Build Analysis</h6>
+        <div class="table-container mb-4">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Build</th>
+                <th>Date</th>
+                <th>Total Number of Jiras</th>
+              </tr>
+            </thead>
+            <tbody id="buildHeaderReportBody"></tbody>
+          </table>
+          <hr>
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Sr. No.</th>
+                <th>Changelog Reviewer</th>
+                <th>Issue Key</th>
+                <th>Jira Type</th>
+                <th>Manual Secure Code Review</th>
+                <th>Manual Security Testing</th>
+                <th>Remark</th>
+                <th>Jira Status</th>
+              </tr>
+            </thead>
+            <tbody id="buildAnalysisReportBody"></tbody>
+          </table>
+        </div>
+        <!-- Risk Register Table -->
+        <h6>Risk Register</h6>
+        <div class="table-container">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Sr. No.</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Comment</th>
+              </tr>
+            </thead>
+            <tbody id="riskRegisterReportBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="viewReport">View</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Risk Register Modal -->
+<div class="modal fade" id="riskRegisterModal" tabindex="-1" aria-labelledby="riskRegisterModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title" id="riskRegisterModalLabel">Risk Register for <span id="riskEngagementName"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="riskModalCloseX"></button>
+      </div>
+      <div class="modal-body">
+        <div id="riskTestsContainer">
+          <h6>Tests to Create</h6>
+          <ul class="list-group">
+            <li class="list-group-item">reporting_patches (Acunetix Scan)</li>
+            <li class="list-group-item">SQL Injection (Azure Security Center)</li>
+            <li class="list-group-item">XSS (Azure Security Center)</li>
+            <li class="list-group-item">XXE (Azure Security Center)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="closeRiskModal">Close</button>
+        <button type="button" class="btn btn-primary" id="createAllRiskTests">Create All</button>
+      </div>
+    </div>
+  </div>
+</div>
+ 
+
+  
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+  <script>
+    const pageSize = 20;
+    const closedPageSize = 20;
+    let allEngagements = [];
+    let filteredEngagements = [];
+    let closedEngagements = [];
+    let completedEngagements = [];
+    let currentPage = 1;
+    let closedCurrentPage = 1;
+    let usersCache = {};
+    let productsCache = {};
+    let engagementToClose = null;
+	let addJirasModal;
+let viewJirasModal;
+let jiraTests = [];
+let filteredJiraTests = [];
+let jiraCurrentPage = 1;
+const jiraPageSize = 5;
+// Add variables
+  let riskRegisterModal;
+let currentEngagementId;
+  // Add to DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+    riskRegisterModal = new bootstrap.Modal(document.getElementById('riskRegisterModal'), { backdrop: 'static', keyboard: false });
+    document.getElementById('riskRegister').addEventListener('click', openRiskRegisterModal);
+    document.getElementById('closeRiskModal').addEventListener('click', () => riskRegisterModal.hide());
+    document.getElementById('riskModalCloseX').addEventListener('click', (e) => { e.preventDefault(); riskRegisterModal.hide(); });
+    document.getElementById('createAllRiskTests').addEventListener('click', createAllRiskTests);
+  });
+
+  async function openRiskRegisterModal() {
+    const engagementId = $('#reportEngagementSelect').val();
+    if (!engagementId) {
+      showToast('Please select a patch in the Patch Report modal first', 'error');
+      return;
+    }
+
+    const engagement = allEngagements.find(e => e.id === parseInt(engagementId));
+    if (!engagement) {
+      showToast('Selected engagement not found', 'error');
+      return;
+    }
+
+    currentEngagementId = engagementId; // Store the engagement ID for use in createAllRiskTests
+    document.getElementById('riskEngagementName').textContent = `${engagement.id} - ${engagement.name}`; // Display engagement name in modal title
+    riskRegisterModal.show();
+  }
+
+  async function createAllRiskTests() {
+    if (!currentEngagementId) {
+      showToast('No engagement selected', 'error');
+      return;
+    }
+
+    const engagement = allEngagements.find(e => e.id === parseInt(currentEngagementId));
+    if (!engagement) return;
+
+    loadingModal.show();
+    const today = new Date().toISOString().slice(0, 10);
+    const testTemplates = [
+      {
+        title: "reporting_patches",
+        tags: ["reporting_patches"],
+        test_type_name: "Acunetix Scan",
+        test_type: 33,
+        environment: 7
+      },
+      {
+        title: "SQL Injection",
+        tags: ["risk_register"],
+        test_type_name: "Azure Security Center Recommendations Scan",
+        test_type: 44,
+        environment: 6,
+        build_id: "NA"
+      },
+      {
+        title: "XSS",
+        tags: ["risk_register"],
+        test_type_name: "Azure Security Center Recommendations Scan",
+        test_type: 44,
+        environment: 6,
+        build_id: "NA"
+      },
+      {
+        title: "XXE",
+        tags: ["risk_register"],
+        test_type_name: "Azure Security Center Recommendations Scan",
+        test_type: 44,
+        environment: 6,
+        build_id: "NA"
+      }
+    ];
+
+    try {
+      const existingTitles = await fetchExistingTests(currentEngagementId);
+      let createdCount = 0;
+
+      for (const testData of testTemplates) {
+        if (existingTitles.includes(testData.title)) {
+          showToast(`Test "${testData.title}" already exists for this engagement`, 'error');
+          continue;
+        }
+
+        const payload = {
+          title: testData.title,
+          tags: testData.tags,
+          target_start: today,
+          target_end: today,
+          lead: engagement.lead || null,
+          test_type_name: testData.test_type_name,
+          test_type: testData.test_type,
+          environment: testData.environment,
+          build_id: testData.build_id || undefined,
+          engagement: currentEngagementId
+        };
+
+        const response = await fetch('https://demo.defectdojo.org/api/v2/tests/?tags=pci_jira', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.getElementById('csrfToken').value
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          createdCount++;
+        } else {
+          const errorData = await response.json();
+          showToast(`Failed to create test "${testData.title}": ${errorData.message || 'Unknown error'}`, 'error');
+        }
+      }
+
+      if (createdCount > 0) {
+        showToast(`${createdCount} test(s) created successfully`, 'success');
+      } else if (createdCount === 0 && existingTitles.length >= testTemplates.length) {
+        showToast('All tests already exist for this engagement', 'info');
+      }
+    } catch (error) {
+      console.error('Error creating risk tests:', error);
+      showToast('Error creating risk tests', 'error');
+    } finally {
+      loadingModal.hide();
+    }
+  }
+
+
+
+
+
+// Add these variables at the top of the script section
+let reportModal;
+const reportTests = {};
+
+// Add to DOMContentLoaded
+reportModal = new bootstrap.Modal(document.getElementById('reportModal'), { 
+  backdrop: 'static', // Prevent closing by clicking outside
+  keyboard: false     // Prevent closing with ESC key
+});
+
+
+document.getElementById('reportEngagements').addEventListener('click', openReportModal);
+document.getElementById('viewReport').addEventListener('click', viewReport);
+
+// New functions
+// Update the openReportModal function
+async function openReportModal() {
+    const engagementSelect = document.getElementById('reportEngagementSelect');
+    engagementSelect.innerHTML = '<option value="">Select a Patch</option>';
+    filteredEngagements.forEach(e => {
+      const option = document.createElement('option');
+      option.value = e.id;
+      option.textContent = `${e.id} - ${e.name}`;
+      engagementSelect.appendChild(option);
+    });
+
+    $('#reportEngagementSelect').select2({
+      theme: 'bootstrap-5',
+      width: '100%',
+      dropdownParent: $('#reportModal'),
+      placeholder: 'Select a Patch',
+      allowClear: true
+    });
+
+    $('#reportEngagementSelect').val(null).trigger('change');
+    reportTests.summary = [];
+    reportTests.build = [];
+    reportTests.risk = [];
+
+    // Show the modal first, then clear tables once DOM is ready
+    reportModal.show();
+    // Use a small timeout to ensure modal DOM is fully rendered
+    setTimeout(() => {
+      clearReportTables();
+    }, 0);
+
+    $('#reportEngagementSelect').on('change', async function() {
+      const engagementId = $(this).val();
+      if (engagementId) {
+        reportTests.summary = [];
+        reportTests.build = [];
+        reportTests.risk = [];
+        await fetchReportData([engagementId]);
+      } else {
+        clearReportTables();
+      }
+    });
+  }
+
+
+
+
+
+// Update fetchReportData function to prevent duplicates
+async function fetchReportData(engagementIds) {
+  loadingModal.show();
+  try {
+    // Clear existing data completely
+    reportTests.summary = [];
+    reportTests.build = [];
+    reportTests.risk = [];
+
+    const engagementId = engagementIds[0]; // Since we're only allowing one engagement
+    const response = await fetch(`https://demo.defectdojo.org/api/v2/tests/?engagement=${engagementId}`);
+    if (response.ok) {
+      const data = await response.json();
+      const tests = data.results;
+
+      // Filter tests and ensure no duplicates by using Set for unique IDs
+      const uniqueTests = Array.from(new Map(tests.map(t => [t.id, t])).values());
+      
+      reportTests.summary = uniqueTests.filter(t => t.tags.includes('reporting_patches'));
+      reportTests.build = uniqueTests.filter(t => t.tags.includes('pci_jira'));
+      reportTests.risk = uniqueTests.filter(t => t.tags.includes('risk_register'));
+
+      await enrichJiraWithLeadNames([...reportTests.summary, ...reportTests.build, ...reportTests.risk]);
+      renderReportTables(engagementIds);
+    } else {
+      showToast('Failed to fetch report data', 'error');
+    }
+  } catch (error) {
+    console.error('Error fetching report data:', error);
+    showToast('Error fetching report data', 'error');
+  } finally {
+    loadingModal.hide();
+  }
+}
+
+// Update renderReportTables to use unique entries
+function renderReportTables(engagementIds) {
+  const selectedEngagements = filteredEngagements.filter(e => engagementIds.includes(e.id.toString()));
+  
+  // Summary Table (unchanged)
+  const summaryBody = document.getElementById('summaryReportBody');
+  summaryBody.innerHTML = selectedEngagements.map(e => `
+    <tr>
+      <td>${e.name}</td>
+      <td>${e.lead_name}</td>
+      <td>Functional: ${reportTests.build.filter(t => t.build_id === 'Functional' && t.engagement === e.id).length}, 
+          Security: ${reportTests.build.filter(t => t.build_id === 'Security' && t.engagement === e.id).length}</td>
+    </tr>
+  `).join('');
+
+  const contrastBody = document.getElementById('contrastReportBody');
+  contrastBody.innerHTML = selectedEngagements.map(e => {
+    const reportingTest = reportTests.summary.find(t => t.engagement === e.id) || {};
+    return `
+      <tr>
+        <td>
+          <select class="form-select" data-id="${reportingTest.id || ''}" data-field="commit_hash">
+            <option value="Yes" ${reportingTest.commit_hash === 'Yes' ? 'selected' : ''}>Yes</option>
+            <option value="No" ${reportingTest.commit_hash === 'No' ? 'selected' : ''}>No</option>
+          </select>
+        </td>
+        <td>
+          <textarea class="form-control" data-id="${reportingTest.id || ''}" data-field="description">${reportingTest.description || ''}</textarea>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  // Build Analysis Table
+  const today = new Date().toISOString().slice(0, 10);
+  const buildHeaderBody = document.getElementById('buildHeaderReportBody');
+  buildHeaderBody.innerHTML = selectedEngagements.map(e => `
+    <tr>
+      <td>${e.name}</td>
+      <td>${today}</td>
+      <td>${reportTests.build.length}</td>  <!-- Use current length directly -->
+    </tr>
+  `).join('');
+
+  const buildAnalysisBody = document.getElementById('buildAnalysisReportBody');
+  // Remove duplicates by mapping to unique test IDs
+  const uniqueBuildTests = Array.from(new Map(reportTests.build.map(t => [t.id, t])).values());
+  buildAnalysisBody.innerHTML = uniqueBuildTests.map((t, index) => {
+    const mscrMatch = t.description?.match(/manual secure code review: (na|done|not done)/i);
+    const mstMatch = t.description?.match(/manual security testing: (na|done|not done)/i);
+    return `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${usersCache[t.lead]?.name || 'Unassigned'}</td>
+        <td>${t.title}</td>
+        <td>${t.build_id || ''}</td>
+        <td>${mscrMatch ? mscrMatch[1].toUpperCase() : 'NA'}</td>
+        <td>${mstMatch ? mstMatch[1].toUpperCase() : 'NA'}</td>
+        <td><textarea class="form-control" data-id="${t.id}" data-field="description">${t.description || ''}</textarea></td>
+        <td>${t.branch_tag || ''}</td>
+      </tr>
+    `;
+  }).join('');
+
+  // Risk Register Table
+  const riskBody = document.getElementById('riskRegisterReportBody');
+  // Remove duplicates by mapping to unique test IDs
+  const uniqueRiskTests = Array.from(new Map(reportTests.risk.map(t => [t.id, t])).values());
+  riskBody.innerHTML = uniqueRiskTests.map((t, index) => {
+    return `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${t.title}</td>
+        <td>
+          <select class="form-select" data-id="${t.id}" data-field="build_id">
+            <option value="NA" ${t.build_id === 'NA' ? 'selected' : ''}>NA</option>
+            <option value="Found" ${t.build_id === 'Found' ? 'selected' : ''}>Found</option>
+            <option value="Not Found" ${t.build_id === 'Not Found' ? 'selected' : ''}>Not Found</option>
+          </select>
+        </td>
+        <td><input type="text" class="form-control" data-id="${t.id}" data-field="commit_hash" value="${t.commit_hash || ''}"></td>
+      </tr>
+    `;
+  }).join('');
+
+  // Add event listeners for autosave (unchanged)
+  document.querySelectorAll('#reportModal textarea, #reportModal select, #reportModal input').forEach(element => {
+    element.addEventListener('change', debounce(async (e) => {
+      const testId = e.target.getAttribute('data-id');
+      const field = e.target.getAttribute('data-field');
+      const value = e.target.value;
+      if (testId) await saveJiraTest(testId, field, value);
+    }, 500));
+  });
+}
+
+
+
+
+function clearReportTables() {
+    const summaryReportBody = document.getElementById('summaryReportBody');
+    const contrastReportBody = document.getElementById('contrastReportBody');
+    const buildHeaderReportBody = document.getElementById('buildHeaderReportBody');
+    const buildAnalysisReportBody = document.getElementById('buildAnalysisReportBody');
+    const riskRegisterReportBody = document.getElementById('riskRegisterReportBody');
+
+    if (summaryReportBody) summaryReportBody.innerHTML = '';
+    else console.error('summaryReportBody element not found');
+    if (contrastReportBody) contrastReportBody.innerHTML = '';
+    else console.error('contrastReportBody element not found');
+    if (buildHeaderReportBody) buildHeaderReportBody.innerHTML = '';
+    else console.error('buildHeaderReportBody element not found');
+    if (buildAnalysisReportBody) buildAnalysisReportBody.innerHTML = '';
+    else console.error('buildAnalysisReportBody element not found');
+    if (riskRegisterReportBody) riskRegisterReportBody.innerHTML = '';
+    else console.error('riskRegisterReportBody element not found');
+  }
+
+// Debounce function to prevent GUI flicker
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+function viewReport() {
+  const engagementIds = $('#reportEngagementSelect').val();
+  if (!engagementIds || engagementIds.length === 0) {
+    showToast('Please select at least one engagement', 'error');
+    return;
+  }
+
+  const selectedEngagements = filteredEngagements.filter(e => engagementIds.includes(e.id.toString()));
+  const reportHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>${selectedEngagements[0].name} Report</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #343a40; color: white; }
+        h2 { color: #343a40; }
+        hr { margin: 20px 0; }
+        @media print {
+          .no-print { display: none; }
+          @page { margin: 0; }
+          body { margin: 1cm; }
+        }
+      </style>
+    </head>
+    <body>
+      <h2>Patch Report</h2>
+      <h3>Summary</h3>
+      <table>
+        <tr><th>Name</th><th>Prepared By</th><th>Total Changelogs</th></tr>
+        ${selectedEngagements.map(e => `
+          <tr>
+            <td>${e.name}</td>
+            <td>${e.lead_name}</td>
+            <td>Functional: ${reportTests.build.filter(t => t.build_id === 'Functional' && t.engagement === e.id).length}, 
+                Security: ${reportTests.build.filter(t => t.build_id === 'Security' && t.engagement === e.id).length}</td>
+          </tr>
+        `).join('')}
+      </table>
+      <table>
+        <tr><th>Contrast Verification</th><th>Conclusion</th></tr>
+        ${selectedEngagements.map(e => {
+          const test = reportTests.summary.find(t => t.engagement === e.id) || {};
+          return `
+            <tr>
+              <td>${test.commit_hash || 'No'}</td>
+              <td>${test.description || ''}</td>
+            </tr>
+          `;
+        }).join('')}
+      </table>
+
+      <h3>Build Analysis</h3>
+      <table>
+        <tr><th>Build</th><th>Date</th><th>Total Number of Jiras</th></tr>
+        ${selectedEngagements.map(e => `
+          <tr>
+            <td>${e.name}</td>
+            <td>${new Date().toISOString().slice(0, 10)}</td>
+            <td>${reportTests.build.filter(t => t.engagement === e.id).length}</td>
+          </tr>
+        `).join('')}
+      </table>
+      <hr>
+      <table>
+        <tr>
+          <th>Sr. No.</th>
+          <th>Changelog Reviewer</th>
+          <th>Issue Key</th>
+          <th>Jira Type</th>
+          <th>Manual Secure Code Review</th>
+          <th>Manual Security Testing</th>
+          <th>Remark</th>
+          <th>Jira Status</th>
+        </tr>
+        ${reportTests.build.map((t, index) => {
+          const mscrMatch = t.description?.match(/manual secure code review: (na|done|not done)/i);
+          const mstMatch = t.description?.match(/manual security testing: (na|done|not done)/i);
+          return `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${usersCache[t.lead]?.name || 'Unassigned'}</td>
+              <td>${t.title}</td>
+              <td>${t.build_id || ''}</td>
+              <td>${mscrMatch ? mscrMatch[1].toUpperCase() : 'NA'}</td>
+              <td>${mstMatch ? mstMatch[1].toUpperCase() : 'NA'}</td>
+              <td>${t.description || ''}</td>
+              <td>${t.branch_tag || ''}</td>
+            </tr>
+          `;
+        }).join('')}
+      </table>
+
+      <h3>Risk Register</h3>
+      <table>
+        <tr><th>Sr. No.</th><th>Category</th><th>Status</th><th>Comment</th></tr>
+        ${reportTests.risk.map((t, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${t.title}</td>
+            <td>${t.build_id || 'NA'}</td>
+            <td>${t.commit_hash || ''}</td>
+          </tr>
+        `).join('')}
+      </table>
+
+      <button class="no-print" onclick="window.print()">Print</button>
+    </body>
+    </html>
+  `;
+
+  const newWindow = window.open('', '_blank');
+  newWindow.document.write(reportHtml);
+  newWindow.document.close();
+  newWindow.document.title = `${selectedEngagements[0].name}_Report`;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+document.getElementById("refreshTable").onclick = async () => {
+  loadingModal.show();
+  try {
+    await fetchEngagements();
+    applyFilters();
+    showToast('Table refreshed successfully', 'success');
+  } catch (error) {
+    console.error('Error refreshing table:', error);
+    showToast('Error refreshing table', 'error');
+  } finally {
+    loadingModal.hide();
+  }
+};
+
+
+
+
+
+
+
+
+    const tableBody = document.getElementById("engagementTableBody");
+    const closedTableBody = document.getElementById("closedEngagementTableBody");
+    const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'), { backdrop: 'static' });
+    const paginationStatus = document.getElementById("paginationStatus");
+    const closedPaginationStatus = document.getElementById("closedPaginationStatus");
+
+    // Initialize searchable dropdowns
+    $(document).ready(function() {
+      $('.searchable-select').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: 'Search...',
+        allowClear: true
+      });
+    });
+
+
+
+
+
+async function fetchJiraData(engagementId) {
+  try {
+    const response = await fetch(`https://demo.defectdojo.org/api/v2/tests/?engagement=${engagementId}&tags=pci_jira`);
+    if (response.ok) {
+      const data = await response.json();
+      const tests = data.results;
+      
+      const counts = {
+        total: tests.length,
+        security: tests.filter(test => test.build_id === 'Security').length,
+        functional: tests.filter(test => test.build_id === 'Functional').length,
+        doable: tests.filter(test => ['Ready for Testing', 'Done'].includes(test.branch_tag)).length,
+        nonDoable: tests.filter(test => !['Ready for Testing', 'Done'].includes(test.branch_tag)).length
+      };
+      return counts;
+    }
+    return { total: 0, security: 0, functional: 0, doable: 0, nonDoable: 0 };
+  } catch (error) {
+    console.error('Error fetching Jira data:', error);
+    return { total: 0, security: 0, functional: 0, doable: 0, nonDoable: 0 };
+  }
+}
+
+
+
+
+
+
+
+
+    async function fetchEngagements() {
+      loadingModal.show();
+      const urls = [
+        'https://demo.defectdojo.org/api/v2/engagements/?tags=pci&status=Not%20Started&o=-created',
+        'https://demo.defectdojo.org/api/v2/engagements/?tags=pci&status=In%20Progress&o=-created',
+        'https://demo.defectdojo.org/api/v2/engagements/?tags=pci&status=On%20Hold&o=-created'
+      ];
+
+      const responses = await Promise.all(urls.map(url => fetch(url)));
+      const results = await Promise.all(responses.map(res => res.json()));
+
+      allEngagements = results.flatMap(res => res.results);
+      await enrichWithLeadNames(allEngagements);
+      
+      populateFilterDropdowns();
+      filteredEngagements = [...allEngagements];
+      
+      updateStatusCounts();
+      renderTable();
+      loadingModal.hide();
+    }
+
+    async function fetchClosedEngagements() {
+      loadingModal.show();
+      const urls = [
+        'https://demo.defectdojo.org/api/v2/engagements/?tags=pci&status=Blocked',
+        'https://demo.defectdojo.org/api/v2/engagements/?tags=pci&status=Completed',
+        'https://demo.defectdojo.org/api/v2/engagements/?tags=pci&status=Cancelled'
+      ];
+
+      const responses = await Promise.all(urls.map(url => fetch(url)));
+      const results = await Promise.all(responses.map(res => res.json()));
+
+      closedEngagements = results.flatMap(res => res.results);
+      await enrichWithLeadNames(closedEngagements);
+      renderClosedTable();
+      loadingModal.hide();
+    }
+
+    async function fetchCompletedSummary() {
+      const startDate = document.getElementById('completedStartDate').value;
+      const endDate = document.getElementById('completedEndDate').value;
+
+      if (!startDate || !endDate) {
+        showToast('Please select both start and end dates', 'error');
+        return;
+      }
+
+      loadingModal.show();
+
+      const startISO = `${startDate}T00:00:00Z`;
+      const endISO = `${endDate}T23:59:59Z`;
+      const url = `https://demo.defectdojo.org/api/v2/engagements/?tags=pci&status=Completed&active=false&updated__gte=${startISO}&updated__lte=${endISO}`;
+
+      try {
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          completedEngagements = data.results;
+          await enrichWithLeadNames(completedEngagements);
+
+          const summary = {
+            total: completedEngagements.length,
+            approved: completedEngagements.filter(e => e.commit_hash === 'Approved').length,
+            approvedWithException: completedEngagements.filter(e => e.commit_hash === 'Approved with Exception').length,
+            rejected: completedEngagements.filter(e => e.commit_hash === 'Rejected').length
+          };
+
+          document.getElementById('totalCompleted').textContent = summary.total;
+          document.getElementById('approvedCount').textContent = summary.approved;
+          document.getElementById('approvedWithExceptionCount').textContent = summary.approvedWithException;
+          document.getElementById('rejectedCount').textContent = summary.rejected;
+        } else {
+          showToast('Failed to fetch completed summary', 'error');
+        }
+      } catch (error) {
+        console.error('Error fetching completed summary:', error);
+        showToast('Error fetching completed summary', 'error');
+      } finally {
+        loadingModal.hide();
+      }
+    }
+
+    async function enrichWithLeadNames(engagements) {
+      const leadIds = [...new Set(engagements.map(e => e.lead).filter(Boolean))];
+      const leadMap = {};
+
+      await Promise.all(leadIds.map(async id => {
+        const res = await fetch(`https://demo.defectdojo.org/api/v2/users/${id}/`);
+        if (res.ok) {
+          const data = await res.json();
+          leadMap[id] = `${data.first_name} ${data.last_name}`;
+        }
+      }));
+
+      engagements.forEach(e => {
+        e.lead_name = leadMap[e.lead] || 'Unassigned';
+      });
+    }
+    
+    async function fetchAllProducts() {
+      if (Object.keys(productsCache).length > 0) return productsCache;
+      
+      try {
+        const response = await fetch('https://demo.defectdojo.org/api/v2/products/');
+        if (response.ok) {
+          const data = await response.json();
+          data.results.forEach(product => {
+            productsCache[product.id] = {
+              id: product.id,
+              name: product.name
+            };
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      }
+      
+      return productsCache;
+    }
+
+    async function fetchAllUsers() {
+      if (Object.keys(usersCache).length > 0) return usersCache;
+      
+      try {
+        const response = await fetch('https://demo.defectdojo.org/api/v2/users/');
+        if (response.ok) {
+          const data = await response.json();
+          data.results.forEach(user => {
+            const fullName = `${user.first_name} ${user.last_name}`;
+            usersCache[user.id] = {
+              id: user.id,
+              name: fullName
+            };
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+      
+      return usersCache;
+    }
+
+    function updateStatusCounts() {
+      const notStartedCount = allEngagements.filter(e => e.status === 'Not Started').length;
+      const inProgressCount = allEngagements.filter(e => e.status === 'In Progress').length;
+      const onHoldCount = allEngagements.filter(e => e.status === 'On Hold').length;
+
+      document.getElementById('notStartedCount').textContent = notStartedCount;
+      document.getElementById('inProgressCount').textContent = inProgressCount;
+      document.getElementById('onHoldCount').textContent = onHoldCount;
+    }
+
+    function populateFilterDropdowns() {
+      $('#assignedToFilter, #createdByFilter').select2('destroy');
+      
+      const assignedToSet = new Set(allEngagements.map(e => e.lead_name).filter(Boolean).sort());
+      const assignedToFilter = document.getElementById('assignedToFilter');
+      assignedToFilter.innerHTML = '<option value="">All</option>';
+      assignedToSet.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        assignedToFilter.appendChild(option);
+      });
+      
+      const createdBySet = new Set(allEngagements.map(e => e.reason).filter(Boolean).sort());
+      const createdByFilter = document.getElementById('createdByFilter');
+      createdByFilter.innerHTML = '<option value="">All</option>';
+      createdBySet.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        createdByFilter.appendChild(option);
+      });
+      
+      const statusAnalystSet = new Set(allEngagements.map(e => e.status).filter(Boolean).sort());
+      const statusAnalystFilter = document.getElementById('statusAnalystFilter');
+      statusAnalystFilter.innerHTML = '<option value="">All</option>';
+      statusAnalystSet.forEach(status => {
+        const option = document.createElement('option');
+        option.value = status;
+        option.textContent = status;
+        statusAnalystFilter.appendChild(option);
+      });
+      
+      const statusMentorSet = new Set(allEngagements.map(e => e.branch_tag).filter(Boolean).sort());
+      const statusMentorFilter = document.getElementById('statusMentorFilter');
+      statusMentorFilter.innerHTML = '<option value="">All</option>';
+      statusMentorSet.forEach(status => {
+        const option = document.createElement('option');
+        option.value = status;
+        option.textContent = status;
+        statusMentorFilter.appendChild(option);
+      });
+      
+      const statusLeadSet = new Set(allEngagements.map(e => e.commit_hash).filter(Boolean).sort());
+      const statusLeadFilter = document.getElementById('statusLeadFilter');
+      statusLeadFilter.innerHTML = '<option value="">All</option>';
+      statusLeadSet.forEach(status => {
+        const option = document.createElement('option');
+        option.value = status;
+        option.textContent = status;
+        statusLeadFilter.appendChild(option);
+      });
+      
+      $('.searchable-select').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: 'Search...',
+        allowClear: true
+      });
+    }
+
+    function applyFilters() {
+      const idValue = document.getElementById('idFilter').value;
+      const createdValue = document.getElementById('createdFilter').value;
+      const agingValue = document.getElementById('agingFilter').value;
+      const agingCondition = document.getElementById('agingCondition').value;
+      const createdByValue = $('#createdByFilter').val();
+      const statusAnalystValue = document.getElementById('statusAnalystFilter').value;
+      const statusMentorValue = document.getElementById('statusMentorFilter').value;
+      const statusLeadValue = document.getElementById('statusLeadFilter').value;
+      const nameValue = document.getElementById('nameFilter').value.toLowerCase();
+      const assignedToValue = $('#assignedToFilter').val();
+      const appSecETAValue = document.getElementById('appSecETAFilter').value;
+      const rmETAValue = document.getElementById('rmETAFilter').value;
+      const irValue = document.getElementById('irFilter').value.toLowerCase();
+      
+      const today = new Date();
+      
+      filteredEngagements = allEngagements.filter(engagement => {
+        if (idValue && engagement.id.toString() !== idValue) return false;
+        if (createdValue && engagement.created.slice(0, 10) !== createdValue) return false;
+        if (agingValue) {
+          const created = new Date(engagement.created);
+          const aging = Math.floor((today - created) / (1000 * 60 * 60 * 24));
+          if (agingCondition === 'lt' && !(aging < parseInt(agingValue))) return false;
+          if (agingCondition === 'gt' && !(aging > parseInt(agingValue))) return false;
+          if (agingCondition === 'eq' && !(aging === parseInt(agingValue))) return false;
+        }
+        if (createdByValue && engagement.reason !== createdByValue) return false;
+        if (statusAnalystValue && engagement.status !== statusAnalystValue) return false;
+        if (statusMentorValue && engagement.branch_tag !== statusMentorValue) return false;
+        if (statusLeadValue && engagement.commit_hash !== statusLeadValue) return false;
+        if (nameValue && !engagement.name.toLowerCase().includes(nameValue)) return false;
+        if (assignedToValue && engagement.lead_name !== assignedToValue) return false;
+        if (appSecETAValue && engagement.target_start && engagement.target_start.slice(0, 10) !== appSecETAValue) return false;
+        if (rmETAValue && engagement.target_end && engagement.target_end.slice(0, 10) !== rmETAValue) return false;
+        if (irValue && (!engagement.version || !engagement.version.toLowerCase().includes(irValue))) return false;
+        return true;
+      });
+      
+      currentPage = 1;
+      renderTable();
+    }
+    
+    function resetFilters() {
+      document.getElementById('idFilter').value = '';
+      document.getElementById('createdFilter').value = '';
+      document.getElementById('agingFilter').value = '';
+      document.getElementById('agingCondition').value = 'lt';
+      $('#createdByFilter').val(null).trigger('change');
+      document.getElementById('statusAnalystFilter').value = '';
+      document.getElementById('statusMentorFilter').value = '';
+      document.getElementById('statusLeadFilter').value = '';
+      document.getElementById('nameFilter').value = '';
+      $('#assignedToFilter').val(null).trigger('change');
+      document.getElementById('appSecETAFilter').value = '';
+      document.getElementById('rmETAFilter').value = '';
+      document.getElementById('irFilter').value = '';
+      
+      filteredEngagements = [...allEngagements];
+      currentPage = 1;
+      renderTable();
+    }
+
+    function getHighlightClass(dateStr) {
+      if (!dateStr) return '';
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      const isFriday = today.getDay() === 5;
+      const monday = new Date(today);
+      if (isFriday) monday.setDate(today.getDate() + 3);
+      else monday.setDate(today.getDate() + (8 - today.getDay()) % 7);
+
+      const cellDate = new Date(dateStr);
+      cellDate.setHours(0, 0, 0, 0);
+
+      if (cellDate.getTime() === today.getTime()) return 'highlight-today';
+      if (cellDate.getTime() === tomorrow.getTime() || (isFriday && cellDate.getTime() === monday.getTime())) return 'highlight-upcoming';
+      return '';
+    }
+
+
+async function renderTable() {
+  const start = (currentPage - 1) * pageSize;
+  const pagedData = filteredEngagements.slice(start, start + pageSize);
+  const today = new Date();
+  const totalPages = Math.ceil(filteredEngagements.length / pageSize);
+
+  // Fetch Jira data for all engagements in parallel
+  const jiraDataPromises = pagedData.map(e => fetchJiraData(e.id));
+  const jiraDataArray = await Promise.all(jiraDataPromises);
+
+  tableBody.innerHTML = pagedData.map((e, index) => {
+    const created = new Date(e.created);
+    const aging = Math.floor((today - created) / (1000 * 60 * 60 * 24));
+    const appSecETA = e.target_start ? e.target_start.slice(0, 10) : '';
+    const rmETA = e.target_end ? e.target_end.slice(0, 10) : '';
+    const appSecClass = getHighlightClass(appSecETA);
+    const rmClass = getHighlightClass(rmETA);
+    const jiraData = jiraDataArray[index];
+
+    return `
+      <tr>
+        <td>${e.id}</td>
+        <td>${aging} days</td>
+        <td>${e.name}</td>
+        <td>${jiraData.total}</td>
+        <td>${jiraData.security}</td>
+        <td>${jiraData.functional}</td>
+        <td>${jiraData.doable}</td>
+        <td>${jiraData.nonDoable}</td>
+        <td>${e.lead_name}</td>
+        <td class="${appSecClass}">${appSecETA}</td>
+        <td class="${rmClass}">${rmETA}</td>
+        <td>${e.status}</td>
+        <td>${e.branch_tag || ''}</td>
+        <td>${e.commit_hash || ''}</td>
+        <td>${e.version || ''}</td>
+        <td>
+          <button class="btn btn-sm btn-success edit-btn" data-id="${e.id}" title="Edit"><i class="bi bi-pencil-square"></i></button>
+          <button class="btn btn-sm btn-danger close-btn" data-id="${e.id}" title="Close"><i class="bi bi-x-circle"></i></button>
+          <button class="btn btn-sm btn-info jira-btn" data-id="${e.id}" title="Jira"><i class="bi bi-ticket-detailed"></i></button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  paginationStatus.textContent = `Page ${currentPage} of ${totalPages} (${filteredEngagements.length} results)`;
+  
+  document.getElementById("prevPage").disabled = currentPage === 1;
+  document.getElementById("firstPage").disabled = currentPage === 1;
+  document.getElementById("nextPage").disabled = currentPage === totalPages;
+  document.getElementById("lastPage").disabled = currentPage === totalPages;
+  
+  document.querySelectorAll('.edit-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      const engagementId = parseInt(button.getAttribute('data-id'));
+      openEditModal(engagementId);
+    });
+  });
+
+  document.querySelectorAll('.jira-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      const engagementId = parseInt(button.getAttribute('data-id'));
+      openAddJirasModal(engagementId);
+    });
+  });
+
+  document.querySelectorAll('.close-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      const engagementId = parseInt(button.getAttribute('data-id'));
+      confirmCloseEngagement(engagementId);
+    });
+  });
+}
+
+
+async function openAddJirasModal(engagementId) {
+  const engagement = allEngagements.find(e => e.id === engagementId);
+  if (!engagement) return;
+
+  document.getElementById('jiraEngagementId').value = engagementId;
+  document.getElementById('jiraTitle').value = '';
+  document.getElementById('jiraFileInput').value = '';
+  document.getElementById('jiraKeysTextarea').value = '';
+  document.getElementById('dropZone').style.backgroundColor = '#f8f9fa';
+  
+  addJirasModal.show();
+}
+
+
+
+function handleCloseJirasModal() {
+  addJirasModal.hide();
+}
+
+function handleJirasXClose(e) {
+  e.preventDefault();
+  addJirasModal.hide();
+}
+
+async function saveJiras() {
+  const engagementId = document.getElementById('jiraEngagementId').value;
+  const engagement = allEngagements.find(e => e.id === parseInt(engagementId));
+  if (!engagement) return;
+
+  loadingModal.show();
+  const today = new Date().toISOString().slice(0, 10);
+  const baseTestData = {
+    title: '',
+    tags: ['pci_jira'],
+    test_type_name: 'Qualys Scan',
+    target_start: today,
+    target_end: today,
+    lead: engagement.lead || null,
+    test_type: 21,
+    environment: 3,
+    commit_hash: 'Not Started'
+  };
+
+  try {
+    // 1. Single Title Entry
+    const title = document.getElementById('jiraTitle').value.trim();
+    if (title) {
+      await createTest(engagementId, { ...baseTestData, title });
+    }
+
+    // 2. Drag and Drop Files
+    const files = document.getElementById('jiraFileInput').files;
+    if (files.length > 0) {
+      const jiraKeys = await extractJiraKeysFromFiles(files);
+      for (const key of jiraKeys) {
+        await createTest(engagementId, { ...baseTestData, title: key });
+      }
+    }
+
+    // 3. Comma-Separated Values
+    const textareaValue = document.getElementById('jiraKeysTextarea').value.trim();
+    if (textareaValue) {
+      const jiraKeys = textareaValue.split(',').map(key => key.trim()).filter(key => key);
+      for (const key of jiraKeys) {
+        await createTest(engagementId, { ...baseTestData, title: key });
+      }
+    }
+
+    if (!title && files.length === 0 && !textareaValue) {
+      showToast('Please provide at least one Jira entry (title, file, or textarea)', 'error');
+    } else {
+      addJirasModal.hide();
+      showToast('Jira tests created successfully', 'success');
+    }
+  } catch (error) {
+    console.error('Error creating Jira tests:', error);
+    showToast('Error creating Jira tests', 'error');
+  } finally {
+    loadingModal.hide();
+  }
+}
+
+async function createTest(engagementId, testData) {
+  const existingTitles = await fetchExistingTests(engagementId);
+  if (existingTitles.includes(testData.title)) {
+    console.log(`Test with title "${testData.title}" already exists for engagement ${engagementId}. Skipping creation.`);
+    return;
+  }
+
+  const payload = {
+    title: testData.title,
+    target_start: testData.target_start,
+    target_end: testData.target_end,
+    engagement: engagementId,
+    lead: testData.lead,
+    test_type: testData.test_type,
+    environment: testData.environment,
+    tags: testData.tags,
+    test_type_name: testData.test_type_name,
+    commit_hash: testData.commit_hash
+  };
+
+  const response = await fetch('https://demo.defectdojo.org/api/v2/tests/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.getElementById('csrfToken').value
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(`Failed to create test: ${errorData.message || 'Unknown error'}`);
+  }
+}
+
+async function handleFiles(files) {
+  const dropZone = document.getElementById('dropZone');
+  const fileNames = Array.from(files).map(file => file.name).join(', ');
+  dropZone.innerHTML = `Files: ${fileNames} <input type="file" id="jiraFileInput" accept=".txt,.csv,.xlsx,.xls" multiple hidden>`;
+  dropZone.style.backgroundColor = '#f8f9fa';
+}
+
+
+
+
+
+async function fetchExistingTests(engagementId) {
+  const response = await fetch(`https://demo.defectdojo.org/api/v2/tests/?engagement=${engagementId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.getElementById('csrfToken').value
+    }
+  });
+  if (response.ok) {
+    const data = await response.json();
+    return data.results.map(test => test.title);
+  }
+  return [];
+}
+
+
+
+
+async function extractJiraKeysFromFiles(files) {
+  const jiraKeys = [];
+  
+  for (const file of files) {
+    const fileType = file.name.split('.').pop().toLowerCase();
+    
+    if (fileType === 'txt') {
+      const text = await file.text();
+      const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+      jiraKeys.push(...lines);
+    } else if (fileType === 'csv') {
+      const text = await file.text();
+      const rows = text.split('\n').map(row => row.split(',')[0].trim()).filter(key => key);
+      if (rows.length > 0 && rows[0].toLowerCase() !== 'issue key') {
+        jiraKeys.push(...rows);
+      } else {
+        jiraKeys.push(...rows.slice(1));
+      }
+    } else if (fileType === 'xlsx' || fileType === 'xls') {
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const header = rows[0].map(h => h.toString().toLowerCase());
+      const issueKeyIndex = header.indexOf('issue key');
+      if (issueKeyIndex !== -1) {
+        jiraKeys.push(...rows.slice(1).map(row => row[issueKeyIndex]?.toString().trim()).filter(key => key));
+      } else {
+        jiraKeys.push(...rows.map(row => row[0]?.toString().trim()).filter(key => key));
+      }
+    }
+  }
+  
+  return jiraKeys.filter(key => key.match(/^[A-Z]+-\d+$/)); // Basic Jira key validation
+}
+
+// Include XLSX library for Excel file parsing
+const script = document.createElement('script');
+script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+document.head.appendChild(script);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    function renderClosedTable() {
+      const start = (closedCurrentPage - 1) * closedPageSize;
+      const pagedData = closedEngagements.slice(start, start + closedPageSize);
+
+      document.getElementById('totalClosedCount').textContent = closedEngagements.length;
+
+      closedTableBody.innerHTML = pagedData.map(e => `
+        <tr>
+          <td>${e.id}</td>
+          <td>${e.name}</td>
+          <td>${e.lead_name}</td>
+          <td>${e.reason || ''}</td>
+          <td>${e.status}</td>
+          <td>
+            <button class="btn btn-sm btn-primary reopen-btn" data-id="${e.id}" title="Reopen"><i class="bi bi-arrow-clockwise"></i></button>
+          </td>
+        </tr>
+      `).join('');
+
+      const totalPages = Math.ceil(closedEngagements.length / closedPageSize);
+      closedPaginationStatus.textContent = `Page ${closedCurrentPage} of ${totalPages} (${closedEngagements.length} results)`;
+      
+      document.getElementById("closedPrevPage").disabled = closedCurrentPage === 1;
+      document.getElementById("closedFirstPage").disabled = closedCurrentPage === 1;
+      document.getElementById("closedNextPage").disabled = closedCurrentPage === totalPages;
+      document.getElementById("closedLastPage").disabled = closedCurrentPage === totalPages;
+
+      document.querySelectorAll('.reopen-btn').forEach(button => {
+        button.addEventListener('click', () => {
+          const engagementId = parseInt(button.getAttribute('data-id'));
+          reopenEngagement(engagementId);
+        });
+      });
+    }
+
+    document.getElementById("firstPage").onclick = () => { currentPage = 1; renderTable(); };
+    document.getElementById("prevPage").onclick = () => { if (currentPage > 1) currentPage--; renderTable(); };
+    document.getElementById("nextPage").onclick = () => {
+      const totalPages = Math.ceil(filteredEngagements.length / pageSize);
+      if (currentPage < totalPages) currentPage++; renderTable();
+    };
+    document.getElementById("lastPage").onclick = () => {
+      currentPage = Math.ceil(filteredEngagements.length / pageSize); renderTable();
+    };
+    
+    document.getElementById("closedFirstPage").onclick = () => { closedCurrentPage = 1; renderClosedTable(); };
+    document.getElementById("closedPrevPage").onclick = () => { if (closedCurrentPage > 1) closedCurrentPage--; renderClosedTable(); };
+    document.getElementById("closedNextPage").onclick = () => {
+      const totalPages = Math.ceil(closedEngagements.length / closedPageSize);
+      if (closedCurrentPage < totalPages) closedCurrentPage++; renderClosedTable();
+    };
+    document.getElementById("closedLastPage").onclick = () => {
+      closedCurrentPage = Math.ceil(closedEngagements.length / closedPageSize); renderClosedTable();
+    };
+    
+    document.getElementById("applyFilters").onclick = applyFilters;
+    document.getElementById("resetFilters").onclick = resetFilters;
+
+    let currentEditingEngagement = null;
+    let editModalChanged = false;
+    let editEngagementModal;
+    let confirmCloseModal;
+    let summaryModal;
+    let newEngagementModal;
+    let confirmCloseEngagementModal;
+    let viewClosedModal;
+    let completedSummaryModal;
+
+    // Replace the entire JavaScript section starting from line 1920 with this corrected version:
+
+document.addEventListener('DOMContentLoaded', function() {
+
+  addJirasModal = new bootstrap.Modal(document.getElementById('addJirasModal'), { backdrop: 'static', keyboard: false });
+  document.getElementById('closeJirasModal').addEventListener('click', handleCloseJirasModal);
+  document.getElementById('jirasModalCloseX').addEventListener('click', handleJirasXClose);
+  document.getElementById('saveJiras').addEventListener('click', saveJiras);
+  
+  viewJirasModal = new bootstrap.Modal(document.getElementById('viewJirasModal'));
+  document.getElementById('viewJiras').addEventListener('click', openViewJirasModal);
+  
+  // Drag and drop setup
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('jiraFileInput');
+  
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.style.backgroundColor = '#e9ecef';
+  });
+  
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.style.backgroundColor = '#f8f9fa';
+  });
+  
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.style.backgroundColor = '#f8f9fa';
+    fileInput.files = e.dataTransfer.files;
+    handleFiles(fileInput.files);
+  });
+  
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+  
+  editEngagementModal = new bootstrap.Modal(document.getElementById('editEngagementModal'), { backdrop: 'static', keyboard: false });
+  confirmCloseModal = new bootstrap.Modal(document.getElementById('confirmCloseModal'));
+  summaryModal = new bootstrap.Modal(document.getElementById('summaryModal'));
+  newEngagementModal = new bootstrap.Modal(document.getElementById('newEngagementModal'), { backdrop: 'static', keyboard: false });
+  confirmCloseEngagementModal = new bootstrap.Modal(document.getElementById('confirmCloseEngagementModal'));
+  viewClosedModal = new bootstrap.Modal(document.getElementById('viewClosedModal'));
+  completedSummaryModal = new bootstrap.Modal(document.getElementById('completedSummaryModal'));
+  
+  document.getElementById('closeEditModal').addEventListener('click', handleCloseEditModal);
+  document.getElementById('modalCloseX').addEventListener('click', handleXClose);
+  document.getElementById('confirmCloseBtn').addEventListener('click', confirmCloseEditModal);
+  document.getElementById('confirmNoBtn').addEventListener('click', () => confirmCloseModal.hide());
+  document.getElementById('saveEngagement').addEventListener('click', saveEngagementChanges);
+  document.getElementById('viewSummary').addEventListener('click', openSummaryModal);
+  document.getElementById('completedSummary').addEventListener('click', openCompletedSummaryModal);
+  document.getElementById('viewClosed').addEventListener('click', openClosedModal);
+  document.getElementById('newEngagement').addEventListener('click', openNewEngagementModal);
+  document.getElementById('closeNewModal').addEventListener('click', handleCloseNewModal);
+  document.getElementById('newModalCloseX').addEventListener('click', handleNewXClose);
+  document.getElementById('saveNewEngagement').addEventListener('click', saveNewEngagement);
+  document.getElementById('confirmCloseEngagementBtn').addEventListener('click', closeEngagement);
+  document.getElementById('fetchCompletedSummary').addEventListener('click', fetchCompletedSummary);
+  
+  const editFormInputs = document.querySelectorAll('#editEngagementForm input, #editEngagementForm select, #editEngagementForm textarea');
+  editFormInputs.forEach(element => {
+    element.addEventListener('change', () => {
+      editModalChanged = true;
+    });
+    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+      element.addEventListener('input', () => {
+        editModalChanged = true;
+      });
+    }
+  });
+  
+  fetchCSRFToken();
+});
+
+async function fetchCSRFToken() {
+  try {
+    const response = await fetch('https://demo.defectdojo.org/api/key-v2');
+    if (response.ok) {
+      const html = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const csrfToken = doc.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
+      if (csrfToken) {
+        document.getElementById('csrfToken').value = csrfToken;
+        document.getElementById('newCsrfToken').value = csrfToken;
+      } else {
+        console.error('CSRF token not found in response');
+      }
+    } else {
+      console.error('Failed to fetch CSRF token');
+    }
+  } catch (error) {
+    console.error('Error fetching CSRF token:', error);
+  }
+}
+
+async function openViewJirasModal() {
+  await populateEngagementSelect();
+  await populateAssignedToFilter();
+  jiraTests = [];
+  filteredJiraTests = [];
+  jiraCurrentPage = 1;
+  document.getElementById('jiraTitleSearch').value = '';
+  document.getElementById('jiraTypeFilter').value = '';
+  document.getElementById('analysisStatusFilter').value = '';
+  document.getElementById('jiraStatusFilter').value = '';
+  $('#assignedToFilterJira').val(null).trigger('change');
+  document.getElementById('jiraTableBody').innerHTML = '';
+  viewJirasModal.show();
+}
+
+async function populateEngagementSelect() {
+  const engagementSelect = document.getElementById('engagementSelect');
+  engagementSelect.innerHTML = '<option value="">Select a Patch</option>';
+  filteredEngagements.forEach(e => {
+    const option = document.createElement('option');
+    option.value = e.id;
+    option.textContent = `${e.id} - ${e.name}`;
+    engagementSelect.appendChild(option);
+  });
+  
+  $('#engagementSelect').select2({
+    theme: 'bootstrap-5',
+    width: '100%',
+    dropdownParent: $('#viewJirasModal'),
+    placeholder: 'Select a Patch',
+    allowClear: true
+  });
+
+  $('#engagementSelect').on('change', async function() {
+    const engagementId = $(this).val();
+    if (engagementId) {
+      await fetchJiraTests(engagementId);
+      applyJiraFilters();
+    } else {
+      jiraTests = [];
+      filteredJiraTests = [];
+      renderJiraTable();
+    }
+  });
+}
+
+async function populateAssignedToFilter() {
+  const assignedToFilter = document.getElementById('assignedToFilterJira');
+  assignedToFilter.innerHTML = '<option value="">All Assigned To</option>';
+  await fetchAllUsers();
+  Object.values(usersCache).forEach(user => {
+    const option = document.createElement('option');
+    option.value = user.id;
+    option.textContent = user.name;
+    assignedToFilter.appendChild(option);
+  });
+
+  $('#assignedToFilterJira').select2({
+    theme: 'bootstrap-5',
+    width: '100%',
+    dropdownParent: $('#viewJirasModal'),
+    placeholder: 'All Assigned To',
+    allowClear: true
+  });
+}
+
+async function fetchJiraTests(engagementId) {
+  loadingModal.show();
+  try {
+    const response = await fetch(`https://demo.defectdojo.org/api/v2/tests/?engagement=${engagementId}&tags=pci_jira`);
+    if (response.ok) {
+      const data = await response.json();
+      jiraTests = data.results;
+      await enrichJiraWithLeadNames(jiraTests);
+      filteredJiraTests = [...jiraTests];
+      renderJiraTable();
+    } else {
+      showToast('Failed to fetch Jira tests', 'error');
+    }
+  } catch (error) {
+    console.error('Error fetching Jira tests:', error);
+    showToast('Error fetching Jira tests', 'error');
+  } finally {
+    loadingModal.hide();
+  }
+}
+
+function applyJiraFilters() {
+  const titleSearch = document.getElementById('jiraTitleSearch').value.toLowerCase();
+  const typeFilter = document.getElementById('jiraTypeFilter').value;
+  const statusFilter = document.getElementById('analysisStatusFilter').value;
+  const jiraStatusFilter = document.getElementById('jiraStatusFilter').value;
+  const assignedToFilter = $('#assignedToFilterJira').val();
+
+  filteredJiraTests = jiraTests.filter(test => {
+    if (titleSearch && !test.title.toLowerCase().includes(titleSearch)) return false;
+    if (typeFilter && test.build_id !== typeFilter) return false;
+    if (statusFilter && test.commit_hash !== statusFilter) return false;
+    if (jiraStatusFilter && test.branch_tag !== jiraStatusFilter) return false;
+    if (assignedToFilter && test.lead !== assignedToFilter) return false;
+    return true;
+  });
+
+  jiraCurrentPage = 1;
+  renderJiraTable();
+}
+
+async function saveJiraTest(testId, field, value) {
+  try {
+    const payload = {};
+    // Handle lead field specifically to ensure it's an integer or null
+    if (field === 'lead') {
+      payload[field] = value ? parseInt(value) : null;
+    } else {
+      payload[field] = value;
+    }
+    const response = await fetch(`https://demo.defectdojo.org/api/v2/tests/${testId}/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.getElementById('csrfToken').value
+      },
+      body: JSON.stringify(payload)
+    });
+    if (response.ok) {
+      const updatedTest = await response.json();
+      const index = jiraTests.findIndex(t => t.id === testId);
+      if (index !== -1) {
+        jiraTests[index] = { ...jiraTests[index], ...updatedTest };
+        filteredJiraTests = [...jiraTests];
+        applyJiraFilters();
+      }
+    } else {
+      showToast('Failed to update Jira test', 'error');
+    }
+  } catch (error) {
+    console.error('Error saving Jira test:', error);
+    showToast('Error saving Jira test', 'error');
+  }
+}
+
+
+function renderJiraTable() {
+  const start = (jiraCurrentPage - 1) * jiraPageSize;
+  const pagedData = filteredJiraTests.slice(start, start + jiraPageSize);
+  const totalPages = Math.ceil(filteredJiraTests.length / jiraPageSize);
+
+  const jiraTableBody = document.getElementById('jiraTableBody');
+  jiraTableBody.innerHTML = pagedData.map(t => `
+    <tr>
+      <td>${t.id}</td>
+      <td>${t.title}</td>
+      <td><textarea class="form-control" data-id="${t.id}" data-field="description">${t.description || ''}</textarea></td>
+      <td>
+        <select class="form-select" data-id="${t.id}" data-field="build_id">
+          <option value="Security" ${t.build_id === 'Security' ? 'selected' : ''}>Security</option>
+          <option value="Functional" ${t.build_id === 'Functional' ? 'selected' : ''}>Functional</option>
+        </select>
+      </td>
+      <td>
+        <select class="form-select" data-id="${t.id}" data-field="commit_hash">
+          <option value="Not Started" ${t.commit_hash === 'Not Started' ? 'selected' : ''}>Not Started</option>
+          <option value="In Progress" ${t.commit_hash === 'In Progress' ? 'selected' : ''}>In Progress</option>
+          <option value="On Hold" ${t.commit_hash === 'On Hold' ? 'selected' : ''}>On Hold</option>
+          <option value="Completed" ${t.commit_hash === 'Completed' ? 'selected' : ''}>Completed</option>
+        </select>
+      </td>
+      <td><input type="text" class="form-control" data-id="${t.id}" data-field="branch_tag" value="${t.branch_tag || ''}"></td>
+      <td>
+        <select class="form-select searchable-select" data-id="${t.id}" data-field="lead">
+          <option value="">Unassigned</option>
+          ${Object.values(usersCache).map(user => `
+            <option value="${user.id}" ${t.lead === user.id.toString() ? 'selected' : ''}>${user.name}</option>
+          `).join('')}
+        </select>
+      </td>
+    </tr>
+  `).join('');
+  
+  document.getElementById('jiraPaginationStatus').textContent = `Page ${jiraCurrentPage} of ${totalPages} (${filteredJiraTests.length} results)`;
+  document.getElementById("jiraPrevPage").disabled = jiraCurrentPage === 1;
+  document.getElementById("jiraFirstPage").disabled = jiraCurrentPage === 1;
+  document.getElementById("jiraNextPage").disabled = jiraCurrentPage === totalPages;
+  document.getElementById("jiraLastPage").disabled = jiraCurrentPage === totalPages;
+
+  $('#jiraTableBody .searchable-select').select2({
+    theme: 'bootstrap-5',
+    width: '100%',
+    dropdownParent: $('#viewJirasModal'),
+    placeholder: 'Unassigned',
+    allowClear: true
+  });
+
+  jiraTableBody.querySelectorAll('textarea, select, input').forEach(element => {
+    element.addEventListener('change', (e) => {
+      const testId = parseInt(e.target.getAttribute('data-id'));
+      const field = e.target.getAttribute('data-field');
+      const value = field === 'lead' ? (e.target.value ? parseInt(e.target.value) : null) : e.target.value;
+      saveJiraTest(testId, field, value);
+    });
+  });
+}
+
+document.getElementById("jiraFirstPage").onclick = () => { jiraCurrentPage = 1; renderJiraTable(); };
+document.getElementById("jiraPrevPage").onclick = () => { if (jiraCurrentPage > 1) jiraCurrentPage--; renderJiraTable(); };
+document.getElementById("jiraNextPage").onclick = () => {
+  const totalPages = Math.ceil(filteredJiraTests.length / jiraPageSize);
+  if (jiraCurrentPage < totalPages) jiraCurrentPage++; renderJiraTable();
+};
+document.getElementById("jiraLastPage").onclick = () => {
+  jiraCurrentPage = Math.ceil(filteredJiraTests.length / jiraPageSize); renderJiraTable();
+};
+
+document.getElementById('jiraTitleSearch').addEventListener('input', applyJiraFilters);
+document.getElementById('jiraTypeFilter').addEventListener('change', applyJiraFilters);
+document.getElementById('analysisStatusFilter').addEventListener('change', applyJiraFilters);
+document.getElementById('jiraStatusFilter').addEventListener('change', applyJiraFilters);
+document.getElementById('assignedToFilterJira').addEventListener('change', applyJiraFilters);
+
+async function enrichJiraWithLeadNames(tests) {
+  const leadIds = [...new Set(tests.map(t => t.lead).filter(Boolean))];
+  await fetchAllUsers();
+  tests.forEach(t => {
+    t.lead_name = t.lead ? usersCache[t.lead]?.name || 'Unassigned' : 'Unassigned';
+  });
+}
+
+// ... (rest of the code remains unchanged)
+
+
+
+
+
+    async function openEditModal(engagementId) {
+      editModalChanged = false;
+      currentEditingEngagement = allEngagements.find(e => e.id === engagementId);
+      if (!currentEditingEngagement) return;
+      
+      await fetchAllUsers();
+      await fetchAllProducts();
+      
+      const assignedToSelect = document.getElementById('editAssignedTo');
+      assignedToSelect.innerHTML = '<option value="">Unassigned</option>';
+      Object.values(usersCache).forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = user.name;
+        assignedToSelect.appendChild(option);
+      });
+      
+      const productSelect = document.getElementById('editProduct');
+      productSelect.innerHTML = '<option value="">Select Product</option>';
+      Object.values(productsCache).forEach(product => {
+        const option = document.createElement('option');
+        option.value = product.id;
+        option.textContent = product.name;
+        productSelect.appendChild(option);
+      });
+      
+      document.getElementById('editId').value = currentEditingEngagement.id;
+      document.getElementById('editCreated').value = currentEditingEngagement.created.slice(0, 10);
+      document.getElementById('editCreatedBy').value = currentEditingEngagement.reason || '';
+      document.getElementById('editName').value = currentEditingEngagement.name;
+      document.getElementById('editAssignedTo').value = currentEditingEngagement.lead || '';
+      document.getElementById('editProduct').value = currentEditingEngagement.product || '';
+      document.getElementById('editAppSecETA').value = currentEditingEngagement.target_start ? currentEditingEngagement.target_start.slice(0, 10) : '';
+      document.getElementById('editRmETA').value = currentEditingEngagement.target_end ? currentEditingEngagement.target_end.slice(0, 10) : '';
+      document.getElementById('editStatusAnalyst').value = currentEditingEngagement.status || 'Not Started';
+      document.getElementById('editStatusMentor').value = currentEditingEngagement.branch_tag || 'Not Started';
+      document.getElementById('editStatusLead').value = currentEditingEngagement.commit_hash || 'Not Started';
+      document.getElementById('editIR').value = currentEditingEngagement.version || '';
+      document.getElementById('editComment').value = currentEditingEngagement.description || '';
+      
+      $('#editAssignedTo, #editProduct').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        dropdownParent: $('#editEngagementModal')
+      });
+      
+      editEngagementModal.show();
+    }
+
+    function handleCloseEditModal() {
+      if (editModalChanged) {
+        confirmCloseModal.show();
+      } else {
+        editEngagementModal.hide();
+      }
+    }
+
+    function handleXClose(e) {
+      e.preventDefault();
+      if (editModalChanged) {
+        confirmCloseModal.show();
+      } else {
+        editEngagementModal.hide();
+      }
+    }
+
+    function confirmCloseEditModal() {
+      confirmCloseModal.hide();
+      editEngagementModal.hide();
+    }
+
+    async function saveEngagementChanges() {
+      if (!currentEditingEngagement) return;
+      
+      loadingModal.show();
+      
+      const formData = {
+        id: currentEditingEngagement.id,
+        name: document.getElementById('editName').value,
+        target_start: document.getElementById('editAppSecETA').value || null,
+        target_end: document.getElementById('editRmETA').value || null,
+        lead: document.getElementById('editAssignedTo').value || null,
+        product: document.getElementById('editProduct').value,
+        status: document.getElementById('editStatusAnalyst').value,
+        branch_tag: document.getElementById('editStatusMentor').value,
+        commit_hash: document.getElementById('editStatusLead').value,
+        version: document.getElementById('editIR').value,
+        description: document.getElementById('editComment').value
+      };
+      
+      if (!formData.name || !formData.target_start || !formData.target_end || !formData.product) {
+        showToast('Please fill all required fields: Name, AppSec ETA, RM ETA, and Product', 'error');
+        loadingModal.hide();
+        return;
+      }
+      
+      try {
+        const response = await fetch(`https://demo.defectdojo.org/api/v2/engagements/${currentEditingEngagement.id}/`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.getElementById('csrfToken').value
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        if (response.ok) {
+          const updatedEngagement = await response.json();
+          const index = allEngagements.findIndex(e => e.id === updatedEngagement.id);
+          if (index !== -1) {
+            allEngagements[index] = updatedEngagement;
+            if (updatedEngagement.lead) {
+              allEngagements[index].lead_name = usersCache[updatedEngagement.lead]?.name || 'Unassigned';
+            } else {
+              allEngagements[index].lead_name = 'Unassigned';
+            }
+            const filteredIndex = filteredEngagements.findIndex(e => e.id === updatedEngagement.id);
+            if (filteredIndex !== -1) {
+              filteredEngagements[filteredIndex] = updatedEngagement;
+            }
+            updateStatusCounts();
+            renderTable();
+          }
+          
+          editEngagementModal.hide();
+          showToast('Patch updated successfully', 'success');
+        } else {
+          const errorData = await response.json();
+          console.error('Failed to update Patch:', errorData);
+          showToast('Failed to update Patch: ' + (errorData.message || 'Unknown error'), 'error');
+        }
+      } catch (error) {
+        console.error('Error updating Patch:', error);
+        showToast('Error updating Patch', 'error');
+      } finally {
+        loadingModal.hide();
+      }
+    }
+
+    function openSummaryModal() {
+      const summaryData = {};
+      allEngagements.forEach(e => {
+        const leadName = e.lead_name;
+        if (!summaryData[leadName]) {
+          summaryData[leadName] = { 'Not Started': 0, 'In Progress': 0, 'On Hold': 0, 'Completed': 0, Total: 0 };
+        }
+        summaryData[leadName][e.status]++;
+        summaryData[leadName].Total++;
+      });
+
+      const totals = { 'Not Started': 0, 'In Progress': 0, 'On Hold': 0, 'Completed': 0, Total: 0 };
+      Object.values(summaryData).forEach(counts => {
+        totals['Not Started'] += counts['Not Started'];
+        totals['In Progress'] += counts['In Progress'];
+        totals['On Hold'] += counts['On Hold'];
+        totals['Completed'] += counts['Completed'];
+        totals.Total += counts.Total;
+      });
+
+      const summaryTableBody = document.getElementById('summaryTableBody');
+      summaryTableBody.innerHTML = Object.entries(summaryData).map(([lead, counts]) => `
+        <tr>
+          <td>${lead}</td>
+          <td>${counts['Not Started']}</td>
+          <td>${counts['In Progress']}</td>
+          <td>${counts['On Hold']}</td>
+          <td>${counts['Completed']}</td>
+          <td class="total-column">${counts.Total}</td>
+        </tr>
+      `).join('') + `
+        <tr class="total-row">
+          <td>Total</td>
+          <td>${totals['Not Started']}</td>
+          <td>${totals['In Progress']}</td>
+          <td>${totals['On Hold']}</td>
+          <td>${totals['Completed']}</td>
+          <td class="total-column">${totals.Total}</td>
+        </tr>
+      `;
+
+      summaryModal.show();
+    }
+
+    function openCompletedSummaryModal() {
+      document.getElementById('completedStartDate').value = '';
+      document.getElementById('completedEndDate').value = '';
+      document.getElementById('totalCompleted').textContent = '0';
+      document.getElementById('approvedCount').textContent = '0';
+      document.getElementById('approvedWithExceptionCount').textContent = '0';
+      document.getElementById('rejectedCount').textContent = '0';
+      completedSummaryModal.show();
+    }
+
+    async function openClosedModal() {
+      await fetchClosedEngagements();
+      viewClosedModal.show();
+    }
+
+    async function openNewEngagementModal() {
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+
+      document.getElementById('newName').value = '';
+      document.getElementById('newTargetStart').value = today.toISOString().slice(0, 10);
+      document.getElementById('newTargetEnd').value = tomorrow.toISOString().slice(0, 10);
+      document.getElementById('newStatus').value = 'Not Started';
+      document.getElementById('newCreatedBy').value = '';
+
+      // Populate Assigned To dropdown
+      await fetchAllUsers();
+      const leadSelect = document.getElementById('newLead');
+      leadSelect.innerHTML = '<option value="">Unassigned</option>';
+      Object.values(usersCache).forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = user.name;
+        leadSelect.appendChild(option);
+      });
+
+      // Populate Product dropdown
+      await fetchAllProducts();
+      const productSelect = document.getElementById('newProduct');
+      productSelect.innerHTML = '<option value="">Select Product</option>';
+      Object.values(productsCache).forEach(product => {
+        const option = document.createElement('option');
+        option.value = product.id;
+        option.textContent = product.name;
+        productSelect.appendChild(option);
+      });
+
+      // Initialize Select2 for searchable dropdowns
+      $('#newLead, #newProduct').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        dropdownParent: $('#newEngagementModal'),
+        placeholder: 'Search...',
+        allowClear: true
+      });
+
+      newEngagementModal.show();
+    }
+
+    function handleCloseNewModal() {
+      newEngagementModal.hide();
+    }
+
+    function handleNewXClose(e) {
+      e.preventDefault();
+      newEngagementModal.hide();
+    }
+
+    async function saveNewEngagement() {
+      loadingModal.show();
+      
+      const formData = {
+        name: document.getElementById('newName').value,
+        target_start: document.getElementById('newTargetStart').value,
+        target_end: document.getElementById('newTargetEnd').value,
+        status: document.getElementById('newStatus').value,
+        lead: document.getElementById('newLead').value || null,
+        product: document.getElementById('newProduct').value,
+        reason: document.getElementById('newCreatedBy').value,
+        tags: ["pci"]
+      };
+      
+      if (!formData.name || !formData.target_start || !formData.target_end || !formData.product || !formData.reason) {
+        showToast('Please fill all required fields: Name, AppSec ETA, RM ETA, Product, and Created By', 'error');
+        loadingModal.hide();
+        return;
+      }
+      
+      try {
+        const response = await fetch('https://demo.defectdojo.org/api/v2/engagements/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.getElementById('newCsrfToken').value
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        if (response.ok) {
+          const newEngagement = await response.json();
+          newEngagement.lead_name = formData.lead ? usersCache[formData.lead]?.name || 'Unassigned' : 'Unassigned';
+          allEngagements.push(newEngagement);
+          filteredEngagements.push(newEngagement);
+          updateStatusCounts();
+          renderTable();
+          
+          newEngagementModal.hide();
+          showToast('New Patch created successfully', 'success');
+        } else {
+          const errorData = await response.json();
+          console.error('Failed to create Patch:', errorData);
+          showToast('Failed to create Patch: ' + (errorData.message || 'Unknown error'), 'error');
+        }
+      } catch (error) {
+        console.error('Error creating Patch:', error);
+        showToast('Error creating Patch', 'error');
+      } finally {
+        loadingModal.hide();
+      }
+    }
+
+    function confirmCloseEngagement(engagementId) {
+      engagementToClose = engagementId;
+      confirmCloseEngagementModal.show();
+    }
+
+    async function closeEngagement() {
+      if (!engagementToClose) return;
+
+      loadingModal.show();
+      
+      try {
+        const response = await fetch(`https://demo.defectdojo.org/api/v2/engagements/${engagementToClose}/close/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.getElementById('csrfToken').value
+          }
+        });
+        
+        if (response.ok) {
+          const index = allEngagements.findIndex(e => e.id === engagementToClose);
+          if (index !== -1) {
+            const closedEngagement = allEngagements.splice(index, 1)[0];
+            closedEngagements.push(closedEngagement);
+          }
+          const filteredIndex = filteredEngagements.findIndex(e => e.id === engagementToClose);
+          if (filteredIndex !== -1) {
+            filteredEngagements.splice(filteredIndex, 1);
+          }
+          updateStatusCounts();
+          renderTable();
+          renderClosedTable();
+          
+          confirmCloseEngagementModal.hide();
+          showToast('Engagement closed successfully', 'success');
+        } else {
+          const errorData = await response.json();
+          console.error('Failed to close engagement:', errorData);
+          showToast('Failed to close engagement: ' + (errorData.message || 'Unknown error'), 'error');
+        }
+      } catch (error) {
+        console.error('Error closing engagement:', error);
+        showToast('Error closing engagement', 'error');
+      } finally {
+        loadingModal.hide();
+        engagementToClose = null;
+      }
+    }
+
+    async function reopenEngagement(engagementId) {
+      loadingModal.show();
+      
+      try {
+        const response = await fetch(`https://demo.defectdojo.org/api/v2/engagements/${engagementId}/reopen/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.getElementById('csrfToken').value
+          }
+        });
+        
+        if (response.ok) {
+          const index = closedEngagements.findIndex(e => e.id === engagementId);
+          if (index !== -1) {
+            const reopenedEngagement = closedEngagements.splice(index, 1)[0];
+            reopenedEngagement.status = 'Not Started'; // Assuming reopen sets it to Not Started
+            allEngagements.push(reopenedEngagement);
+            filteredEngagements.push(reopenedEngagement);
+          }
+          updateStatusCounts();
+          renderTable();
+          renderClosedTable();
+          
+          showToast('Patch reopened successfully', 'success');
+        } else {
+          const errorData = await response.json();
+          console.error('Failed to reopen Patch:', errorData);
+          showToast('Failed to reopen Patch: ' + (errorData.message || 'Unknown error'), 'error');
+        }
+      } catch (error) {
+        console.error('Error reopening Patch:', error);
+        showToast('Error reopening Patch', 'error');
+      } finally {
+        loadingModal.hide();
+      }
+    }
+
+    function showToast(message, type = 'info') {
+      const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+      
+      const toast = document.createElement('div');
+      toast.className = `toast align-items-center text-white bg-${type === 'error' ? 'danger' : type} border-0`;
+      toast.setAttribute('role', 'alert');
+      toast.setAttribute('aria-live', 'assertive');
+      toast.setAttribute('aria-atomic', 'true');
+      
+      const toastContent = `
+        <div class="d-flex">
+          <div class="toast-body">
+            ${message}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      `;
+      
+      toast.innerHTML = toastContent;
+      toastContainer.appendChild(toast);
+      
+      const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
+      bsToast.show();
+      
+      toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+      });
+    }
+
+    function createToastContainer() {
+      const container = document.createElement('div');
+      container.id = 'toastContainer';
+      container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+      container.style.zIndex = '5';
+      document.body.appendChild(container);
+      return container;
+    }
+
+    window.onload = fetchEngagements;
+  </script>
+</body>
+</html>
