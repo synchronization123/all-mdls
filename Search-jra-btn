@@ -1,0 +1,104 @@
+<!-- Add to .filter-buttons div in your existing HTML -->
+<button id="searchJira" class="btn btn-info btn-sm">
+  <i class="bi bi-search"></i> Search Jira
+</button>
+
+<!-- Add after other modals in <body> -->
+<div class="modal fade" id="searchJiraModal" tabindex="-1" aria-labelledby="searchJiraModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: #343a40; color: #fff;">
+        <h5 class="modal-title" id="searchJiraModalLabel">Search Jira</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <div class="input-group">
+            <input type="text" class="form-control" id="jiraSearchInput" placeholder="Search Jira by title...">
+            <button class="btn btn-primary" id="searchJiraGo">Go</button>
+          </div>
+        </div>
+        <div class="table-container" style="max-height: 60vh; overflow-y: auto;">
+          <table class="table table-hover table-bordered align-middle">
+            <thead>
+              <tr>
+                <th>Id</th>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Engagement</th>
+                <th>Lead</th>
+              </tr>
+            </thead>
+            <tbody id="searchJiraTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add to existing <script> section within DOMContentLoaded -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Existing modal initializations (e.g., addJirasModal, etc.) should already be here
+  let searchJiraModal = new bootstrap.Modal(document.getElementById('searchJiraModal'));
+  document.getElementById('searchJira').addEventListener('click', openSearchJiraModal);
+  document.getElementById('searchJiraGo').addEventListener('click', searchJiraTests);
+
+  function openSearchJiraModal() {
+    document.getElementById('jiraSearchInput').value = '';
+    document.getElementById('searchJiraTableBody').innerHTML = '';
+    searchJiraModal.show();
+  }
+
+  async function searchJiraTests() {
+    const searchValue = document.getElementById('jiraSearchInput').value.trim().toLowerCase();
+    if (!searchValue) {
+      showToast('Please enter a search term', 'error');
+      return;
+    }
+
+    loadingModal.show();
+    try {
+      const testsResponse = await fetch('https://demo.defectdojo.org/api/v2/tests/?limit=10000000000', {
+        headers: { 'X-CSRFToken': document.getElementById('csrfToken').value }
+      });
+      if (!testsResponse.ok) throw new Error('Failed to fetch tests');
+      const testsData = await testsResponse.json();
+      const filteredTests = testsData.results.filter(test => (test.title ?? '').toLowerCase().includes(searchValue));
+
+      const engagementsResponse = await fetch('https://demo.defectdojo.org/api/v2/engagements/?limit=10000000000');
+      const engagementsData = await engagementsResponse.json();
+      const engagementsMap = new Map(engagementsData.results.map(e => [e.id, e.name]));
+
+      const usersResponse = await fetch('https://demo.defectdojo.org/api/v2/users/?limit=10000000000');
+      const usersData = await usersResponse.json();
+      const usersMap = new Map(usersData.results.map(u => [u.id, `${u.first_name} ${u.last_name}`]));
+
+      const tableBody = document.getElementById('searchJiraTableBody');
+      tableBody.innerHTML = filteredTests.map(test => `
+        <tr>
+          <td>${test.id}</td>
+          <td>${test.title || ''}</td>
+          <td>${test.description || ''}</td>
+          <td>${engagementsMap.get(test.engagement) || 'Unknown'}</td>
+          <td>${test.lead ? usersMap.get(parseInt(test.lead)) || 'Unassigned' : 'Unassigned'}</td>
+        </tr>
+      `).join('');
+
+      if (filteredTests.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No results found</td></tr>';
+      }
+    } catch (error) {
+      console.error('Error searching Jira tests:', error);
+      showToast('Error searching Jira tests', 'error');
+      document.getElementById('searchJiraTableBody').innerHTML = '<tr><td colspan="5" class="text-center">Error loading data</td></tr>';
+    } finally {
+      loadingModal.hide();
+    }
+  }
+});
+</script>
