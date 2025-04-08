@@ -1,0 +1,221 @@
+<div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: #343a40; color: #fff;">
+        <h5 class="modal-title" id="reportModalLabel">Patch Report</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <button id="riskRegister" class="btn btn-primary btn-sm mb-2" disabled>
+            <i class="bi bi-shield-exclamation"></i> Risk Register
+          </button>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Select Patch</label>
+          <select class="form-select searchable-select" id="reportEngagementSelect">
+            <option value="">Select a Patch</option>
+          </select>
+        </div>
+        <!-- Rest of the modal content unchanged -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="viewReport">View</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+___________________
+<div class="modal fade" id="riskRegisterModal" tabindex="-1" aria-labelledby="riskRegisterModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title" id="riskRegisterModalLabel">Risk Register for <span id="riskEngagementName"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="riskModalCloseX"></button>
+      </div>
+      <div class="modal-body">
+        <div id="riskTestsContainer">
+          <h6>Tests to Create</h6>
+          <ul class="list-group">
+            <li class="list-group-item">reporting_patches (Acunetix Scan)</li>
+            <li class="list-group-item">SQL Injection (Azure Security Center)</li>
+            <li class="list-group-item">XSS (Azure Security Center)</li>
+            <li class="list-group-item">XXE (Azure Security Center)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="closeRiskModal">Close</button>
+        <button type="button" class="btn btn-primary" id="createAllRiskTests">Create All</button>
+      </div>
+    </div>
+  </div>
+</div>
+___________
+<script>
+  // ... (previous code unchanged up to variable declarations) ...
+
+  let riskRegisterModal;
+  let currentEngagementId;
+  const predefinedTests = [
+    { title: "reporting_patches (Acunetix Scan)", test_type_name: "Acunetix Scan", test_type: 1 },
+    { title: "SQL Injection (Azure Security Center)", test_type_name: "Azure Security Center", test_type: 2 },
+    { title: "XSS (Azure Security Center)", test_type_name: "Azure Security Center", test_type: 2 },
+    { title: "XXE (Azure Security Center)", test_type_name: "Azure Security Center", test_type: 2 }
+  ];
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // ... (other modal initializations unchanged) ...
+
+    riskRegisterModal = new bootstrap.Modal(document.getElementById('riskRegisterModal'), { backdrop: 'static', keyboard: false });
+    document.getElementById('riskRegister').addEventListener('click', openRiskRegisterModal);
+    document.getElementById('createAllRiskTests').addEventListener('click', createAllRiskTests);
+    document.getElementById('reportEngagementSelect').addEventListener('change', updateRiskRegisterButtonState);
+
+    // ... (rest of DOMContentLoaded unchanged) ...
+  });
+
+  async function openRiskRegisterModal() {
+    const engagementId = document.getElementById('reportEngagementSelect').value;
+    if (!engagementId) {
+      showToast('Please select a Patch first', 'error');
+      return;
+    }
+
+    currentEngagementId = engagementId;
+    const engagement = allEngagements.find(e => e.id === parseInt(engagementId));
+    if (engagement) {
+      document.getElementById('riskEngagementName').textContent = engagement.name;
+
+      // Check conditions for commit_hash and branch_tag
+      if (engagement.commit_hash !== 'Completed' || engagement.branch_tag === 'Not Started') {
+        showToast('Cannot create tests: Commit must be "Completed" and Status (Mentor) must not be "Not Started"', 'error');
+        return;
+      }
+
+      riskRegisterModal.show();
+    }
+  }
+
+  async function createAllRiskTests() {
+    if (!currentEngagementId) return;
+
+    loadingModal.show();
+    const engagement = allEngagements.find(e => e.id === parseInt(currentEngagementId));
+    if (!engagement) {
+      showToast('Engagement not found', 'error');
+      loadingModal.hide();
+      return;
+    }
+
+    try {
+      // Fetch existing tests to check for duplicates
+      const existingTests = await fetchExistingTests(currentEngagementId);
+      const existingTitles = new Set(existingTests.map(test => test.title));
+
+      const today = new Date().toISOString().slice(0, 10);
+      const baseTestData = {
+        tags: ['pci_risk'],
+        target_start: today,
+        target_end: today,
+        lead: engagement.lead || null,
+        environment: 3,
+        commit_hash: 'Not Started'
+      };
+
+      let createdCount = 0;
+      for (const test of predefinedTests) {
+        if (existingTitles.has(test.title)) {
+          console.log(`Test "${test.title}" already exists for engagement ${currentEngagementId}. Skipping.`);
+          continue;
+        }
+
+        const payload = {
+          ...baseTestData,
+          title: test.title,
+          test_type_name: test.test_type_name,
+          test_type: test.test_type,
+          engagement: currentEngagementId
+        };
+
+        const response = await fetch('https://demo.defectdojo.org/api/v2/tests/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.getElementById('csrfToken').value
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          createdCount++;
+        } else {
+          const errorData = await response.json();
+          throw new Error(`Failed to create test "${test.title}": ${errorData.message || 'Unknown error'}`);
+        }
+      }
+
+      if (createdCount > 0) {
+        showToast(`${createdCount} new risk tests created successfully`, 'success');
+        updateRiskRegisterButtonState(); // Disable the button after creation
+      } else {
+        showToast('No new tests created (all tests already exist)', 'info');
+      }
+
+      riskRegisterModal.hide();
+    } catch (error) {
+      console.error('Error creating risk tests:', error);
+      showToast(`Error creating risk tests: ${error.message}`, 'error');
+    } finally {
+      loadingModal.hide();
+    }
+  }
+
+  async function fetchExistingTests(engagementId) {
+    const response = await fetch(`https://demo.defectdojo.org/api/v2/tests/?engagement=${engagementId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.getElementById('csrfToken').value
+      }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return data.results;
+    }
+    return [];
+  }
+
+  async function updateRiskRegisterButtonState() {
+    const engagementId = document.getElementById('reportEngagementSelect').value;
+    const riskRegisterBtn = document.getElementById('riskRegister');
+    
+    if (!engagementId) {
+      riskRegisterBtn.disabled = true;
+      return;
+    }
+
+    const engagement = allEngagements.find(e => e.id === parseInt(engagementId));
+    if (!engagement) {
+      riskRegisterBtn.disabled = true;
+      return;
+    }
+
+    // Check commit_hash and branch_tag conditions
+    if (engagement.commit_hash !== 'Completed' || engagement.branch_tag === 'Not Started') {
+      riskRegisterBtn.disabled = true;
+      return;
+    }
+
+    // Check if all predefined tests already exist
+    const existingTests = await fetchExistingTests(engagementId);
+    const existingTitles = new Set(existingTests.map(test => test.title));
+    const allTestsExist = predefinedTests.every(test => existingTitles.has(test.title));
+
+    riskRegisterBtn.disabled = allTestsExist;
+  }
+
+  // ... (rest of the code unchanged) ...
+</script>
