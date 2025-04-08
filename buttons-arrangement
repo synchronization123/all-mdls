@@ -1,0 +1,51 @@
+		  <table class="filter-button-table">
+  <tr>
+    <!-- Left Buttons -->
+    <td class="left">
+      <button id="newEngagement" class="btn btn-success btn-sm btn-round">
+        <i class="bi bi-plus-circle"></i> New
+      </button>
+      <button id="reassignEngagements" class="btn btn-info btn-sm btn-round">
+        <i class="bi bi-person-plus"></i> Reassignment
+      </button>
+      <button id="bulkCloseEngagements" class="btn btn-danger btn-sm btn-round">
+        <i class="bi bi-x-circle"></i> Bulk Close
+      </button>
+    </td>
+
+    <!-- Center Buttons -->
+    <td class="center">
+      <button id="viewSummary" class="btn btn-info btn-sm btn-round">
+        <i class="bi bi-eye"></i> Open
+      </button>
+      <button id="completedSummary" class="btn btn-primary btn-sm btn-round">
+        <i class="bi bi-check-circle"></i> Completed
+      </button>
+      <button id="viewClosed" class="btn btn-warning btn-sm btn-round">
+        <i class="bi bi-archive"></i> Closed
+      </button>
+      <button id="viewJiras" class="btn btn-info btn-sm btn-round">
+        <i class="bi bi-ticket-detailed"></i> Patch Jira
+      </button>
+      <button id="reportEngagements" class="btn btn-primary btn-sm btn-round">
+        <i class="bi bi-file-earmark-text"></i> Report
+      </button>
+      <button id="searchJira" class="btn btn-info btn-sm btn-round">
+        <i class="bi bi-search"></i> Search Jira
+      </button>
+    </td>
+
+    <!-- Right Buttons -->
+    <td class="right">
+      <button id="applyFilters" class="btn btn-primary btn-sm btn-lg-round">
+        <i class="bi bi-search"></i> Go
+      </button>
+      <button id="resetFilters" class="btn btn-outline-secondary btn-sm btn-round">
+        <i class="bi bi-x-circle"></i> Reset
+      </button>
+      <button id="refreshTable" class="btn btn-primary btn-sm btn-round">
+        <i class="bi bi-arrow-repeat"></i> Refresh
+      </button>
+    </td>
+  </tr>
+</table>
