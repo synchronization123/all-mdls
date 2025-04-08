@@ -1,0 +1,337 @@
+            <button id="bulkCloseEngagements" class="btn btn-danger btn-sm"><i class="bi bi-x-circle"></i> Bulk Close</button>
+
+
+
+
+<div class="modal fade" id="bulkCloseModal" tabindex="-1" aria-labelledby="bulkCloseModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header" style="background-color: #343a40; color: #fff;">
+          <h5 class="modal-title" id="bulkCloseModalLabel">Bulk Close Engagements</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row mb-3">
+            <div class="col-md-2">
+              <input type="text" class="form-control" id="bulkCloseIdFilter" placeholder="Search ID...">
+            </div>
+            <div class="col-md-3">
+              <select class="form-select searchable-select" id="bulkCloseNameFilter">
+                <option value="">All Patch Names</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <select class="form-select" id="bulkCloseStatusFilter">
+                <option value="">All Status</option>
+                <option value="Not Started">Not Started</option>
+                <option value="In Progress">In Progress</option>
+                <option value="On Hold">On Hold</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <select class="form-select searchable-select" id="bulkCloseProductFilter" multiple>
+                <option value="">All Products</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <select class="form-select searchable-select" id="bulkCloseLeadFilter" multiple>
+                <option value="">All Leads</option>
+              </select>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-12">
+              <button class="btn btn-outline-primary btn-sm me-2" id="applyBulkCloseFilters">Apply Filters</button>
+              <button class="btn btn-outline-secondary btn-sm" id="clearBulkCloseFilters">Clear Filters</button>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="table table-hover table-bordered align-middle">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="selectAllBulkClose"></th>
+                  <th>ID</th>
+                  <th>Patch Name</th>
+                  <th>Status (Analyst)</th>
+                  <th>Product</th>
+                  <th>Lead</th>
+                </tr>
+              </thead>
+              <tbody id="bulkCloseTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger" id="bulkCloseAction">Close Selected</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+
+
+
+
+
+
+  // Update DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', function() {
+    reassignmentModal = new bootstrap.Modal(document.getElementById('reassignmentModal'), { backdrop: 'static', keyboard: false });
+    document.getElementById('reassignEngagements').addEventListener('click', openReassignmentModal);
+    document.getElementById('applyReassignFilters').addEventListener('click', applyReassignFilters);
+    document.getElementById('clearReassignFilters').addEventListener('click', clearReassignFilters);
+    document.getElementById('selectAllReassign').addEventListener('change', toggleSelectAllReassign);
+    document.getElementById('reassignLeads').addEventListener('click', reassignLeads);
+	
+	bulkCloseModal = new bootstrap.Modal(document.getElementById('bulkCloseModal'), { backdrop: 'static', keyboard: false });
+      document.getElementById('bulkCloseEngagements').addEventListener('click', openBulkCloseModal);
+      document.getElementById('applyBulkCloseFilters').addEventListener('click', applyBulkCloseFilters);
+      document.getElementById('clearBulkCloseFilters').addEventListener('click', clearBulkCloseFilters);
+      document.getElementById('selectAllBulkClose').addEventListener('change', toggleSelectAllBulkClose);
+      document.getElementById('bulkCloseAction').addEventListener('click', bulkCloseSelectedEngagements);
+
+	
+	
+	
+	
+	
+  });
+
+
+
+
+async function openBulkCloseModal() {
+      await fetchBulkCloseData();
+      await populateBulkCloseFilters();
+      filteredBulkCloseEngagements = [...bulkCloseEngagements];
+      renderBulkCloseTable();
+      bulkCloseModal.show();
+    }
+
+    async function fetchBulkCloseData() {
+      loadingModal.show();
+      try {
+        const response = await fetch('https://demo.defectdojo.org/api/v2/engagements/?tags=pci&active=true');
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
+        bulkCloseEngagements = data.results;
+        await enrichBulkCloseWithNames(bulkCloseEngagements);
+      } catch (error) {
+        console.error('Error fetching bulk close data:', error);
+        showToast(`Failed to fetch engagements: ${error.message || 'Server unavailable'}`, 'error');
+      } finally {
+        loadingModal.hide();
+      }
+    }
+
+    async function enrichBulkCloseWithNames(engagements) {
+      await fetchAllUsers();
+      await fetchAllProducts();
+      engagements.forEach(e => {
+        e.lead_name = e.lead ? usersCache[e.lead]?.name || 'Unassigned' : 'Unassigned';
+        e.product_name = e.product ? productsCache[e.product]?.name || 'Unknown' : 'Unknown';
+      });
+    }
+
+    async function populateBulkCloseFilters() {
+      const nameFilter = document.getElementById('bulkCloseNameFilter');
+      nameFilter.innerHTML = '<option value="">All Patch Names</option>';
+      const uniqueNames = [...new Set(bulkCloseEngagements.map(e => e.name))].sort();
+      uniqueNames.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        nameFilter.appendChild(option);
+      });
+
+      const productFilter = document.getElementById('bulkCloseProductFilter');
+      productFilter.innerHTML = '<option value="">All Products</option>';
+      Object.values(productsCache).forEach(product => {
+        const option = document.createElement('option');
+        option.value = product.id;
+        option.textContent = product.name;
+        productFilter.appendChild(option);
+      });
+
+      const leadFilter = document.getElementById('bulkCloseLeadFilter');
+      leadFilter.innerHTML = '<option value="">All Leads</option>';
+      Object.values(usersCache).forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = user.name;
+        leadFilter.appendChild(option);
+      });
+
+      $('#bulkCloseNameFilter').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        dropdownParent: $('#bulkCloseModal'),
+        placeholder: 'All Patch Names',
+        allowClear: true,
+        dropdownCssClass: 'select2-dropdown-wide'
+      });
+
+      $('#bulkCloseProductFilter').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        dropdownParent: $('#bulkCloseModal'),
+        placeholder: 'All Products',
+        allowClear: true,
+        closeOnSelect: false,
+        dropdownCssClass: 'select2-dropdown-wide'
+      });
+
+      $('#bulkCloseLeadFilter').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        dropdownParent: $('#bulkCloseModal'),
+        placeholder: 'All Leads',
+        allowClear: true,
+        closeOnSelect: false,
+        dropdownCssClass: 'select2-dropdown-wide'
+      });
+    }
+
+    function applyBulkCloseFilters() {
+      const idFilter = document.getElementById('bulkCloseIdFilter').value.toLowerCase();
+      const nameFilter = $('#bulkCloseNameFilter').val();
+      const statusFilter = document.getElementById('bulkCloseStatusFilter').value;
+      const productFilter = $('#bulkCloseProductFilter').val() || [];
+      const leadFilter = $('#bulkCloseLeadFilter').val() || [];
+
+      filteredBulkCloseEngagements = bulkCloseEngagements.filter(e => {
+        const matchesId = !idFilter || e.id.toString().includes(idFilter);
+        const matchesName = !nameFilter || e.name === nameFilter;
+        const matchesStatus = !statusFilter || e.status === statusFilter;
+        const matchesProduct = productFilter.length === 0 || productFilter.includes(e.product.toString());
+        const matchesLead = leadFilter.length === 0 || leadFilter.includes(e.lead?.toString());
+
+        return matchesId && matchesName && matchesStatus && matchesProduct && matchesLead;
+      });
+
+      renderBulkCloseTable();
+    }
+
+    function clearBulkCloseFilters() {
+      document.getElementById('bulkCloseIdFilter').value = '';
+      $('#bulkCloseNameFilter').val(null).trigger('change');
+      document.getElementById('bulkCloseStatusFilter').value = '';
+      $('#bulkCloseProductFilter').val(null).trigger('change');
+      $('#bulkCloseLeadFilter').val(null).trigger('change');
+      filteredBulkCloseEngagements = [...bulkCloseEngagements];
+      renderBulkCloseTable();
+    }
+
+    function toggleSelectAllBulkClose() {
+      const isChecked = document.getElementById('selectAllBulkClose').checked;
+      document.querySelectorAll('#bulkCloseTableBody input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = isChecked;
+      });
+    }
+
+    function renderBulkCloseTable() {
+      const tableBody = document.getElementById('bulkCloseTableBody');
+      tableBody.innerHTML = filteredBulkCloseEngagements.map(e => `
+        <tr>
+          <td><input type="checkbox" class="bulk-close-checkbox" data-id="${e.id}"></td>
+          <td>${e.id}</td>
+          <td>${e.name}</td>
+          <td>${e.status}</td>
+          <td>${e.product_name}</td>
+          <td>${e.lead_name}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function bulkCloseSelectedEngagements() {
+  const selectedIds = Array.from(document.querySelectorAll('#bulkCloseTableBody .bulk-close-checkbox:checked'))
+    .map(checkbox => parseInt(checkbox.getAttribute('data-id')));
+
+  if (selectedIds.length === 0) {
+    showToast('Please select at least one engagement to close', 'error');
+    return;
+  }
+
+  loadingModal.show();
+  try {
+    const closePromises = selectedIds.map(async id => {
+      const response = await fetch(`https://demo.defectdojo.org/api/v2/engagements/${id}/close/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.getElementById('csrfToken').value
+        }
+      });
+
+      if (!response.ok) {
+        // Attempt to get error details from the response
+        const contentType = response.headers.get('Content-Type');
+        let errorMessage = `Failed to close engagement ${id} (Status: ${response.status})`;
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage += `: ${errorData.message || JSON.stringify(errorData)}`;
+        } else {
+          const text = await response.text();
+          errorMessage += `: ${text || 'No additional details'}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Only parse JSON if the response has a body (not 204)
+      if (response.status !== 204 && response.headers.get('Content-Length') !== '0') {
+        return response.json();
+      }
+      return { id }; // Return a minimal object if no body
+    });
+
+    const results = await Promise.all(closePromises);
+
+    // Update local data
+    selectedIds.forEach(id => {
+      const index = allEngagements.findIndex(e => e.id === id);
+      if (index !== -1) {
+        const closedEngagement = allEngagements.splice(index, 1)[0];
+        closedEngagements.push(closedEngagement);
+      }
+      const filteredIndex = filteredEngagements.findIndex(e => e.id === id);
+      if (filteredIndex !== -1) {
+        filteredEngagements.splice(filteredIndex, 1);
+      }
+      const bulkIndex = bulkCloseEngagements.findIndex(e => e.id === id);
+      if (bulkIndex !== -1) {
+        bulkCloseEngagements.splice(bulkIndex, 1);
+      }
+      const filteredBulkIndex = filteredBulkCloseEngagements.findIndex(e => e.id === id);
+      if (filteredBulkIndex !== -1) {
+        filteredBulkCloseEngagements.splice(filteredBulkIndex, 1);
+      }
+    });
+
+    updateStatusCounts();
+    renderTable();
+    renderClosedTable();
+    renderBulkCloseTable();
+    showToast(`${selectedIds.length} engagement(s) closed successfully`, 'success');
+    bulkCloseModal.hide();
+  } catch (error) {
+    console.error('Error during bulk close:', error);
+    showToast(`Error closing engagements: ${error.message}`, 'error');
+  } finally {
+    loadingModal.hide();
+  }
+}
+
+
+
+
+
+
+
+
+
