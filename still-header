@@ -1,0 +1,30 @@
+.table-container {
+  max-height: 70vh; /* Already present, ensures scrollable area */
+  overflow-y: auto;
+  margin-bottom: 1rem;
+  position: relative; /* Ensure positioning context for sticky headers */
+}
+
+/* Style for the first row of headers */
+.table-container thead tr:first-child th {
+  position: sticky;
+  top: 0;
+  background-color: #343a40; /* Matches existing background */
+  color: #fff;
+  z-index: 2; /* Higher than content but lower than filters */
+}
+
+/* Style for the second row of headers (Jira sub-headers) */
+.table-container thead tr:nth-child(2) th {
+  position: sticky;
+  top: 38px; /* Adjust this value based on the height of the first row */
+  background-color: #343a40; /* Matches existing background */
+  color: #fff;
+  z-index: 2;
+}
+
+/* Ensure table body rows don't overlap headers */
+.table-container tbody tr {
+  position: relative;
+  z-index: 1; /* Lower than headers */
+}
