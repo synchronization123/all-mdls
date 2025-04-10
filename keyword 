@@ -1,0 +1,49 @@
+import os
+import csv
+
+def search_files_for_keyword(root_folder, keyword):
+    results = []
+
+    keyword_lower = keyword.lower()
+
+    for foldername, subfolders, filenames in os.walk(root_folder):
+        for filename in filenames:
+            file_path = os.path.join(foldername, filename)
+
+            try:
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    for i, line in enumerate(f, start=1):
+                        if keyword_lower in line.lower():
+                            results.append((filename, i, file_path))
+            except Exception as e:
+                print(f"Error reading file {file_path}: {e}")
+
+    return results
+
+def write_to_csv(results, output_file):
+    with open(output_file, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(["File Name", "Line Number", "File Path"])
+        for row in results:
+            writer.writerow(row)
+
+    print(f"Results saved to {output_file}")
+
+def main():
+    folder = input("Enter folder path to scan: ").strip()
+    keyword = input("Enter keyword to search (case-insensitive): ").strip()
+
+    if not os.path.isdir(folder):
+        print("Invalid folder path!")
+        return
+
+    results = search_files_for_keyword(folder, keyword)
+
+    if results:
+        output_file = "scan_results.csv"
+        write_to_csv(results, output_file)
+    else:
+        print("No matches found.")
+
+if __name__ == "__main__":
+    main()
