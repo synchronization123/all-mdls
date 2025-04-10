@@ -1,6 +1,1 @@
-In this case, first consult with the lead and mentor to determine what testing needs to be performed.
-After the discussion, create individual IRs for the different components.
-Then, open the Excel sheet, copy the project ID, and paste it into the CRM. Click on "Lookup."
-Once the project appears, click on it to open.
-Search for the task named "Security Analysis," open it, and add the IR number.
-Finally, update the task status to "Completed."
+v
