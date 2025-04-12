@@ -1,0 +1,184 @@
+Add in style tag:
+textarea.description-textarea {
+      width: 100%;
+      min-height: 50px;
+      resize: vertical;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 4px;
+    }
+====================================
+Update main table:
+<table class="table table-hover table-bordered align-middle">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Aging</th>
+              <th>Name</th>
+              <th colspan="5">Jira</th>
+              <th>Assigned To</th>
+              <th>AppSec ETA</th>
+              <th>RM ETA</th>
+              <th>Status (Analyst)</th>
+              <th>Status (Mentor)</th>
+              <th>Status (Lead)</th>
+              <th>Description</th>
+              <th>IR</th>
+              <th>Action</th>
+            </tr>
+            <tr>
+              <th></th>
+              <th></th>
+              <th></th>
+              <th>Total</th>
+              <th>Security</th>
+              <th>Functional</th>
+              <th>Doable</th>
+              <th>Non Doable</th>
+              <th></th>
+              <th></th>
+              <th></th>
+              <th></th>
+              <th></th>
+              <th></th>
+              <th></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="engagementTableBody"></tbody>
+        </table>
+
+=====================================================
+Add or update below function:
+async function renderTable() {
+      const start = (currentPage - 1) * pageSize;
+      const pagedData = filteredEngagements.slice(start, start + pageSize);
+      const today = new Date();
+      const totalPages = Math.ceil(filteredEngagements.length / pageSize);
+
+      // Fetch Jira data for all engagements in parallel
+      const jiraDataPromises = pagedData.map(e => fetchJiraData(e.id));
+      const jiraDataArray = await Promise.all(jiraDataPromises);
+
+      tableBody.innerHTML = pagedData.map((e, index) => {
+        const created = new Date(e.created);
+        const aging = Math.floor((today - created) / (1000 * 60 * 60 * 24));
+        const appSecETA = e.target_start ? e.target_start.slice(0, 10) : '';
+        const rmETA = e.target_end ? e.target_end.slice(0, 10) : '';
+        const appSecClass = getHighlightClass(appSecETA);
+        const rmClass = getHighlightClass(rmETA);
+        const jiraData = jiraDataArray[index];
+
+        return `
+          <tr data-id="${e.id}">
+            <td>${e.id}</td>
+            <td>${aging} days</td>
+            <td>${e.name}</td>
+            <td>${jiraData.total}</td>
+            <td>${jiraData.security}</td>
+            <td>${jiraData.functional}</td>
+            <td>${jiraData.doable}</td>
+            <td>${jiraData.nonDoable}</td>
+            <td>${e.lead_name}</td>
+            <td class="${appSecClass}">${appSecETA}</td>
+            <td class="${rmClass}">${rmETA}</td>
+            <td>
+              <select class="form-select status-analyst" data-id="${e.id}">
+                <option value="Pending" ${e.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                <option value="In Progress" ${e.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                <option value="Completed" ${e.status === 'Completed' ? 'selected' : ''}>Completed</option>
+              </select>
+            </td>
+            <td>${e.branch_tag || ''}</td>
+            <td>${e.commit_hash || ''}</td>
+            <td><textarea class="form-control description-textarea" data-id="${e.id}">${e.description || ''}</textarea></td>
+            <td>${e.version || ''}</td>
+            <td class="action-buttons">
+              <button class="btn btn-sm btn-success edit-btn" data-id="${e.id}" title="Edit"><i class="bi bi-pencil-square"></i></button>
+              <button class="btn btn-sm btn-danger close-btn" data-id="${e.id}" title="Close"><i class="bi bi-x-circle"></i></button>
+              <button class="btn btn-sm btn-info jira-btn" data-id="${e.id}" title="Jira"><i class="bi bi-ticket-detailed"></i></button>
+              <button class="btn btn-sm btn-primary save-btn" data-id="${e.id}" title="Save"><i class="bi bi-save"></i></button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      paginationStatus.textContent = `Page ${currentPage} of ${totalPages} (${filteredEngagements.length} results)`;
+      
+      document.getElementById("prevPage").disabled = currentPage === 1;
+      document.getElementById("firstPage").disabled = currentPage === 1;
+      document.getElementById("nextPage").disabled = currentPage === totalPages;
+      document.getElementById("lastPage").disabled = currentPage === totalPages;
+      
+      // Edit button listeners
+      document.querySelectorAll('.edit-btn').forEach(button => {
+        button.addEventListener('click', () => {
+          const engagementId = parseInt(button.getAttribute('data-id'));
+          openEditModal(engagementId);
+        });
+      });
+
+      // Close button listeners
+      document.querySelectorAll('.close-btn').forEach(button => {
+        button.addEventListener('click', () => {
+          const engagementId = parseInt(button.getAttribute('data-id'));
+          confirmCloseEngagement(engagementId);
+        });
+      });
+
+      // Jira button listeners
+      document.querySelectorAll('.jira-btn').forEach(button => {
+        button.addEventListener('click', () => {
+          const engagementId = parseInt(button.getAttribute('data-id'));
+          openAddJirasModal(engagementId);
+        });
+      });
+
+      // Save button listeners
+      document.querySelectorAll('.save-btn').forEach(button => {
+        button.addEventListener('click', async () => {
+          const engagementId = parseInt(button.getAttribute('data-id'));
+          const row = button.closest('tr');
+          const status = row.querySelector('.status-analyst').value;
+          const description = row.querySelector('.description-textarea').value;
+
+          loadingModal.show();
+          try {
+            const response = await fetch(`https://demo.defectdojo.org/api/v2/engagements/${engagementId}/`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.getElementById('csrfToken').value
+              },
+              body: JSON.stringify({
+                status: status,
+                description: description
+              })
+            });
+
+            if (response.ok) {
+              const updatedEngagement = await response.json();
+              const index = allEngagements.findIndex(e => e.id === engagementId);
+              if (index !== -1) {
+                allEngagements[index] = { ...allEngagements[index], ...updatedEngagement };
+                const filteredIndex = filteredEngagements.findIndex(e => e.id === engagementId);
+                if (filteredIndex !== -1) {
+                  filteredEngagements[filteredIndex] = { ...filteredEngagements[filteredIndex], ...updatedEngagement };
+                }
+                updateStatusCounts();
+                showToast('Engagement updated successfully', 'success');
+              }
+            } else {
+              const errorData = await response.json();
+              showToast(`Failed to update engagement: ${errorData.message || 'Unknown error'}`, 'error');
+            }
+          } catch (error) {
+            console.error('Error updating engagement:', error);
+            showToast('Error updating engagement', 'error');
+          } finally {
+            loadingModal.hide();
+          }
+        });
+      });
+    }
