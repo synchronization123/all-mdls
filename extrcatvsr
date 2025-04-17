@@ -7,7 +7,7 @@
 </head>
 <body>
   <div class="container py-5">
-    <h3 class="mb-4">Extract Version Codes (V11/V12/R11/R12)</h3>
+    <h3 class="mb-4">Extract Unique Version Codes (V11/V12/R11/R12)</h3>
 
     <div class="mb-3">
       <label for="inputText" class="form-label">Paste your paragraph below:</label>
@@ -17,7 +17,7 @@
     <button class="btn btn-primary mb-3" onclick="extractData()">Extract</button>
 
     <div class="mb-3">
-      <label for="outputText" class="form-label">Extracted Data (comma separated):</label>
+      <label for="outputText" class="form-label">Extracted Unique Data (comma separated):</label>
       <textarea class="form-control" id="outputText" rows="4" readonly></textarea>
     </div>
   </div>
@@ -27,8 +27,13 @@
       const text = document.getElementById('inputText').value;
       const regex = /\b(V11|V12|R11|R12)[._\d]*/gi;
       const matches = text.match(regex);
-      const result = matches ? matches.join(", ") : "";
-      document.getElementById('outputText').value = result;
+      
+      if (matches) {
+        const unique = [...new Set(matches.map(match => match.toUpperCase()))];
+        document.getElementById('outputText').value = unique.join(", ");
+      } else {
+        document.getElementById('outputText').value = "";
+      }
     }
   </script>
 
