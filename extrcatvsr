@@ -25,12 +25,12 @@
   <script>
     function extractData() {
       const text = document.getElementById('inputText').value;
-      // Match version strings starting with V11, V12, R11, R12 followed by any combo of digits, dots, or underscores
-      const regex = /\b(V11|V12|R11|R12)[\w._]*/gi;
+
+      // Match entire strings starting with V11/V12/R11/R12 until a space or punctuation (, ; : ! ? etc.)
+      const regex = /\b(V11|V12|R11|R12)[a-zA-Z0-9._\-]*/gi;
       const matches = text.match(regex);
 
       if (matches) {
-        // Remove duplicates while keeping original case
         const unique = [...new Set(matches)];
         document.getElementById('outputText').value = unique.join(", ");
       } else {
