@@ -49,20 +49,33 @@ def compare_patches(old_dir, new_dir):
 
     modified = []
     diffs = {}
+    size_changes = {}
 
     for f in common:
         old_path = os.path.join(old_dir, f)
         new_path = os.path.join(new_dir, f)
+
         if get_file_hash(old_path) != get_file_hash(new_path):
             modified.append(f)
+            old_size = os.path.getsize(old_path)
+            new_size = os.path.getsize(new_path)
+            size_changes[f] = (old_size, new_size)
+
             if is_text_file(f):
                 diffs[f] = get_diff_html(old_path, new_path)
             else:
                 diffs[f] = "<p><em>Binary file or unsupported format — no diff available.</em></p>"
 
-    return added, removed, modified, diffs
+    return added, removed, modified, diffs, size_changes
 
-def generate_html_report(added, removed, modified, diffs, output_file):
+def format_size(bytes):
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if bytes < 1024:
+            return f"{bytes:.1f} {unit}"
+        bytes /= 1024
+    return f"{bytes:.1f} GB"
+
+def generate_html_report(added, removed, modified, diffs, size_changes, output_file):
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     def html_list(title, items, color):
@@ -72,8 +85,11 @@ def generate_html_report(added, removed, modified, diffs, output_file):
         return f"<h3 style='color:{color}'>{title}</h3><ul>{list_items}</ul>"
 
     diff_sections = ""
-    for file, diff_html in diffs.items():
-        diff_sections += f"<h4>{escape(file)}</h4>{diff_html}<br><hr>"
+    for file in modified:
+        old_size, new_size = size_changes.get(file, ("?", "?"))
+        size_info = f"<p><strong>Old Size:</strong> {format_size(old_size)} &nbsp;&nbsp; <strong>New Size:</strong> {format_size(new_size)}</p>"
+        diff_html = diffs.get(file, "<p>No diff available.</p>")
+        diff_sections += f"<h4>{escape(file)}</h4>{size_info}{diff_html}<br><hr>"
 
     html_content = f"""<!DOCTYPE html>
 <html>
@@ -100,13 +116,23 @@ def generate_html_report(added, removed, modified, diffs, output_file):
     {html_list("Added Files", added, "green")}
     {html_list("Removed Files", removed, "red")}
     {html_list("Modified Files", modified, "orange")}
-    <h3 style="color: navy;">Diff Details for Modified Files</h3>
+    <h3 style="color: navy;">Details for Modified Files</h3>
     {diff_sections}
 </body>
 </html>
 """
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(html_content)
+
+def clean_directory(path):
+    if os.path.exists(path):
+        for root, _, files in os.walk(path, topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in os.listdir(root):
+                full_path = os.path.join(root, name)
+                if os.path.isdir(full_path):
+                    os.rmdir(full_path)
 
 def main():
     old_zip = 'old_patch.zip'
@@ -115,21 +141,14 @@ def main():
     new_dir = 'new_extracted'
     report_file = 'patch_comparison_report.html'
 
-    for d in [old_dir, new_dir]:
-        if os.path.exists(d):
-            for root, _, files in os.walk(d, topdown=False):
-                for name in files:
-                    os.remove(os.path.join(root, name))
-                for name in os.listdir(root):
-                    full_path = os.path.join(root, name)
-                    if os.path.isdir(full_path):
-                        os.rmdir(full_path)
+    clean_directory(old_dir)
+    clean_directory(new_dir)
 
     extract_zip(old_zip, old_dir)
     extract_zip(new_zip, new_dir)
 
-    added, removed, modified, diffs = compare_patches(old_dir, new_dir)
-    generate_html_report(added, removed, modified, diffs, report_file)
+    added, removed, modified, diffs, size_changes = compare_patches(old_dir, new_dir)
+    generate_html_report(added, removed, modified, diffs, size_changes, report_file)
 
     print(f"Report generated: {report_file}")
 
