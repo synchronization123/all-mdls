@@ -1,0 +1,102 @@
+import zipfile
+import hashlib
+import os
+import datetime
+from html import escape
+
+def extract_zip(zip_path, extract_to):
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(extract_to)
+
+def get_all_files(root_dir):
+    file_paths = []
+    for folder, _, files in os.walk(root_dir):
+        for filename in files:
+            full_path = os.path.relpath(os.path.join(folder, filename), root_dir)
+            file_paths.append(full_path.replace("\\", "/"))
+    return file_paths
+
+def get_file_hash(filepath):
+    sha256 = hashlib.sha256()
+    with open(filepath, 'rb') as f:
+        for chunk in iter(lambda: f.read(4096), b''):
+            sha256.update(chunk)
+    return sha256.hexdigest()
+
+def compare_patches(old_dir, new_dir):
+    old_files = get_all_files(old_dir)
+    new_files = get_all_files(new_dir)
+
+    added = [f for f in new_files if f not in old_files]
+    removed = [f for f in old_files if f not in new_files]
+    common = [f for f in old_files if f in new_files]
+
+    modified = []
+    for f in common:
+        old_hash = get_file_hash(os.path.join(old_dir, f))
+        new_hash = get_file_hash(os.path.join(new_dir, f))
+        if old_hash != new_hash:
+            modified.append(f)
+
+    return added, removed, modified
+
+def generate_html_report(added, removed, modified, output_file):
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    def html_list(title, items, color):
+        if not items:
+            return f"<h3 style='color:{color}'>{title}</h3><p>None</p>"
+        list_items = "".join(f"<li>{escape(item)}</li>" for item in items)
+        return f"<h3 style='color:{color}'>{title}</h3><ul>{list_items}</ul>"
+
+    html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Patch Comparison Report</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }}
+        h1 {{ color: #333; }}
+        ul {{ background: #fff; padding: 10px 20px; border: 1px solid #ccc; border-radius: 5px; }}
+        li {{ margin: 5px 0; }}
+    </style>
+</head>
+<body>
+    <h1>Patch Comparison Report</h1>
+    <p><strong>Generated:</strong> {now}</p>
+    {html_list("Added Files", added, "green")}
+    {html_list("Removed Files", removed, "red")}
+    {html_list("Modified Files", modified, "orange")}
+</body>
+</html>
+"""
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write(html_content)
+
+def main():
+    old_zip = 'old_patch.zip'
+    new_zip = 'new_patch.zip'
+    old_dir = 'old_extracted'
+    new_dir = 'new_extracted'
+    report_file = 'patch_comparison_report.html'
+
+    for d in [old_dir, new_dir]:
+        if os.path.exists(d):
+            for root, _, files in os.walk(d, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                for name in os.listdir(root):
+                    full_path = os.path.join(root, name)
+                    if os.path.isdir(full_path):
+                        os.rmdir(full_path)
+
+    extract_zip(old_zip, old_dir)
+    extract_zip(new_zip, new_dir)
+
+    added, removed, modified = compare_patches(old_dir, new_dir)
+    generate_html_report(added, removed, modified, report_file)
+
+    print(f"Report generated: {report_file}")
+
+if __name__ == "__main__":
+    main()
