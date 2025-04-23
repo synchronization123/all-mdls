@@ -25,32 +25,32 @@ def process_files():
         # Step 4: Save Excel without formatting
         df_excel.to_excel(excel_file, index=False)
 
-        # Step 5: Apply formatting to new column (highlight 0s)
+        # Step 5: Apply formatting to all date columns (from 3rd column onward)
         wb = load_workbook(excel_file)
         ws = wb.active
-        col_idx = df_excel.columns.get_loc(today_str) + 1  # 1-based index
-        col_letter = chr(64 + col_idx)
 
         green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-        for row in range(2, ws.max_row + 1):
-            cell = ws[f"{col_letter}{row}"]
-            if cell.value == 0:
-                cell.fill = green_fill
+
+        for row in range(2, ws.max_row + 1):  # Skip header row
+            for col in range(3, ws.max_column + 1):  # Start from 3rd column (column C)
+                cell = ws.cell(row=row, column=col)
+                if cell.value == 0:
+                    cell.fill = green_fill
 
         wb.save(excel_file)
 
-        messagebox.showinfo("Success", f"File updated with column '{today_str}'!")
+        messagebox.showinfo("Success", f"Updated '{excel_file}' with column '{today_str}' and highlighted zeros!")
     except Exception as e:
         messagebox.showerror("Error", str(e))
 
 # Tkinter GUI
 root = tk.Tk()
-root.title("Project File Updater")
+root.title("Project Count Updater")
 
 frame = tk.Frame(root, padx=20, pady=20)
 frame.pack()
 
-label = tk.Label(frame, text="Click to update project.xlsx using dailycount.csv", font=('Arial', 12))
+label = tk.Label(frame, text="Click to update 'project.xlsx' using 'dailycount.csv'", font=('Arial', 12))
 label.pack(pady=10)
 
 button = tk.Button(frame, text="Run Script", command=process_files, font=('Arial', 12), bg="lightblue")
