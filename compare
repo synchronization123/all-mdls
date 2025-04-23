@@ -1,12 +1,14 @@
 import pandas as pd
 import requests
 import os
-from openpyxl import load_workbook
-from openpyxl.styles import PatternFill, Alignment, Border, Side
-from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
-import matplotlib.pyplot as plt
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill, Alignment, Border, Side, Font
+from datetime import datetime
+import win32com.client as win32
+import subprocess
+import time
 
 def fetch_jira_data():
     try:
@@ -14,7 +16,6 @@ def fetch_jira_data():
         with open('dailycount.csv', 'w') as f:
             f.write('')
 
-        # Jira API Setup
         url = 'https://your-jira-domain/rest/api/2/search?jql=filter=67888&maxResults=1000'
         headers = {
             "Authorization": "Bearer hjhhj",
@@ -25,63 +26,52 @@ def fetch_jira_data():
         response.raise_for_status()
         data = response.json()
 
-        # Extract project names from issues
+        # Extract project names
         projects = [issue['fields']['project']['name'] for issue in data['issues']]
         df = pd.DataFrame(projects, columns=['Project'])
         df_count = df['Project'].value_counts().reset_index()
         df_count.columns = ['Project', 'Count']
-
-        # Save as dailycount.csv
         df_count.to_csv('dailycount.csv', index=False)
+        return True
 
     except Exception as e:
         messagebox.showerror("Jira Fetch Error", str(e))
         return False
 
-    return True
-
 def process_files():
     try:
-        # Step 1: Fetch Jira data first
         if not fetch_jira_data():
             return
 
-        # Step 2: Load dailycount
         csv_file = 'dailycount.csv'
         excel_file = 'project.xlsx'
-        image_file = 'count.png'
+        image_file = os.path.abspath("count.png")
 
         df_csv = pd.read_csv(csv_file)
-
-        # Step 3: Load Excel
         df_excel = pd.read_excel(excel_file)
 
-        # Step 4: Add today's date column with counts
         today_str = datetime.today().strftime('%d-%B-%Y')
         df_excel[today_str] = df_excel['Project'].map(df_csv.set_index('Project')['Count']).fillna(0).astype(int)
-
-        # Step 5: Save Excel without formatting
         df_excel.to_excel(excel_file, index=False)
 
-        # Step 6: Open Excel for formatting
         wb = load_workbook(excel_file)
         ws = wb.active
 
         green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
         yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
         center_align = Alignment(horizontal="center", vertical="center")
-        thin_border = Border(
-            left=Side(style='thin'),
-            right=Side(style='thin'),
-            top=Side(style='thin'),
-            bottom=Side(style='thin')
-        )
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                             top=Side(style='thin'), bottom=Side(style='thin'))
 
-        # Highlight 0s and apply borders
+        header_font = Font(bold=True)
+
         for row in range(1, ws.max_row + 1):
             for col in range(1, ws.max_column + 1):
                 cell = ws.cell(row=row, column=col)
-                if isinstance(cell.value, int) and cell.value == 0 and col >= 3:
+                if row == 1:
+                    cell.font = header_font
+                    cell.fill = yellow_fill
+                elif isinstance(cell.value, int) and cell.value == 0 and col >= 3:
                     cell.fill = green_fill
                 cell.border = thin_border
 
@@ -101,19 +91,25 @@ def process_files():
 
         wb.save(excel_file)
 
-        # Step 7: Export cleaned Excel data to PNG
-        df_clean = pd.read_excel(excel_file).dropna(how='all', axis=1).dropna(how='all', axis=0)
-        fig, ax = plt.subplots(figsize=(min(20, 0.5 * len(df_clean.columns)), 0.4 * len(df_clean)))
-        ax.axis('off')
-        table = ax.table(cellText=df_clean.values, colLabels=df_clean.columns, cellLoc='center', loc='center')
-        table.auto_set_font_size(False)
-        table.set_fontsize(10)
-        table.scale(1, 1.5)
-        plt.tight_layout()
-        plt.savefig(image_file, bbox_inches='tight', dpi=300)
-        plt.close()
+        # Screenshot Excel to PNG using COM automation
+        excel = win32.gencache.EnsureDispatch('Excel.Application')
+        wb_com = excel.Workbooks.Open(os.path.abspath(excel_file))
+        ws_com = wb_com.Worksheets(1)
 
-        messagebox.showinfo("Success", f"Excel updated and image saved as 'count.png'!")
+        used_range = ws_com.UsedRange
+        used_range.CopyPicture(Format=win32.constants.xlBitmap)
+        chart_obj = ws_com.ChartObjects().Add(10, 10, used_range.Width + 200, used_range.Height + 50)
+        chart = chart_obj.Chart
+        chart.Paste()
+        chart.Export(Filename=image_file)
+        chart_obj.Delete()
+        wb_com.Close(SaveChanges=False)
+        excel.Quit()
+
+        time.sleep(1)
+        subprocess.Popen(["mspaint.exe", image_file])
+
+        messagebox.showinfo("Success", "Excel updated and 'count.png' opened in Paint!")
 
     except Exception as e:
         messagebox.showerror("Error", str(e))
