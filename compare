@@ -1,4 +1,6 @@
 import pandas as pd
+import requests
+import os
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Border, Side
 from datetime import datetime
@@ -6,32 +8,65 @@ import tkinter as tk
 from tkinter import messagebox
 import matplotlib.pyplot as plt
 
+def fetch_jira_data():
+    try:
+        # Clear old dailycount.csv
+        with open('dailycount.csv', 'w') as f:
+            f.write('')
+
+        # Jira API Setup
+        url = 'https://your-jira-domain/rest/api/2/search?jql=filter=67888&maxResults=1000'
+        headers = {
+            "Authorization": "Bearer hjhhj",
+            "Content-Type": "application/json"
+        }
+
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+
+        # Extract project names from issues
+        projects = [issue['fields']['project']['name'] for issue in data['issues']]
+        df = pd.DataFrame(projects, columns=['Project'])
+        df_count = df['Project'].value_counts().reset_index()
+        df_count.columns = ['Project', 'Count']
+
+        # Save as dailycount.csv
+        df_count.to_csv('dailycount.csv', index=False)
+
+    except Exception as e:
+        messagebox.showerror("Jira Fetch Error", str(e))
+        return False
+
+    return True
+
 def process_files():
     try:
+        # Step 1: Fetch Jira data first
+        if not fetch_jira_data():
+            return
+
+        # Step 2: Load dailycount
         csv_file = 'dailycount.csv'
         excel_file = 'project.xlsx'
         image_file = 'count.png'
 
-        # Step 1: Load and clean CSV
         df_csv = pd.read_csv(csv_file)
-        df_csv.drop(df_csv.columns[[2, 3]], axis=1, inplace=True)
-        df_csv.columns = ['Project', 'Count']
 
-        # Step 2: Load Excel
+        # Step 3: Load Excel
         df_excel = pd.read_excel(excel_file)
 
-        # Step 3: Add today's date column with counts
+        # Step 4: Add today's date column with counts
         today_str = datetime.today().strftime('%d-%B-%Y')
         df_excel[today_str] = df_excel['Project'].map(df_csv.set_index('Project')['Count']).fillna(0).astype(int)
 
-        # Step 4: Save Excel without formatting
+        # Step 5: Save Excel without formatting
         df_excel.to_excel(excel_file, index=False)
 
-        # Step 5: Open Excel for formatting
+        # Step 6: Open Excel for formatting
         wb = load_workbook(excel_file)
         ws = wb.active
 
-        # Prepare styles
         green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
         yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
         center_align = Alignment(horizontal="center", vertical="center")
@@ -42,7 +77,7 @@ def process_files():
             bottom=Side(style='thin')
         )
 
-        # Step 6: Highlight all 0s in date columns and apply border
+        # Highlight 0s and apply borders
         for row in range(1, ws.max_row + 1):
             for col in range(1, ws.max_column + 1):
                 cell = ws.cell(row=row, column=col)
@@ -50,7 +85,6 @@ def process_files():
                     cell.fill = green_fill
                 cell.border = thin_border
 
-        # Step 7: Merge and label names in column A
         def merge_and_label(start_row, end_row, name):
             ws.merge_cells(start_row=start_row, start_column=1, end_row=end_row, end_column=1)
             cell = ws.cell(row=start_row, column=1)
@@ -67,7 +101,7 @@ def process_files():
 
         wb.save(excel_file)
 
-        # Step 8: Export used range to PNG
+        # Step 7: Export cleaned Excel data to PNG
         df_clean = pd.read_excel(excel_file).dropna(how='all', axis=1).dropna(how='all', axis=0)
         fig, ax = plt.subplots(figsize=(min(20, 0.5 * len(df_clean.columns)), 0.4 * len(df_clean)))
         ax.axis('off')
@@ -79,7 +113,7 @@ def process_files():
         plt.savefig(image_file, bbox_inches='tight', dpi=300)
         plt.close()
 
-        messagebox.showinfo("Success", f"Excel updated and 'count.png' generated!")
+        messagebox.showinfo("Success", f"Excel updated and image saved as 'count.png'!")
 
     except Exception as e:
         messagebox.showerror("Error", str(e))
@@ -91,7 +125,7 @@ root.title("Project Count Updater")
 frame = tk.Frame(root, padx=20, pady=20)
 frame.pack()
 
-label = tk.Label(frame, text="Click to update 'project.xlsx' using 'dailycount.csv'", font=('Arial', 12))
+label = tk.Label(frame, text="Click to fetch from Jira and update project.xlsx", font=('Arial', 12))
 label.pack(pady=10)
 
 button = tk.Button(frame, text="Run Script", command=process_files, font=('Arial', 12), bg="lightblue")
