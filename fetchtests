@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DefectDojo Test Viewer & Editor</title>
+  <title>DefectDojo Test Editor</title>
   <style>
     body { font-family: Arial; margin: 30px; }
     textarea { width: 100%; height: 100px; margin-bottom: 10px; }
@@ -15,7 +15,10 @@
 </head>
 <body>
 
-  <h2>DefectDojo Test Fetcher & Editor</h2>
+  <h2>DefectDojo Test Viewer & Editor</h2>
+
+  <!-- CSRF token injected in the HTML (e.g. by Django template engine) -->
+  <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}" id="csrfToken">
 
   <label>Enter paragraph with test IDs:</label>
   <textarea id="inputText" placeholder="Enter comma paragraph..."></textarea>
@@ -41,13 +44,6 @@
   <script>
     const API_BASE = 'https://demo.defectdojo.org/api/v2';
     let userMap = {};
-    let csrfToken = '';
-
-    async function fetchCSRFToken() {
-      const res = await fetch(`${API_BASE}/key-v2`);
-      const data = await res.json();
-      csrfToken = data.csrf_token;
-    }
 
     async function fetchUsers() {
       let allUsers = [];
@@ -64,7 +60,6 @@
     }
 
     async function processAndFetch() {
-      await fetchCSRFToken();
       await fetchUsers();
 
       const text = document.getElementById('inputText').value;
@@ -88,27 +83,26 @@
             userSelect.appendChild(opt);
           }
 
-          // Inline filtering for large user lists (basic search support)
-          userSelect.addEventListener('click', () => {
-            userSelect.size = 10;
-          });
-          userSelect.addEventListener('blur', () => {
-            userSelect.size = 0;
-          });
-
           userSelect.onchange = async function () {
             const newLeadId = parseInt(this.value);
-            await fetch(`${API_BASE}/tests/${test.id}/`, {
+            const csrfToken = document.querySelector('#csrfToken').value;
+
+            const updatedTest = { ...test, lead: newLeadId };
+            delete updatedTest.id;  // Remove ID from body if API complains
+
+            const res = await fetch(`${API_BASE}/tests/${test.id}/`, {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': csrfToken,
               },
               credentials: 'include',
-              body: JSON.stringify({ ...test, lead: newLeadId })
-            }).then(r => {
-              if (!r.ok) alert(`Failed to update test ${test.id}`);
+              body: JSON.stringify(updatedTest)
             });
+
+            if (!res.ok) {
+              alert(`Failed to update test ${test.id}`);
+            }
           };
 
           row.innerHTML = `
