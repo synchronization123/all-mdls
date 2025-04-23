@@ -2,7 +2,10 @@ import zipfile
 import hashlib
 import os
 import datetime
+import difflib
 from html import escape
+
+TEXT_EXTENSIONS = {'.txt', '.html', '.js', '.css', '.java', '.py', '.jsp', '.xml', '.json', '.csv', '.md'}
 
 def extract_zip(zip_path, extract_to):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -23,6 +26,19 @@ def get_file_hash(filepath):
             sha256.update(chunk)
     return sha256.hexdigest()
 
+def is_text_file(filepath):
+    return os.path.splitext(filepath)[1].lower() in TEXT_EXTENSIONS
+
+def get_diff_html(old_file, new_file):
+    try:
+        with open(old_file, 'r', encoding='utf-8') as f1, open(new_file, 'r', encoding='utf-8') as f2:
+            old_lines = f1.readlines()
+            new_lines = f2.readlines()
+        diff = difflib.HtmlDiff().make_table(old_lines, new_lines, fromdesc='Old', todesc='New', context=True, numlines=2)
+        return diff
+    except:
+        return "<p><em>Binary or unreadable file — diff skipped.</em></p>"
+
 def compare_patches(old_dir, new_dir):
     old_files = get_all_files(old_dir)
     new_files = get_all_files(new_dir)
@@ -32,15 +48,21 @@ def compare_patches(old_dir, new_dir):
     common = [f for f in old_files if f in new_files]
 
     modified = []
+    diffs = {}
+
     for f in common:
-        old_hash = get_file_hash(os.path.join(old_dir, f))
-        new_hash = get_file_hash(os.path.join(new_dir, f))
-        if old_hash != new_hash:
+        old_path = os.path.join(old_dir, f)
+        new_path = os.path.join(new_dir, f)
+        if get_file_hash(old_path) != get_file_hash(new_path):
             modified.append(f)
+            if is_text_file(f):
+                diffs[f] = get_diff_html(old_path, new_path)
+            else:
+                diffs[f] = "<p><em>Binary file or unsupported format — no diff available.</em></p>"
 
-    return added, removed, modified
+    return added, removed, modified, diffs
 
-def generate_html_report(added, removed, modified, output_file):
+def generate_html_report(added, removed, modified, diffs, output_file):
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     def html_list(title, items, color):
@@ -48,6 +70,10 @@ def generate_html_report(added, removed, modified, output_file):
             return f"<h3 style='color:{color}'>{title}</h3><p>None</p>"
         list_items = "".join(f"<li>{escape(item)}</li>" for item in items)
         return f"<h3 style='color:{color}'>{title}</h3><ul>{list_items}</ul>"
+
+    diff_sections = ""
+    for file, diff_html in diffs.items():
+        diff_sections += f"<h4>{escape(file)}</h4>{diff_html}<br><hr>"
 
     html_content = f"""<!DOCTYPE html>
 <html>
@@ -59,6 +85,13 @@ def generate_html_report(added, removed, modified, output_file):
         h1 {{ color: #333; }}
         ul {{ background: #fff; padding: 10px 20px; border: 1px solid #ccc; border-radius: 5px; }}
         li {{ margin: 5px 0; }}
+        table.diff {{ font-family: monospace; border: 1px solid #aaa; border-collapse: collapse; }}
+        .diff_header {{ background: #eaeaea; font-weight: bold; }}
+        .diff_next {{ background: #ddd; }}
+        .diff_add {{ background-color: #cfc; }}
+        .diff_chg {{ background-color: #ffc; }}
+        .diff_sub {{ background-color: #fcc; }}
+        td, th {{ padding: 4px; border: 1px solid #ccc; }}
     </style>
 </head>
 <body>
@@ -67,6 +100,8 @@ def generate_html_report(added, removed, modified, output_file):
     {html_list("Added Files", added, "green")}
     {html_list("Removed Files", removed, "red")}
     {html_list("Modified Files", modified, "orange")}
+    <h3 style="color: navy;">Diff Details for Modified Files</h3>
+    {diff_sections}
 </body>
 </html>
 """
@@ -93,8 +128,8 @@ def main():
     extract_zip(old_zip, old_dir)
     extract_zip(new_zip, new_dir)
 
-    added, removed, modified = compare_patches(old_dir, new_dir)
-    generate_html_report(added, removed, modified, report_file)
+    added, removed, modified, diffs = compare_patches(old_dir, new_dir)
+    generate_html_report(added, removed, modified, diffs, report_file)
 
     print(f"Report generated: {report_file}")
 
