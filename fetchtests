@@ -2,42 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DefectDojo Test Fetcher</title>
+  <title>DefectDojo Test Viewer & Editor</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 30px;
-    }
-    textarea {
-      width: 100%;
-      height: 100px;
-      margin-bottom: 10px;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      margin-bottom: 20px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    table, th, td {
-      border: 1px solid #ccc;
-    }
-    th, td {
-      padding: 10px;
-      text-align: left;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
+    body { font-family: Arial; margin: 30px; }
+    textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+    button { padding: 10px 20px; font-size: 16px; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 10px; border: 1px solid #ccc; text-align: left; }
+    th { background: #f4f4f4; }
+    select { width: 100%; padding: 5px; }
   </style>
 </head>
 <body>
 
-  <h2>DefectDojo Test Fetcher</h2>
+  <h2>DefectDojo Test Fetcher & Editor</h2>
 
   <label>Enter paragraph with test IDs:</label>
   <textarea id="inputText" placeholder="Enter comma paragraph..."></textarea>
@@ -52,7 +30,7 @@
       <tr>
         <th>Test ID</th>
         <th>Title</th>
-        <th>Lead</th>
+        <th>Lead (Editable)</th>
         <th>Version</th>
         <th>Branch/Tag</th>
       </tr>
@@ -62,45 +40,79 @@
 
   <script>
     const API_BASE = 'https://demo.defectdojo.org/api/v2';
+    let userMap = {}; // Map of userId => "First Last"
+    let csrfToken = '';
 
-    function processAndFetch() {
-      const text = document.getElementById('inputText').value;
-      const ids = [...text.matchAll(/\b\d+\b/g)].map(match => match[0]);
-      document.getElementById('numberText').value = ids.join(', ');
+    async function fetchCSRFToken() {
+      const res = await fetch(`${API_BASE}/key-v2`);
+      const data = await res.json();
+      csrfToken = data.csrf_token || '';
+    }
 
-      const tableBody = document.querySelector('#resultTable tbody');
-      tableBody.innerHTML = '';
-
-      ids.forEach(id => {
-        fetch(`${API_BASE}/tests/${id}/`)
-          .then(response => response.json())
-          .then(data => {
-            const leadId = data.lead;
-            fetch(`${API_BASE}/users/${leadId}/`)
-              .then(resp => resp.json())
-              .then(user => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                  <td>${data.id}</td>
-                  <td>${data.title || ''}</td>
-                  <td>${user.first_name || ''} ${user.last_name || ''}</td>
-                  <td>${data.version || ''}</td>
-                  <td>${data.branch_tag || ''}</td>
-                `;
-                tableBody.appendChild(row);
-              }).catch(() => addEmptyRow(data.id, tableBody, 'Unknown lead'));
-          })
-          .catch(() => addEmptyRow(id, tableBody, 'Test not found'));
+    async function fetchUsers() {
+      let url = `${API_BASE}/users/?limit=1000`;
+      const res = await fetch(url);
+      const data = await res.json();
+      data.results.forEach(user => {
+        userMap[user.id] = `${user.first_name} ${user.last_name}`;
       });
     }
 
-    function addEmptyRow(id, tableBody, message) {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${id}</td>
-        <td colspan="4">${message}</td>
-      `;
-      tableBody.appendChild(row);
+    async function processAndFetch() {
+      await fetchCSRFToken();
+      await fetchUsers();
+
+      const text = document.getElementById('inputText').value;
+      const ids = [...text.matchAll(/\b\d+\b/g)].map(m => m[0]);
+      document.getElementById('numberText').value = ids.join(', ');
+
+      const tbody = document.querySelector('#resultTable tbody');
+      tbody.innerHTML = '';
+
+      for (const id of ids) {
+        try {
+          const test = await fetch(`${API_BASE}/tests/${id}/`).then(r => r.json());
+          const row = document.createElement('tr');
+
+          const userSelect = document.createElement('select');
+          for (const uid in userMap) {
+            const opt = document.createElement('option');
+            opt.value = uid;
+            opt.textContent = userMap[uid];
+            if (parseInt(uid) === test.lead) opt.selected = true;
+            userSelect.appendChild(opt);
+          }
+
+          userSelect.onchange = async function () {
+            const newLeadId = parseInt(this.value);
+            await fetch(`${API_BASE}/tests/${test.id}/`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+              },
+              credentials: 'include',
+              body: JSON.stringify({ ...test, lead: newLeadId })
+            }).then(r => {
+              if (!r.ok) alert(`Failed to update test ${test.id}`);
+            });
+          };
+
+          row.innerHTML = `
+            <td>${test.id}</td>
+            <td>${test.title || ''}</td>
+            <td></td>
+            <td>${test.version || ''}</td>
+            <td>${test.branch_tag || ''}</td>
+          `;
+          row.children[2].appendChild(userSelect);
+          tbody.appendChild(row);
+        } catch {
+          const row = document.createElement('tr');
+          row.innerHTML = `<td>${id}</td><td colspan="4">Error loading test</td>`;
+          tbody.appendChild(row);
+        }
+      }
     }
   </script>
 
