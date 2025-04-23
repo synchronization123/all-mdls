@@ -1,6 +1,7 @@
 import pandas as pd
 from openpyxl import load_workbook
-from openpyxl.styles import PatternFill
+from openpyxl.styles import PatternFill, Alignment
+from openpyxl.utils import get_column_letter
 from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
@@ -25,25 +26,40 @@ def process_files():
         # Step 4: Save Excel without formatting
         df_excel.to_excel(excel_file, index=False)
 
-        # Step 5: Apply formatting to all date columns (from 3rd column onward)
+        # Step 5: Open Excel for formatting
         wb = load_workbook(excel_file)
         ws = wb.active
 
+        # Step 6: Highlight all 0 values in date columns
         green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-
-        for row in range(2, ws.max_row + 1):  # Skip header row
-            for col in range(3, ws.max_column + 1):  # Start from 3rd column (column C)
+        for row in range(2, ws.max_row + 1):
+            for col in range(3, ws.max_column + 1):  # Start from column C
                 cell = ws.cell(row=row, column=col)
                 if cell.value == 0:
                     cell.fill = green_fill
 
+        # Step 7: Merge and label names in column A
+        yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+        center_align = Alignment(horizontal="center", vertical="center")
+
+        def merge_and_label(start_row, end_row, name):
+            ws.merge_cells(start_row=start_row, start_column=1, end_row=end_row, end_column=1)
+            cell = ws.cell(row=start_row, column=1)
+            cell.value = name
+            cell.fill = yellow_fill
+            cell.alignment = center_align
+
+        merge_and_label(2, 12, "dan")
+        merge_and_label(13, 22, "sim")
+        merge_and_label(23, 32, "kim")
+
         wb.save(excel_file)
 
-        messagebox.showinfo("Success", f"Updated '{excel_file}' with column '{today_str}' and highlighted zeros!")
+        messagebox.showinfo("Success", f"Updated '{excel_file}' with counts, highlights, and merged name labels.")
     except Exception as e:
         messagebox.showerror("Error", str(e))
 
-# Tkinter GUI
+# GUI
 root = tk.Tk()
 root.title("Project Count Updater")
 
