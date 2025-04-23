@@ -1,6 +1,6 @@
 import pandas as pd
 from openpyxl import load_workbook
-from openpyxl.styles import PatternFill, Alignment
+from openpyxl.styles import PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from datetime import datetime
 import tkinter as tk
@@ -30,24 +30,37 @@ def process_files():
         wb = load_workbook(excel_file)
         ws = wb.active
 
-        # Step 6: Highlight all 0 values in date columns
+        # Prepare styles
         green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-        for row in range(2, ws.max_row + 1):
-            for col in range(3, ws.max_column + 1):  # Start from column C
-                cell = ws.cell(row=row, column=col)
-                if cell.value == 0:
-                    cell.fill = green_fill
-
-        # Step 7: Merge and label names in column A
         yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
         center_align = Alignment(horizontal="center", vertical="center")
+        thin_border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
 
+        # Step 6: Highlight all 0s in date columns and apply border
+        for row in range(1, ws.max_row + 1):
+            for col in range(1, ws.max_column + 1):
+                cell = ws.cell(row=row, column=col)
+                if isinstance(cell.value, int) and cell.value == 0 and col >= 3:
+                    cell.fill = green_fill
+                cell.border = thin_border
+
+        # Step 7: Merge and label names in column A
         def merge_and_label(start_row, end_row, name):
             ws.merge_cells(start_row=start_row, start_column=1, end_row=end_row, end_column=1)
             cell = ws.cell(row=start_row, column=1)
             cell.value = name
             cell.fill = yellow_fill
             cell.alignment = center_align
+            cell.border = thin_border
+            # Apply border to all rows in merged range
+            for row in range(start_row, end_row + 1):
+                cell = ws.cell(row=row, column=1)
+                cell.border = thin_border
 
         merge_and_label(2, 12, "dan")
         merge_and_label(13, 22, "sim")
@@ -55,7 +68,7 @@ def process_files():
 
         wb.save(excel_file)
 
-        messagebox.showinfo("Success", f"Updated '{excel_file}' with counts, highlights, and merged name labels.")
+        messagebox.showinfo("Success", f"Updated '{excel_file}' with today's data, highlights, borders, and merged cells.")
     except Exception as e:
         messagebox.showerror("Error", str(e))
 
