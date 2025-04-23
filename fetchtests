@@ -40,20 +40,25 @@
 
   <script>
     const API_BASE = 'https://demo.defectdojo.org/api/v2';
-    let userMap = {}; // Map of userId => "First Last"
+    let userMap = {};
     let csrfToken = '';
 
     async function fetchCSRFToken() {
       const res = await fetch(`${API_BASE}/key-v2`);
       const data = await res.json();
-      csrfToken = data.csrf_token || '';
+      csrfToken = data.csrf_token;
     }
 
     async function fetchUsers() {
+      let allUsers = [];
       let url = `${API_BASE}/users/?limit=1000`;
-      const res = await fetch(url);
-      const data = await res.json();
-      data.results.forEach(user => {
+      while (url) {
+        const res = await fetch(url);
+        const data = await res.json();
+        allUsers = allUsers.concat(data.results);
+        url = data.next;
+      }
+      allUsers.forEach(user => {
         userMap[user.id] = `${user.first_name} ${user.last_name}`;
       });
     }
@@ -83,6 +88,14 @@
             userSelect.appendChild(opt);
           }
 
+          // Inline filtering for large user lists (basic search support)
+          userSelect.addEventListener('click', () => {
+            userSelect.size = 10;
+          });
+          userSelect.addEventListener('blur', () => {
+            userSelect.size = 0;
+          });
+
           userSelect.onchange = async function () {
             const newLeadId = parseInt(this.value);
             await fetch(`${API_BASE}/tests/${test.id}/`, {
@@ -107,7 +120,7 @@
           `;
           row.children[2].appendChild(userSelect);
           tbody.appendChild(row);
-        } catch {
+        } catch (err) {
           const row = document.createElement('tr');
           row.innerHTML = `<td>${id}</td><td colspan="4">Error loading test</td>`;
           tbody.appendChild(row);
