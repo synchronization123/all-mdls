@@ -1,0 +1,59 @@
+import pandas as pd
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
+from datetime import datetime
+import tkinter as tk
+from tkinter import messagebox
+
+def process_files():
+    try:
+        csv_file = 'dailycount.csv'
+        excel_file = 'project.xlsx'
+
+        # Step 1: Load and clean CSV
+        df_csv = pd.read_csv(csv_file)
+        df_csv.drop(df_csv.columns[[2, 3]], axis=1, inplace=True)
+        df_csv.columns = ['Project', 'Count']
+
+        # Step 2: Load Excel
+        df_excel = pd.read_excel(excel_file)
+
+        # Step 3: Add today's date column with counts
+        today_str = datetime.today().strftime('%d-%B-%Y')
+        df_excel[today_str] = df_excel['Project'].map(df_csv.set_index('Project')['Count']).fillna(0).astype(int)
+
+        # Step 4: Save Excel without formatting
+        df_excel.to_excel(excel_file, index=False)
+
+        # Step 5: Apply formatting to new column (highlight 0s)
+        wb = load_workbook(excel_file)
+        ws = wb.active
+        col_idx = df_excel.columns.get_loc(today_str) + 1  # 1-based index
+        col_letter = chr(64 + col_idx)
+
+        green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+        for row in range(2, ws.max_row + 1):
+            cell = ws[f"{col_letter}{row}"]
+            if cell.value == 0:
+                cell.fill = green_fill
+
+        wb.save(excel_file)
+
+        messagebox.showinfo("Success", f"File updated with column '{today_str}'!")
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
+
+# Tkinter GUI
+root = tk.Tk()
+root.title("Project File Updater")
+
+frame = tk.Frame(root, padx=20, pady=20)
+frame.pack()
+
+label = tk.Label(frame, text="Click to update project.xlsx using dailycount.csv", font=('Arial', 12))
+label.pack(pady=10)
+
+button = tk.Button(frame, text="Run Script", command=process_files, font=('Arial', 12), bg="lightblue")
+button.pack(pady=10)
+
+root.mainloop()
