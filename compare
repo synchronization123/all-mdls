@@ -1,15 +1,16 @@
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
 from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
+import matplotlib.pyplot as plt
 
 def process_files():
     try:
         csv_file = 'dailycount.csv'
         excel_file = 'project.xlsx'
+        image_file = 'count.png'
 
         # Step 1: Load and clean CSV
         df_csv = pd.read_csv(csv_file)
@@ -57,10 +58,8 @@ def process_files():
             cell.fill = yellow_fill
             cell.alignment = center_align
             cell.border = thin_border
-            # Apply border to all rows in merged range
             for row in range(start_row, end_row + 1):
-                cell = ws.cell(row=row, column=1)
-                cell.border = thin_border
+                ws.cell(row=row, column=1).border = thin_border
 
         merge_and_label(2, 12, "dan")
         merge_and_label(13, 22, "sim")
@@ -68,7 +67,20 @@ def process_files():
 
         wb.save(excel_file)
 
-        messagebox.showinfo("Success", f"Updated '{excel_file}' with today's data, highlights, borders, and merged cells.")
+        # Step 8: Export used range to PNG
+        df_clean = pd.read_excel(excel_file).dropna(how='all', axis=1).dropna(how='all', axis=0)
+        fig, ax = plt.subplots(figsize=(min(20, 0.5 * len(df_clean.columns)), 0.4 * len(df_clean)))
+        ax.axis('off')
+        table = ax.table(cellText=df_clean.values, colLabels=df_clean.columns, cellLoc='center', loc='center')
+        table.auto_set_font_size(False)
+        table.set_fontsize(10)
+        table.scale(1, 1.5)
+        plt.tight_layout()
+        plt.savefig(image_file, bbox_inches='tight', dpi=300)
+        plt.close()
+
+        messagebox.showinfo("Success", f"Excel updated and 'count.png' generated!")
+
     except Exception as e:
         messagebox.showerror("Error", str(e))
 
