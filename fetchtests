@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DefectDojo Test Fetcher</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>DefectDojo Test Fetcher</h2>
+
+  <label>Enter paragraph with test IDs:</label>
+  <textarea id="inputText" placeholder="Enter comma paragraph..."></textarea>
+
+  <label>Extracted Test IDs:</label>
+  <textarea id="numberText" readonly></textarea>
+
+  <button onclick="processAndFetch()">Go</button>
+
+  <table id="resultTable">
+    <thead>
+      <tr>
+        <th>Test ID</th>
+        <th>Title</th>
+        <th>Lead</th>
+        <th>Version</th>
+        <th>Branch/Tag</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const API_BASE = 'https://demo.defectdojo.org/api/v2';
+
+    function processAndFetch() {
+      const text = document.getElementById('inputText').value;
+      const ids = [...text.matchAll(/\b\d+\b/g)].map(match => match[0]);
+      document.getElementById('numberText').value = ids.join(', ');
+
+      const tableBody = document.querySelector('#resultTable tbody');
+      tableBody.innerHTML = '';
+
+      ids.forEach(id => {
+        fetch(`${API_BASE}/tests/${id}/`)
+          .then(response => response.json())
+          .then(data => {
+            const leadId = data.lead;
+            fetch(`${API_BASE}/users/${leadId}/`)
+              .then(resp => resp.json())
+              .then(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                  <td>${data.id}</td>
+                  <td>${data.title || ''}</td>
+                  <td>${user.first_name || ''} ${user.last_name || ''}</td>
+                  <td>${data.version || ''}</td>
+                  <td>${data.branch_tag || ''}</td>
+                `;
+                tableBody.appendChild(row);
+              }).catch(() => addEmptyRow(data.id, tableBody, 'Unknown lead'));
+          })
+          .catch(() => addEmptyRow(id, tableBody, 'Test not found'));
+      });
+    }
+
+    function addEmptyRow(id, tableBody, message) {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${id}</td>
+        <td colspan="4">${message}</td>
+      `;
+      tableBody.appendChild(row);
+    }
+  </script>
+
+</body>
+</html>
