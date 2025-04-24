@@ -1,0 +1,246 @@
+const _mcrjiraopen_tests_api = 'https://demo.defectdojo.org/api/v2/tests/?tags=mcr_jira';
+const _mcrjiraopen_users_api = 'https://demo.defectdojo.org/api/v2/users/';
+const _mcrjiraopen_environments_api = 'https://demo.defectdojo.org/api/v2/development_environments/';
+const _mcrjiraopen_dashboard_url = 'https://demo.defectdojo.org/dashboard';
+const _mcrjiraopen_page_size = 20;
+let _mcrjiraopen_tests = [];
+let _mcrjiraopen_users = [];
+let _mcrjiraopen_environments = {};
+let _mcrjiraopen_current_page = 1;
+let _mcrjiraopen_csrf_token = '';
+let _mcrjiraopen_filtered_tests = [];
+
+async function _mcrjiraopen_fetchCsrfToken() {
+    try {
+        const response = await fetch(_mcrjiraopen_dashboard_url);
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const tokenInput = doc.querySelector('input[name="csrfmiddlewaretoken"]');
+        _mcrjiraopen_csrf_token = tokenInput ? tokenInput.value : '';
+    } catch (error) {
+        _mcrjiraopen_showToast('Error fetching CSRF token', 'error');
+    }
+}
+
+async function _mcrjiraopen_fetchUsers() {
+    try {
+        const response = await fetch(_mcrjiraopen_users_api);
+        const data = await response.json();
+        _mcrjiraopen_users = data.results;
+        const leadSelect = document.getElementById('_mcrjiraopen_lead_filter');
+        _mcrjiraopen_users.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = `${user.first_name} ${user.last_name}`;
+            leadSelect.appendChild(option);
+        });
+        $(`#_mcrjiraopen_lead_filter`).selectmenu({ width: '100%' });
+    } catch (error) {
+        _mcrjiraopen_showToast('Error fetching users', 'error');
+    }
+}
+
+async function _mcrjiraopen_fetchEnvironmentName(envId) {
+    if (_mcrjiraopen_environments[envId]) {
+        return _mcrjiraopen_environments[envId];
+    }
+    try {
+        const response = await fetch(`${_mcrjiraopen_environments_api}${envId}/`);
+        const data = await response.json();
+        _mcrjiraopen_environments[envId] = data.name || 'Unknown';
+        return _mcrjiraopen_environments[envId];
+    } catch (error) {
+        _mcrjiraopen_showToast('Error fetching environment name', 'error');
+        return 'Unknown';
+    }
+}
+
+async function _mcrjiraopen_fetchTests() {
+    try {
+        const response = await fetch(_mcrjiraopen_tests_api);
+        const data = await response.json();
+        _mcrjiraopen_tests = data.results.filter(test => ['Pending', 'On Hold'].includes(test.branch_tag));
+        _mcrjiraopen_filtered_tests = [..._mcrjiraopen_tests];
+
+        // Populate dynamic filter dropdowns
+        await _mcrjiraopen_populateDynamicFilters();
+        await _mcrjiraopen_fetchUsers();
+        _mcrjiraopen_renderCards();
+        _mcrjiraopen_updateTotalCount();
+        _mcrjiraopen_showToast('Tests loaded successfully', 'success');
+    } catch (error) {
+        _mcrjiraopen_showToast('Error fetching tests', 'error');
+    }
+}
+
+async function _mcrjiraopen_populateDynamicFilters() {
+    const versions = [...new Set(_mcrjiraopen_tests.map(test => test.version).filter(v => v))].sort();
+    const environments = [...new Set(_mcrjiraopen_tests.map(test => test.environment).filter(e => e))].sort();
+    const commitHashes = [...new Set(_mcrjiraopen_tests.map(test => test.commit_hash).filter(c => c))].sort();
+    const buildIds = [...new Set(_mcrjiraopen_tests.map(test => test.build_id).filter(b => b))].sort();
+
+    const versionSelect = document.getElementById('_mcrjiraopen_version_filter');
+    versionSelect.innerHTML = '<option value="">Filter by Version</option>';
+    versions.forEach(version => {
+        const option = document.createElement('option');
+        option.value = version;
+        option.textContent = version;
+        versionSelect.appendChild(option);
+    });
+    $(`#_mcrjiraopen_version_filter`).selectmenu({ width: '100%' });
+
+    const envSelect = document.getElementById('_mcrjiraopen_environment_filter');
+    envSelect.innerHTML = '<option value="">Filter by Environment</option>';
+    environments.forEach(env => {
+        const option = document.createElement('option');
+        option.value = env;
+        option.textContent = env; // Will be updated with name
+        envSelect.appendChild(option);
+    });
+
+    const commitSelect = document.getElementById('_mcrjiraopen_commit_hash_filter');
+    commitSelect.innerHTML = '<option value="">Filter by Commit Hash</option>';
+    commitHashes.forEach(hash => {
+        const option = document.createElement('option');
+        option.value = hash;
+        option.textContent = hash;
+        commitSelect.appendChild(option);
+    });
+
+    const buildSelect = document.getElementById('_mcrjiraopen_build_id_filter');
+    buildSelect.innerHTML = '<option value="">Filter by Build ID</option>';
+    buildIds.forEach(build => {
+        const option = document.createElement('option');
+        option.value = build;
+        option.textContent = build;
+        buildSelect.appendChild(option);
+    });
+}
+
+function _mcrjiraopen_getUserName(userId) {
+    const user = _mcrjiraopen_users.find(u => u.id === userId);
+    return user ? `${user.first_name} ${user.last_name}` : 'Unknown';
+}
+
+function _mcrjiraopen_showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function _mcrjiraopen_updateTotalCount() {
+    const countElement = document.getElementById('_mcrjiraopen_total_count');
+    countElement.textContent = `Total Tests: ${_mcrjiraopen_filtered_tests.length}`;
+}
+
+async function _mcrjiraopen_renderCards() {
+    const container = document.getElementById('_mcrjiraopen_card_container');
+    container.innerHTML = '';
+    const start = (_mcrjiraopen_current_page - 1) * _mcrjiraopen_page_size;
+    const end = start + _mcrjiraopen_page_size;
+    const paginatedTests = _mcrjiraopen_filtered_tests.slice(start, end);
+
+    for (const test of paginatedTests) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.id = `_mcrjiraopen_card_${test.id}`;
+
+        const envName = await _mcrjiraopen_fetchEnvironmentName(test.environment);
+        card.innerHTML = `
+            <div>${test.id}</div>
+            <div>${test.title || 'N/A'}</div>
+            <div>${test.description || 'N/A'}</div>
+            <div>${test.version || 'N/A'}</div>
+            <div>${test.branch_tag}</div>
+            <div>${_mcrjiraopen_getUserName(test.lead)}</div>
+            <div>${envName}</div>
+            <div>${test.commit_hash || 'N/A'}</div>
+            <div>${test.build_id || 'N/A'}</div>
+        `;
+        container.appendChild(card);
+    }
+
+    _mcrjiraopen_renderPagination(_mcrjiraopen_filtered_tests.length);
+}
+
+function _mcrjiraopen_renderPagination(totalItems) {
+    const totalPages = Math.ceil(totalItems / _mcrjiraopen_page_size);
+    const pagination = document.getElementById('_mcrjiraopen_pagination');
+    pagination.innerHTML = `
+        <button onclick="_mcrjiraopen_changePage(${_mcrjiraopen_current_page - 1})" ${_mcrjiraopen_current_page === 1 ? 'disabled' : ''}>Previous</button>
+        <span>Page ${_mcrjiraopen_current_page} of ${totalPages}</span>
+        <button onclick="_mcrjiraopen_changePage(${_mcrjiraopen_current_page + 1})" ${_mcrjiraopen_current_page === totalPages ? 'disabled' : ''}>Next</button>
+    `;
+}
+
+function _mcrjiraopen_changePage(page) {
+    _mcrjiraopen_current_page = page;
+    _mcrjiraopen_renderCards();
+}
+
+function _mcrjiraopen_filterTable() {
+    const searchInput = document.getElementById('_mcrjiraopen_search_input').value.toLowerCase();
+    const versionFilter = document.getElementById('_mcrjiraopen_version_filter').value;
+    const branchTagFilter = document.getElementById('_mcrjiraopen_branch_tag_filter').value;
+    const leadFilter = document.getElementById('_mcrjiraopen_lead_filter').value;
+    const envFilter = document.getElementById('_mcrjiraopen_environment_filter').value;
+    const commitHashFilter = document.getElementById('_mcrjiraopen_commit_hash_filter').value;
+    const buildIdFilter = document.getElementById('_mcrjiraopen_build_id_filter').value;
+
+    _mcrjiraopen_filtered_tests = _mcrjiraopen_tests.filter(test => {
+        const matchesSearch = test.title?.toLowerCase().includes(searchInput) || false;
+        const matchesVersion = !versionFilter || test.version === versionFilter;
+        const matchesBranchTag = !branchTagFilter || test.branch_tag === branchTagFilter;
+        const matchesLead = !leadFilter || test.lead === parseInt(leadFilter);
+        const matchesEnv = !envFilter || test.environment === envFilter;
+        const matchesCommitHash = !commitHashFilter || test.commit_hash === commitHashFilter;
+        const matchesBuildId = !buildIdFilter || test.build_id === buildIdFilter;
+        return matchesSearch && matchesVersion && matchesBranchTag && matchesLead && matchesEnv && matchesCommitHash && matchesBuildId;
+    });
+
+    _mcrjiraopen_current_page = 1;
+    _mcrjiraopen_renderCards();
+    _mcrjiraopen_updateTotalCount();
+    _mcrjiraopen_showToast('Filters applied', 'success');
+}
+
+function _mcrjiraopen_clearFilters() {
+    document.getElementById('_mcrjiraopen_search_input').value = '';
+    document.getElementById('_mcrjiraopen_version_filter').value = '';
+    document.getElementById('_mcrjiraopen_branch_tag_filter').value = '';
+    document.getElementById('_mcrjiraopen_lead_filter').value = '';
+    document.getElementById('_mcrjiraopen_environment_filter').value = '';
+    document.getElementById('_mcrjiraopen_commit_hash_filter').value = '';
+    document.getElementById('_mcrjiraopen_build_id_filter').value = '';
+    $(`#_mcrjiraopen_version_filter`).selectmenu('refresh');
+    $(`#_mcrjiraopen_lead_filter`).selectmenu('refresh');
+    _mcrjiraopen_filtered_tests = [..._mcrjiraopen_tests];
+    _mcrjiraopen_current_page = 1;
+    _mcrjiraopen_renderCards();
+    _mcrjiraopen_updateTotalCount();
+    _mcrjiraopen_showToast('Filters cleared', 'success');
+}
+
+async function _mcrjiraopen_refreshData() {
+    await _mcrjiraopen_fetchTests();
+    _mcrjiraopen_showToast('Data refreshed', 'success');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('mcr-jira-open').classList.contains('active')) {
+        _mcrjiraopen_fetchCsrfToken().then(_mcrjiraopen_fetchTests);
+    }
+
+    document.querySelector('.tab[data-tab="mcr-jira-open"]').addEventListener('click', () => {
+        if (!_mcrjiraopen_tests.length) {
+            _mcrjiraopen_fetchCsrfToken().then(_mcrjiraopen_fetchTests);
+        }
+    });
+});
