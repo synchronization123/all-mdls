@@ -47,7 +47,12 @@ async function _opensct_fetchEngagements() {
     try {
         const responses = await Promise.all(_opensct_api_urls.map(url => fetch(url)));
         const data = await Promise.all(responses.map(res => res.json()));
-        _opensct_engagements = data.flatMap(d => d.results);
+        _opensct_engagements = data.flatMap(d => d.results).map(engagement => ({
+            ...engagement,
+            analyst_status: engagement.analyst_status || engagement.status || 'Not Started',
+            mentor_status: engagement.mentor_status || engagement.status || 'Not Started',
+            lead_status: engagement.lead_status || 'Not Started'
+        }));
         _opensct_filtered_engagements = [..._opensct_engagements];
         await _opensct_fetchUsers();
         _opensct_renderCards();
@@ -86,7 +91,7 @@ function _opensct_getUserName(userId) {
 }
 
 function _opensct_showToast(message, type) {
-    const toast局面 = document.createElement('div');
+    const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
     document.body.appendChild(toast);
@@ -99,13 +104,12 @@ function _opensct_showToast(message, type) {
 
 function _opensct_renderCards() {
     const container = document.getElementById('_opensct_card_container');
-    container.innerHTML = '';
+    container.innerHTML = ''; // Only clear when rendering new page or filters
     const start = (_opensct_current_page - 1) * _opensct_page_size;
     const end = start + _opensct_page_size;
     const paginatedEngagements = _opensct_filtered_engagements.slice(start, end);
 
-    paginatedEngagements.forEach(async engagement => {
-        const jiraCounts = await _opensct_fetchJiraCounts(engagement.id);
+    paginatedEngagements.forEach(engagement => {
         const card = document.createElement('div');
         card.className = 'card';
         card.id = `_opensct_card_${engagement.id}`;
@@ -113,10 +117,10 @@ function _opensct_renderCards() {
             <div>${_opensct_formatDate(engagement.created)}</div>
             <div>${engagement.id}</div>
             <div>${engagement.name}</div>
-            <div>${jiraCounts.totalJiras}</div>
-            <div>${jiraCounts.pendingJiras}</div>
-            <div>${jiraCounts.doableJiras}</div>
-            <div>${jiraCounts.nonDoableJiras}</div>
+            <div id="_opensct_total_jiras_${engagement.id}">Loading...</div>
+            <div id="_opensct_pending_jiras_${engagement.id}">Loading...</div>
+            <div id="_opensct_doable_jiras_${engagement.id}">Loading...</div>
+            <div id="_opensct_non_doable_jiras_${engagement.id}">Loading...</div>
             <div>
                 <select id="_opensct_analyst_${engagement.id}" onchange="_opensct_updateStatus(${engagement.id}, 'analyst', this.value)">
                     <option value="Not Started" ${engagement.analyst_status === 'Not Started' ? 'selected' : ''}>Not Started</option>
@@ -159,6 +163,12 @@ function _opensct_renderCards() {
         `;
         container.appendChild(card);
         _opensct_initSearchableDropdown(engagement.id);
+        _opensct_fetchJiraCounts(engagement.id).then(counts => {
+            document.getElementById(`_opensct_total_jiras_${engagement.id}`).textContent = counts.totalJiras;
+            document.getElementById(`_opensct_pending_jiras_${engagement.id}`).textContent = counts.pendingJiras;
+            document.getElementById(`_opensct_doable_jiras_${engagement.id}`).textContent = counts.doableJiras;
+            document.getElementById(`_opensct_non_doable_jiras_${engagement.id}`).textContent = counts.nonDoableJiras;
+        });
     });
 
     _opensct_renderPagination(_opensct_filtered_engagements.length);
@@ -167,12 +177,14 @@ function _opensct_renderCards() {
 function _opensct_updateCard(engagement) {
     const card = document.getElementById(`_opensct_card_${engagement.id}`);
     if (!card) return;
-    const jiraCounts = _opensct_fetchJiraCounts(engagement.id).then(counts => {
-        card.children[3].textContent = counts.totalJiras;
-        card.children[4].textContent = counts.pendingJiras;
-        card.children[5].textContent = counts.doableJiras;
-        card.children[6].textContent = counts.nonDoableJiras;
+
+    _opensct_fetchJiraCounts(engagement.id).then(counts => {
+        document.getElementById(`_opensct_total_jiras_${engagement.id}`).textContent = counts.totalJiras;
+        document.getElementById(`_opensct_pending_jiras_${engagement.id}`).textContent = counts.pendingJiras;
+        document.getElementById(`_opensct_doable_jiras_${engagement.id}`).textContent = counts.doableJiras;
+        document.getElementById(`_opensct_non_doable_jiras_${engagement.id}`).textContent = counts.nonDoableJiras;
     });
+
     card.children[0].textContent = _opensct_formatDate(engagement.created);
     card.children[1].textContent = engagement.id;
     card.children[2].textContent = engagement.name;
@@ -231,9 +243,11 @@ function _opensct_clearFilters() {
 
 async function _opensct_updateStatus(engagementId, type, value) {
     const engagement = _opensct_engagements.find(e => e.id === engagementId);
-    if (!engagement) return;
+    if (!engagement) {
+        _opensct_showToast('Engagement not found', 'error');
+        return;
+    }
 
-    // Update local state
     if (type === 'analyst') engagement.analyst_status = value;
     else if (type === 'mentor') engagement.mentor_status = value;
     else if (type === 'lead') engagement.lead_status = value;
@@ -248,7 +262,8 @@ async function _opensct_updateStatus(engagementId, type, value) {
         analyst_status: engagement.analyst_status,
         mentor_status: engagement.mentor_status,
         lead_status: engagement.lead_status,
-        description: engagement.description
+        description: engagement.description,
+        status: engagement.analyst_status
     };
 
     try {
@@ -262,18 +277,21 @@ async function _opensct_updateStatus(engagementId, type, value) {
         });
         if (response.ok) {
             _opensct_updateCard(engagement);
-            _opensct_showToast(`${engagement.name} status updated`, 'success');
+            _opensct_showToast(`${engagement.name} ${type} status updated`, 'success');
         } else {
-            _opensct_showToast('Failed to update status', 'error');
+            _opensct_showToast(`Failed to update ${type} status`, 'error');
         }
     } catch (error) {
-        _opensct_showToast('Error updating status', 'error');
+        _opensct_showToast(`Error updating ${type} status`, 'error');
     }
 }
 
 async function _opensct_updateLead(engagementId, userId) {
     const engagement = _opensct_engagements.find(e => e.id === engagementId);
-    if (!engagement) return;
+    if (!engagement) {
+        _opensct_showToast('Engagement not found', 'error');
+        return;
+    }
 
     engagement.lead = parseInt(userId);
     const updatedEngagement = {
@@ -286,7 +304,8 @@ async function _opensct_updateLead(engagementId, userId) {
         analyst_status: engagement.analyst_status,
         mentor_status: engagement.mentor_status,
         lead_status: engagement.lead_status,
-        description: engagement.description
+        description: engagement.description,
+        status: engagement.analyst_status
     };
 
     try {
@@ -311,6 +330,11 @@ async function _opensct_updateLead(engagementId, userId) {
 
 async function _opensct_closeEngagement(engagementId) {
     const engagement = _opensct_engagements.find(e => e.id === engagementId);
+    if (!engagement) {
+        _opensct_showToast('Engagement not found', 'error');
+        return;
+    }
+
     if (!confirm(`Are you sure you want to close ${engagement.name}?`)) {
         _opensct_showToast('Close action cancelled', 'warning');
         return;
@@ -326,7 +350,9 @@ async function _opensct_closeEngagement(engagementId) {
         if (response.ok) {
             _opensct_engagements = _opensct_engagements.filter(e => e.id !== engagementId);
             _opensct_filtered_engagements = _opensct_filtered_engagements.filter(e => e.id !== engagementId);
-            _opensct_renderCards();
+            const card = document.getElementById(`_opensct_card_${engagementId}`);
+            if (card) card.remove();
+            _opensct_renderPagination(_opensct_filtered_engagements.length);
             _opensct_showToast(`${engagement.name} closed`, 'success');
         } else {
             _opensct_showToast('Failed to close engagement', 'error');
@@ -343,6 +369,11 @@ function _opensct_toggleComment(engagementId, button) {
 
 async function _opensct_saveComment(engagementId) {
     const engagement = _opensct_engagements.find(e => e.id === engagementId);
+    if (!engagement) {
+        _opensct_showToast('Engagement not found', 'error');
+        return;
+    }
+
     const commentBox = document.getElementById(`_opensct_comment_${engagementId}`);
     const textarea = commentBox.querySelector('textarea');
     engagement.description = textarea.value;
@@ -357,7 +388,8 @@ async function _opensct_saveComment(engagementId) {
         analyst_status: engagement.analyst_status,
         mentor_status: engagement.mentor_status,
         lead_status: engagement.lead_status,
-        description: engagement.description
+        description: engagement.description,
+        status: engagement.analyst_status
     };
 
     try {
@@ -421,7 +453,6 @@ function _opensct_initSearchableDropdown(engagementId) {
 document.addEventListener('DOMContentLoaded', () => {
     _opensct_fetchCsrfToken().then(_opensct_fetchEngagements);
 
-    // Tab switching logic
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', () => {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
