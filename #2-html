@@ -1,0 +1,44 @@
+<div class="tab-content" id="mcr-jira-open">
+    <div class="search-filter">
+        <input type="text" id="_mcrjiraopen_search_input" placeholder="Search by title...">
+        <select id="_mcrjiraopen_version_filter">
+            <option value="">Filter by Version</option>
+        </select>
+        <select id="_mcrjiraopen_branch_tag_filter">
+            <option value="">Filter by Branch Tag</option>
+            <option value="Pending">Pending</option>
+            <option value="On Hold">On Hold</option>
+        </select>
+        <select id="_mcrjiraopen_lead_filter">
+            <option value="">Filter by Lead</option>
+        </select>
+        <select id="_mcrjiraopen_environment_filter">
+            <option value="">Filter by Environment</option>
+        </select>
+        <select id="_mcrjiraopen_commit_hash_filter">
+            <option value="">Filter by Commit Hash</option>
+        </select>
+        <select id="_mcrjiraopen_build_id_filter">
+            <option value="">Filter by Build ID</option>
+        </select>
+        <button onclick="_mcrjiraopen_filterTable()">Go</button>
+        <button class="clear-btn" onclick="_mcrjiraopen_clearFilters()">Clear</button>
+        <button class="refresh-btn" onclick="_mcrjiraopen_refreshData()">Refresh</button>
+    </div>
+    <div class="total-count" id="_mcrjiraopen_total_count">Total Tests: 0</div>
+    <div class="table-container">
+        <div class="table-header">
+            <div>Id</div>
+            <div>Title</div>
+            <div>Description</div>
+            <div>Version</div>
+            <div>Branch Tag</div>
+            <div>Lead</div>
+            <div>Environment</div>
+            <div>Commit Hash</div>
+            <div>Build ID</div>
+        </div>
+        <div class="card-container" id="_mcrjiraopen_card_container"></div>
+    </div>
+    <div class="pagination" id="_mcrjiraopen_pagination"></div>
+</div>
