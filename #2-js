@@ -10,6 +10,14 @@ let _mcrjiraopen_current_page = 1;
 let _mcrjiraopen_csrf_token = '';
 let _mcrjiraopen_filtered_tests = [];
 
+function _mcrjiraopen_showLoadingModal() {
+    document.getElementById('_mcrjiraopen_loading_modal').style.display = 'flex';
+}
+
+function _mcrjiraopen_hideLoadingModal() {
+    document.getElementById('_mcrjiraopen_loading_modal').style.display = 'none';
+}
+
 async function _mcrjiraopen_fetchCsrfToken() {
     try {
         const response = await fetch(_mcrjiraopen_dashboard_url);
@@ -27,8 +35,11 @@ async function _mcrjiraopen_fetchUsers() {
     try {
         const response = await fetch(_mcrjiraopen_users_api);
         const data = await response.json();
-        _mcrjiraopen_users = data.results;
+        _mcrjiraopen_users = data.results.sort((a, b) => 
+            `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)
+        );
         const leadSelect = document.getElementById('_mcrjiraopen_lead_filter');
+        leadSelect.innerHTML = '<option value="">Filter by Lead</option>';
         _mcrjiraopen_users.forEach(user => {
             const option = document.createElement('option');
             option.value = user.id;
@@ -42,6 +53,7 @@ async function _mcrjiraopen_fetchUsers() {
 }
 
 async function _mcrjiraopen_fetchEnvironmentName(envId) {
+    if (!envId) return 'N/A';
     if (_mcrjiraopen_environments[envId]) {
         return _mcrjiraopen_environments[envId];
     }
@@ -58,25 +70,27 @@ async function _mcrjiraopen_fetchEnvironmentName(envId) {
 
 async function _mcrjiraopen_fetchTests() {
     try {
+        _mcrjiraopen_showLoadingModal();
         const response = await fetch(_mcrjiraopen_tests_api);
         const data = await response.json();
         _mcrjiraopen_tests = data.results.filter(test => ['Pending', 'On Hold'].includes(test.branch_tag));
         _mcrjiraopen_filtered_tests = [..._mcrjiraopen_tests];
 
-        // Populate dynamic filter dropdowns
         await _mcrjiraopen_populateDynamicFilters();
         await _mcrjiraopen_fetchUsers();
-        _mcrjiraopen_renderCards();
+        await _mcrjiraopen_renderCards();
         _mcrjiraopen_updateTotalCount();
         _mcrjiraopen_showToast('Tests loaded successfully', 'success');
     } catch (error) {
         _mcrjiraopen_showToast('Error fetching tests', 'error');
+    } finally {
+        _mcrjiraopen_hideLoadingModal();
     }
 }
 
 async function _mcrjiraopen_populateDynamicFilters() {
     const versions = [...new Set(_mcrjiraopen_tests.map(test => test.version).filter(v => v))].sort();
-    const environments = [...new Set(_mcrjiraopen_tests.map(test => test.environment).filter(e => e))].sort();
+    const environments = [...new Set(_mcrjiraopen_tests.map(test => test.environment).filter(e => e))];
     const commitHashes = [...new Set(_mcrjiraopen_tests.map(test => test.commit_hash).filter(c => c))].sort();
     const buildIds = [...new Set(_mcrjiraopen_tests.map(test => test.build_id).filter(b => b))].sort();
 
@@ -92,12 +106,13 @@ async function _mcrjiraopen_populateDynamicFilters() {
 
     const envSelect = document.getElementById('_mcrjiraopen_environment_filter');
     envSelect.innerHTML = '<option value="">Filter by Environment</option>';
-    environments.forEach(env => {
+    for (const envId of environments) {
+        const name = await _mcrjiraopen_fetchEnvironmentName(envId);
         const option = document.createElement('option');
-        option.value = env;
-        option.textContent = env; // Will be updated with name
+        option.value = envId;
+        option.textContent = name;
         envSelect.appendChild(option);
-    });
+    }
 
     const commitSelect = document.getElementById('_mcrjiraopen_commit_hash_filter');
     commitSelect.innerHTML = '<option value="">Filter by Commit Hash</option>';
@@ -151,23 +166,55 @@ async function _mcrjiraopen_renderCards() {
         const card = document.createElement('div');
         card.className = 'card';
         card.id = `_mcrjiraopen_card_${test.id}`;
-
         const envName = await _mcrjiraopen_fetchEnvironmentName(test.environment);
         card.innerHTML = `
             <div>${test.id}</div>
             <div>${test.title || 'N/A'}</div>
-            <div>${test.description || 'N/A'}</div>
+            <div>
+                <textarea id="_mcrjiraopen_description_${test.id}" onblur="_mcrjiraopen_updateDescription(${test.id}, this.value)">${test.description || ''}</textarea>
+            </div>
             <div>${test.version || 'N/A'}</div>
-            <div>${test.branch_tag}</div>
-            <div>${_mcrjiraopen_getUserName(test.lead)}</div>
+            <div>
+                <select id="_mcrjiraopen_branch_tag_${test.id}" onchange="_mcrjiraopen_updateBranchTag(${test.id}, this.value)">
+                    <option value="Pending" ${test.branch_tag === 'Pending' ? 'selected' : ''}>Pending</option>
+                    <option value="On Hold" ${test.branch_tag === 'On Hold' ? 'selected' : ''}>On Hold</option>
+                    <option value="Completed" ${test.branch_tag === 'Completed' ? 'selected' : ''}>Completed</option>
+                    <option value="Rejected" ${test.branch_tag === 'Rejected' ? 'selected' : ''}>Rejected</option>
+                </select>
+            </div>
+            <div>
+                <select id="_mcrjiraopen_lead_${test.id}" onchange="_mcrjiraopen_updateLead(${test.id}, this.value)">
+                    <option value="">Select Lead</option>
+                    ${_mcrjiraopen_users.map(user => `<option value="${user.id}" ${test.lead === user.id ? 'selected' : ''}>${user.first_name} ${user.last_name}</option>`).join('')}
+                </select>
+            </div>
             <div>${envName}</div>
             <div>${test.commit_hash || 'N/A'}</div>
             <div>${test.build_id || 'N/A'}</div>
         `;
         container.appendChild(card);
+        $(`#_mcrjiraopen_lead_${test.id}`).selectmenu({ width: '100%' });
     }
 
     _mcrjiraopen_renderPagination(_mcrjiraopen_filtered_tests.length);
+}
+
+function _mcrjiraopen_updateCard(test) {
+    const card = document.getElementById(`_mcrjiraopen_card_${test.id}`);
+    if (!card) return;
+
+    card.children[0].textContent = test.id;
+    card.children[1].textContent = test.title || 'N/A';
+    card.children[2].querySelector('textarea').value = test.description || '';
+    card.children[3].textContent = test.version || 'N/A';
+    card.children[4].querySelector('select').value = test.branch_tag || 'Pending';
+    card.children[5].querySelector('select').value = test.lead || '';
+    $(`#_mcrjiraopen_lead_${test.id}`).selectmenu('refresh');
+    card.children[7].textContent = test.commit_hash || 'N/A';
+    card.children[8].textContent = test.build_id || 'N/A';
+    _mcrjiraopen_fetchEnvironmentName(test.environment).then(name => {
+        card.children[6].textContent = name;
+    });
 }
 
 function _mcrjiraopen_renderPagination(totalItems) {
@@ -231,6 +278,126 @@ function _mcrjiraopen_clearFilters() {
 async function _mcrjiraopen_refreshData() {
     await _mcrjiraopen_fetchTests();
     _mcrjiraopen_showToast('Data refreshed', 'success');
+}
+
+async function _mcrjiraopen_updateDescription(testId, value) {
+    const test = _mcrjiraopen_tests.find(t => t.id === testId);
+    if (!test) {
+        _mcrjiraopen_showToast('Test not found', 'error');
+        return;
+    }
+
+    test.description = value || null;
+    const updatedTest = {
+        id: test.id,
+        title: test.title,
+        description: test.description,
+        version: test.version,
+        branch_tag: test.branch_tag,
+        lead: test.lead,
+        environment: test.environment,
+        commit_hash: test.commit_hash,
+        build_id: test.build_id
+    };
+
+    try {
+        const response = await fetch(`https://demo.defectdojo.org/api/v2/tests/${testId}/`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': _mcrjiraopen_csrf_token
+            },
+            body: JSON.stringify(updatedTest)
+        });
+        if (response.ok) {
+            _mcrjiraopen_updateCard(test);
+            _mcrjiraopen_showToast(`Test ${test.id} description updated`, 'success');
+        } else {
+            _mcrjiraopen_showToast('Failed to update description', 'error');
+        }
+    } catch (error) {
+        _mcrjiraopen_showToast('Error updating description', 'error');
+    }
+}
+
+async function _mcrjiraopen_updateBranchTag(testId, value) {
+    const test = _mcrjiraopen_tests.find(t => t.id === testId);
+    if (!test) {
+        _mcrjiraopen_showToast('Test not found', 'error');
+        return;
+    }
+
+    test.branch_tag = value;
+    const updatedTest = {
+        id: test.id,
+        title: test.title,
+        description: test.description,
+        version: test.version,
+        branch_tag: test.branch_tag,
+        lead: test.lead,
+        environment: test.environment,
+        commit_hash: test.commit_hash,
+        build_id: test.build_id
+    };
+
+    try {
+        const response = await fetch(`https://demo.defectdojo.org/api/v2/tests/${testId}/`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': _mcrjiraopen_csrf_token
+            },
+            body: JSON.stringify(updatedTest)
+        });
+        if (response.ok) {
+            _mcrjiraopen_updateCard(test);
+            _mcrjiraopen_showToast(`Test ${test.id} branch tag updated`, 'success');
+        } else {
+            _mcrjiraopen_showToast('Failed to update branch tag', 'error');
+        }
+    } catch (error) {
+        _mcrjiraopen_showToast('Error updating branch tag', 'error');
+    }
+}
+
+async function _mcrjiraopen_updateLead(testId, userId) {
+    const test = _mcrjiraopen_tests.find(t => t.id === testId);
+    if (!test) {
+        _mcrjiraopen_showToast('Test not found', 'error');
+        return;
+    }
+
+    test.lead = userId ? parseInt(userId) : null;
+    const updatedTest = {
+        id: test.id,
+        title: test.title,
+        description: test.description,
+        version: test.version,
+        branch_tag: test.branch_tag,
+        lead: test.lead,
+        environment: test.environment,
+        commit_hash: test.commit_hash,
+        build_id: test.build_id
+    };
+
+    try {
+        const response = await fetch(`https://demo.defectdojo.org/api/v2/tests/${testId}/`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': _mcrjiraopen_csrf_token
+            },
+            body: JSON.stringify(updatedTest)
+        });
+        if (response.ok) {
+            _mcrjiraopen_updateCard(test);
+            _mcrjiraopen_showToast(`Test ${test.id} lead updated`, 'success');
+        } else {
+            _mcrjiraopen_showToast('Failed to update lead', 'error');
+        }
+    } catch (error) {
+        _mcrjiraopen_showToast('Error updating lead', 'error');
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
