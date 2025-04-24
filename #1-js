@@ -49,9 +49,9 @@ async function _opensct_fetchEngagements() {
         const data = await Promise.all(responses.map(res => res.json()));
         _opensct_engagements = data.flatMap(d => d.results).map(engagement => ({
             ...engagement,
-            analyst_status: engagement.analyst_status || engagement.status || 'Not Started',
-            mentor_status: engagement.mentor_status || engagement.status || 'Not Started',
-            lead_status: engagement.lead_status || 'Not Started'
+            status: engagement.status || 'Not Started',
+            branch_tag: engagement.branch_tag || 'Not Started',
+            commit_hash: engagement.commit_hash || 'Not Started'
         }));
         _opensct_filtered_engagements = [..._opensct_engagements];
         await _opensct_fetchUsers();
@@ -104,7 +104,7 @@ function _opensct_showToast(message, type) {
 
 function _opensct_renderCards() {
     const container = document.getElementById('_opensct_card_container');
-    container.innerHTML = ''; // Only clear when rendering new page or filters
+    container.innerHTML = '';
     const start = (_opensct_current_page - 1) * _opensct_page_size;
     const end = start + _opensct_page_size;
     const paginatedEngagements = _opensct_filtered_engagements.slice(start, end);
@@ -123,26 +123,26 @@ function _opensct_renderCards() {
             <div id="_opensct_non_doable_jiras_${engagement.id}">Loading...</div>
             <div>
                 <select id="_opensct_analyst_${engagement.id}" onchange="_opensct_updateStatus(${engagement.id}, 'analyst', this.value)">
-                    <option value="Not Started" ${engagement.analyst_status === 'Not Started' ? 'selected' : ''}>Not Started</option>
-                    <option value="In Progress" ${engagement.analyst_status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                    <option value="On Hold" ${engagement.analyst_status === 'On Hold' ? 'selected' : ''}>On Hold</option>
-                    <option value="Completed" ${engagement.analyst_status === 'Completed' ? 'selected' : ''}>Completed</option>
+                    <option value="Not Started" ${engagement.status === 'Not Started' ? 'selected' : ''}>Not Started</option>
+                    <option value="In Progress" ${engagement.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                    <option value="On Hold" ${engagement.status === 'On Hold' ? 'selected' : ''}>On Hold</option>
+                    <option value="Completed" ${engagement.status === 'Completed' ? 'selected' : ''}>Completed</option>
                 </select>
             </div>
             <div>
                 <select id="_opensct_mentor_${engagement.id}" onchange="_opensct_updateStatus(${engagement.id}, 'mentor', this.value)">
-                    <option value="Not Started" ${engagement.mentor_status === 'Not Started' ? 'selected' : ''}>Not Started</option>
-                    <option value="In Progress" ${engagement.mentor_status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                    <option value="On Hold" ${engagement.mentor_status === 'On Hold' ? 'selected' : ''}>On Hold</option>
-                    <option value="Completed" ${engagement.mentor_status === 'Completed' ? 'selected' : ''}>Completed</option>
+                    <option value="Not Started" ${engagement.branch_tag === 'Not Started' ? 'selected' : ''}>Not Started</option>
+                    <option value="In Progress" ${engagement.branch_tag === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                    <option value="On Hold" ${engagement.branch_tag === 'On Hold' ? 'selected' : ''}>On Hold</option>
+                    <option value="Completed" ${engagement.branch_tag === 'Completed' ? 'selected' : ''}>Completed</option>
                 </select>
             </div>
             <div>
                 <select id="_opensct_lead_status_${engagement.id}" onchange="_opensct_updateStatus(${engagement.id}, 'lead', this.value)">
-                    <option value="Not Started" ${engagement.lead_status === 'Not Started' ? 'selected' : ''}>Not Started</option>
-                    <option value="Approved" ${engagement.lead_status === 'Approved' ? 'selected' : ''}>Approved</option>
-                    <option value="Not Approved" ${engagement.lead_status === 'Not Approved' ? 'selected' : ''}>Not Approved</option>
-                    <option value="Rejected" ${engagement.lead_status === 'Rejected' ? 'selected' : ''}>Rejected</option>
+                    <option value="Not Started" ${engagement.commit_hash === 'Not Started' ? 'selected' : ''}>Not Started</option>
+                    <option value="Approved" ${engagement.commit_hash === 'Approved' ? 'selected' : ''}>Approved</option>
+                    <option value="Not Approved" ${engagement.commit_hash === 'Not Approved' ? 'selected' : ''}>Not Approved</option>
+                    <option value="Rejected" ${engagement.commit_hash === 'Rejected' ? 'selected' : ''}>Rejected</option>
                 </select>
             </div>
             <div class="searchable-select">
@@ -188,9 +188,9 @@ function _opensct_updateCard(engagement) {
     card.children[0].textContent = _opensct_formatDate(engagement.created);
     card.children[1].textContent = engagement.id;
     card.children[2].textContent = engagement.name;
-    card.children[7].querySelector('select').value = engagement.analyst_status || 'Not Started';
-    card.children[8].querySelector('select').value = engagement.mentor_status || 'Not Started';
-    card.children[9].querySelector('select').value = engagement.lead_status || 'Not Started';
+    card.children[7].querySelector('select').value = engagement.status || 'Not Started';
+    card.children[8].querySelector('select').value = engagement.branch_tag || 'Not Started';
+    card.children[9].querySelector('select').value = engagement.commit_hash || 'Not Started';
     card.children[10].querySelector('input').value = _opensct_getUserName(engagement.lead);
     card.children[11].textContent = engagement.version || 'N/A';
     card.children[12].textContent = _opensct_formatDate(engagement.target_end);
@@ -248,9 +248,9 @@ async function _opensct_updateStatus(engagementId, type, value) {
         return;
     }
 
-    if (type === 'analyst') engagement.analyst_status = value;
-    else if (type === 'mentor') engagement.mentor_status = value;
-    else if (type === 'lead') engagement.lead_status = value;
+    if (type === 'analyst') engagement.status = value;
+    else if (type === 'mentor') engagement.branch_tag = value;
+    else if (type === 'lead') engagement.commit_hash = value;
 
     const updatedEngagement = {
         id: engagement.id,
@@ -259,11 +259,10 @@ async function _opensct_updateStatus(engagementId, type, value) {
         target_end: engagement.target_end,
         lead: engagement.lead,
         product: engagement.product,
-        analyst_status: engagement.analyst_status,
-        mentor_status: engagement.mentor_status,
-        lead_status: engagement.lead_status,
-        description: engagement.description,
-        status: engagement.analyst_status
+        status: engagement.status,
+        branch_tag: engagement.branch_tag,
+        commit_hash: engagement.commit_hash,
+        description: engagement.description
     };
 
     try {
@@ -301,11 +300,10 @@ async function _opensct_updateLead(engagementId, userId) {
         target_end: engagement.target_end,
         lead: engagement.lead,
         product: engagement.product,
-        analyst_status: engagement.analyst_status,
-        mentor_status: engagement.mentor_status,
-        lead_status: engagement.lead_status,
-        description: engagement.description,
-        status: engagement.analyst_status
+        status: engagement.status,
+        branch_tag: engagement.branch_tag,
+        commit_hash: engagement.commit_hash,
+        description: engagement.description
     };
 
     try {
@@ -385,11 +383,10 @@ async function _opensct_saveComment(engagementId) {
         target_end: engagement.target_end,
         lead: engagement.lead,
         product: engagement.product,
-        analyst_status: engagement.analyst_status,
-        mentor_status: engagement.mentor_status,
-        lead_status: engagement.lead_status,
-        description: engagement.description,
-        status: engagement.analyst_status
+        status: engagement.status,
+        branch_tag: engagement.branch_tag,
+        commit_hash: engagement.commit_hash,
+        description: engagement.description
     };
 
     try {
