@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SCT Management Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -48,7 +49,7 @@
             background: #ffffff;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, PHONE);
         }
         .tab-content.active {
             display: block;
@@ -92,6 +93,12 @@
         }
         .search-filter .clear-btn:hover {
             background: #607d8b;
+        }
+        .total-count {
+            margin-bottom: 15px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #37474f;
         }
         .table-container {
             width: 100%;
@@ -138,6 +145,12 @@
             width: 100%;
             background: #fafafa;
         }
+        .card .ir-input {
+            cursor: pointer;
+        }
+        .card .eta-input {
+            cursor: pointer;
+        }
         .action-buttons {
             display: flex;
             gap: 8px;
@@ -168,30 +181,61 @@
         .comment-btn:hover {
             opacity: 0.9;
         }
-        .comment-box {
+        .modal {
             display: none;
-            margin-top: 10px;
-            padding: 10px;
-            border: 1px solid #cfd8dc;
-            border-radius: 4px;
-            background: #f5f7fa;
-            grid-column: 1 / -1;
-        }
-        .comment-box textarea {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            padding: 8px;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            width: 400px;
+            max-width: 90%;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .modal-content h3 {
+            margin: 0 0 15px;
+            font-size: 16px;
+            color: #37474f;
+        }
+        .modal-content textarea {
+            width: 100%;
+            padding: 10px;
             border: 1px solid #cfd8dc;
             border-radius: 4px;
             resize: vertical;
             font-size: 13px;
+            margin-bottom: 15px;
         }
-        .comment-box button {
-            padding: 8px 12px;
+        .modal-content button {
+            padding: 8px 16px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 12px;
-            margin-right: 8px;
+            font-size: 13px;
+            margin-right: 10px;
+        }
+        .modal-content .save-btn {
+            background: #455a64;
+            color: #fff;
+        }
+        .modal-content .save-btn:hover {
+            background: #37474f;
+        }
+        .modal-content .cancel-btn {
+            background: #78909c;
+            color: #fff;
+        }
+        .modal-content .cancel-btn:hover {
+            background: #607d8b;
         }
         .pagination {
             display: flex;
@@ -241,38 +285,6 @@
         .toast.warning {
             background: #ffb300;
         }
-        .searchable-select {
-            position: relative;
-        }
-        .searchable-select input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #cfd8dc;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-        .searchable-select .dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            max-height: 200px;
-            overflow-y: auto;
-            background: #ffffff;
-            border: 1px solid #cfd8dc;
-            border-radius: 4px;
-            display: none;
-            z-index: 10;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-        }
-        .searchable-select .dropdown div {
-            padding: 8px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        .searchable-select .dropdown div:hover {
-            background: #f5f7fa;
-        }
     </style>
 </head>
 <body>
@@ -298,6 +310,7 @@
                 <button onclick="_opensct_filterTable()">Go</button>
                 <button class="clear-btn" onclick="_opensct_clearFilters()">Clear</button>
             </div>
+            <div class="total-count" id="_opensct_total_count">Total Engagements: 0</div>
             <div class="table-container">
                 <div class="table-header">
                     <div>Created</div>
@@ -324,11 +337,33 @@
         <div class="tab-content" id="mcr-jira-open">MCR Jira (Open) Content</div>
         <div class="tab-content" id="mcr-jira-closed">MCR Jira (Closed) Content</div>
         <div class="tab-content" id="mcr-jira-summary">MCR Jira Summary (All) Content</div>
-        <div class="tab-content" id="test-id-search">Test ID Search Content</div>
+        <div class="tab-content" id="test-id-search">Test ID Search</div>
         <div class="tab-content" id="assignment">Assignment Content</div>
         <div class="tab-content" id="create-sct-task">Create SCT Task Content</div>
+
+        <!-- Comment Modal -->
+        <div class="modal" id="_opensct_comment_modal">
+            <div class="modal-content">
+                <h3>Edit Comment</h3>
+                <textarea id="_opensct_comment_textarea"></textarea>
+                <button class="save-btn" onclick="_opensct_saveCommentFromModal()">Save</button>
+                <button class="cancel-btn" onclick="_opensct_closeCommentModal()">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Close Modal -->
+        <div class="modal" id="_opensct_close_modal">
+            <div class="modal-content">
+                <h3>Confirm Close</h3>
+                <p id="_opensct_close_message"></p>
+                <button class="save-btn" onclick="_opensct_confirmClose()">Confirm</button>
+                <button class="cancel-btn" onclick="_opensct_closeCloseModal()">Cancel</button>
+            </div>
+        </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <script src="_opensct.js"></script>
 </body>
 </html>
