@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCT Management Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background-color: #f4f6f9;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #007bff;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            font-weight: 500;
+            color: #333;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        .tab:hover {
+            background-color: #e9ecef;
+        }
+        .tab.active {
+            color: #007bff;
+            border-bottom: 3px solid #007bff;
+            font-weight: 600;
+        }
+        .tab-content {
+            display: none;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .search-filter {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .search-filter input, .search-filter select {
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 14px;
+            width: 200px;
+        }
+        .search-filter button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .search-filter button:hover {
+            background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        th {
+            background-color: #007bff;
+            color: #fff;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        .action-buttons button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-right: 5px;
+        }
+        .close-btn {
+            background-color: #dc3545;
+            color: #fff;
+        }
+        .close-btn:hover {
+            background-color: #c82333;
+        }
+        .comment-btn {
+            background-color: #007bff;
+            color: #fff;
+        }
+        .comment-btn.red {
+            background-color: #dc3545;
+        }
+        .comment-btn:hover {
+            opacity: 0.9;
+        }
+        .comment-box {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .comment-box textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            resize: vertical;
+        }
+        .comment-box button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .pagination button {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            background-color: #fff;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .pagination button:hover {
+            background-color: #007bff;
+            color: #fff;
+        }
+        .pagination button:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" data-tab="open-sct">Open SCT</div>
+            <div class="tab" data-tab="closed-sct">Closed SCT</div>
+            <div class="tab" data-tab="mcr-jira-open">MCR Jira (Open)</div>
+            <div class="tab" data-tab="mcr-jira-closed">MCR Jira (Closed)</div>
+            <div class="tab" data-tab="mcr-jira-summary">MCR Jira Summary (All)</div>
+            <div class="tab" data-tab="test-id-search">Test ID Search</div>
+            <div class="tab" data-tab="assignment">Assignment</div>
+            <div class="tab" data-tab="create-sct-task">Create SCT Task</div>
+        </div>
+
+        <div class="tab-content active" id="open-sct">
+            <div class="search-filter">
+                <input type="text" id="_opensct_search_input" placeholder="Search by name...">
+                <select id="_opensct_assigned_filter">
+                    <option value="">Filter by Assigned To</option>
+                </select>
+                <input type="date" id="_opensct_eta_filter" placeholder="Filter by ETA">
+                <button onclick="_opensct_filterTable()">Go</button>
+            </div>
+            <table id="_opensct_table">
+                <thead>
+                    <tr>
+                        <th>Created</th>
+                        <th>Id</th>
+                        <th>Name</th>
+                        <th>Total Jiras</th>
+                        <th>Pending Jiras</th>
+                        <th>Doable Jiras</th>
+                        <th>Non-Doable Jiras</th>
+                        <th>Status (Analyst)</th>
+                        <th>Status (Mentor)</th>
+                        <th>Status (Lead)</th>
+                        <th>Assigned To</th>
+                        <th>IR</th>
+                        <th>ETA</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="_opensct_table_body"></tbody>
+            </table>
+            <div class="pagination" id="_opensct_pagination"></div>
+        </div>
+
+        <div class="tab-content" id="closed-sct">Closed SCT Content</div>
+        <div class="tab-content" id="mcr-jira-open">MCR Jira (Open) Content</div>
+        <div class="tab-content" id="mcr-jira-closed">MCR Jira (Closed) Content</div>
+        <div class="tab-content" id="mcr-jira-summary">MCR Jira Summary (All) Content</div>
+        <div class="tab-content" id="test-id-search">Test ID Search Content</div>
+        <div class="tab-content" id="assignment">Assignment Content</div>
+        <div class="tab-content" id="create-sct-task">Create SCT Task Content</div>
+    </div>
+
+    <script src="_opensct.js"></script>
+</body>
+</html>
