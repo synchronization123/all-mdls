@@ -1,0 +1,460 @@
+import os
+import difflib
+import hashlib
+import zipfile
+import tarfile
+from datetime import datetime
+import html
+from collections import Counter
+
+def calculate_file_hash(filepath):
+    """Calculate SHA256 hash of a file."""
+    sha256_hash = hashlib.sha256()
+    with open(filepath, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
+
+def is_archive_file(filepath):
+    """Check if file is a zip or tar archive."""
+    return filepath.endswith(('.zip', '.tar', '.tar.gz', '.tgz', '.jar'))
+
+def is_binary_file(filepath):
+    """Check if file is a binary file based on its extension."""
+    binary_extensions = {'.class', '.jar', '.zip', '.tar', '.tar.gz', '.tgz', '.exe', '.dll', '.so', '.bin'}
+    return os.path.splitext(filepath)[1].lower() in binary_extensions
+
+def extract_archive(filepath, extract_to):
+    """Extract zip or tar archive to specified directory, handling nested archives."""
+    os.makedirs(extract_to, exist_ok=True)
+    try:
+        if filepath.endswith('.zip') or filepath.endswith('.jar'):
+            with zipfile.ZipFile(filepath, 'r') as zip_ref:
+                zip_ref.extractall(extract_to)
+        elif filepath.endswith(('.tar', '.tar.gz', '.tgz')):
+            with tarfile.open(filepath, 'r:*') as tar_ref:
+                tar_ref.extractall(extract_to)
+        return True
+    except (zipfile.BadZipFile, tarfile.TarError) as e:
+        print(f"Error extracting archive {filepath}: {e}")
+        return False
+
+def get_file_content(filepath):
+    """Read file content, handling text and binary files."""
+    if is_binary_file(filepath):
+        return ["[Binary file]"]
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return f.readlines()
+    except (UnicodeDecodeError, IOError):
+        return ["[Binary or non-text file]"]
+
+def human_readable_size(size):
+    """Convert file size to human-readable format."""
+    for unit in ['Bytes', 'KB', 'MB', 'GB', 'TB']:
+        if size < 1024:
+            return f"{size:.2f} {unit}" if unit != 'Bytes' else f"{int(size)} {unit}"
+        size /= 1024
+    return f"{size:.2f} PB"
+
+def compare_files(old_file, new_file):
+    """Compare two files and return diff with 2-line context for text, or size comparison for binary."""
+    if is_binary_file(old_file) or is_binary_file(new_file):
+        old_size = os.path.getsize(old_file)
+        new_size = os.path.getsize(new_file)
+        if old_size != new_size:
+            return [{
+                'old_start': None,
+                'new_start': None,
+                'lines': [{
+                    'old_line': None,
+                    'new_line': None,
+                    'old_content': f'Size: {human_readable_size(old_size)}',
+                    'new_content': f'Size: {human_readable_size(new_size)}',
+                    'change_type': 'binary'
+                }]
+            }]
+        return []
+
+    old_content = get_file_content(old_file)
+    new_content = get_file_content(new_file)
+    
+    diff = difflib.unified_diff(
+        old_content, new_content,
+        fromfile=old_file, tofile=new_file,
+        lineterm='',
+        n=2
+    )
+    
+    diff_lines = []
+    current_chunk = {'old_start': None, 'new_start': None, 'lines': []}
+    in_chunk = False
+    old_line_counter = 0
+    new_line_counter = 0
+    
+    for line in diff:
+        if line.startswith('@@'):
+            if in_chunk and current_chunk['lines']:
+                diff_lines.append(current_chunk)
+            parts = line.split()
+            old_range = parts[1].split(',')
+            new_range = parts[2].split(',')
+            old_line_counter = int(old_range[0][1:]) - 1
+            new_line_counter = int(new_range[0][1:]) - 1
+            current_chunk = {
+                'old_start': old_line_counter,
+                'new_start': new_line_counter,
+                'lines': []
+            }
+            in_chunk = True
+        elif in_chunk:
+            old_line_num = None
+            new_line_num = None
+            old_content_display = ''
+            new_content_display = ''
+            change_type = None
+            
+            if line.startswith('-'):
+                old_line_num = old_line_counter + 1
+                old_line_counter += 1
+                old_content_display = html.escape(line[1:])
+                old_words = old_content_display.split()
+                old_content_display = ' '.join([f'<span style="background-color: #ffe6e6">{word}</span>' for word in old_words])
+                change_type = 'removed'
+            elif line.startswith('+'):
+                new_line_num = new_line_counter + 1
+                new_line_counter += 1
+                new_content_display = html.escape(line[1:])
+                new_words = new_content_display.split()
+                new_content_display = ' '.join([f'<span style="background-color: #e6ffe6">{word}</span>' for word in new_words])
+                change_type = 'added'
+            elif line.startswith(' '):
+                old_line_num = old_line_counter + 1
+                new_line_num = new_line_counter + 1
+                old_line_counter += 1
+                new_line_counter += 1
+                content = html.escape(line[1:])
+                old_content_display = content
+                new_content_display = content
+                change_type = 'context'
+                continue
+            
+            if old_content_display or new_content_display:
+                current_chunk['lines'].append({
+                    'old_line': old_line_num,
+                    'new_line': new_line_num,
+                    'old_content': old_content_display,
+                    'new_content': new_content_display,
+                    'change_type': change_type
+                })
+    
+    if in_chunk and current_chunk['lines']:
+        diff_lines.append(current_chunk)
+    
+    return diff_lines
+
+def scan_directory(path, base_path="", temp_extract_dir="temp_extract"):
+    """Scan directory recursively, handling nested archives, and collect file types."""
+    files_info = {}
+    file_types = []
+    
+    for root, _, files in os.walk(path):
+        for file in files:
+            filepath = os.path.join(root, file)
+            rel_path = os.path.relpath(filepath, path)
+            extension = os.path.splitext(file)[1].lower() or '.no-extension'
+            if extension.startswith('.'):
+                extension = extension[1:]
+            file_types.append(extension)
+            
+            if is_archive_file(filepath):
+                extract_path = os.path.join(temp_extract_dir, rel_path)
+                if extract_archive(filepath, extract_path):
+                    nested_info, nested_types = scan_directory(extract_path, base_path=rel_path, temp_extract_dir=temp_extract_dir)
+                    files_info.update(nested_info)
+                    file_types.extend(nested_types)
+            else:
+                file_size = os.path.getsize(filepath)
+                file_hash = calculate_file_hash(filepath)
+                files_info[os.path.join(base_path, rel_path)] = {
+                    'size': file_size,
+                    'hash': file_hash,
+                    'abs_path': filepath
+                }
+    
+    return files_info, file_types
+
+def generate_html_report(old_path, new_path, added, removed, modified, modified_details, new_file_types):
+    """Generate HTML report with file type summary and comparisons."""
+    file_type_counts = Counter(new_file_types)
+    old_patch_name = os.path.basename(old_path)
+    new_patch_name = os.path.basename(new_path)
+    old_file_count = len(added) + len(removed) + len(modified)  # Approximate total from comparison
+    new_file_count = len(added) + len(modified) + len(new_file_types)  # Adjusted for unique files in new patch
+    
+    html_content = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{old_patch_name} vs {new_patch_name} Comparison Report</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 40px;
+            background-color: #f5f1ed;
+            color: #333;
+            line-height: 1.6;
+        }}
+        h1 {{
+            font-size: 24px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 30px;
+        }}
+        h2 {{
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 15px;
+        }}
+        h3 {{
+            font-size: 16px;
+            font-weight: 500;
+            color: #1a1a1a;
+            margin: 20px 0 10px;
+        }}
+        .card {{
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid #e5e5e5;
+        }}
+        .summary {{
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }}
+        .summary-item {{
+            flex: 1;
+            min-width: 200px;
+        }}
+        .summary-item p {{
+            margin: 5px 0;
+            font-size: 14px;
+        }}
+        .summary-item strong a {{
+            font-size: 24px;
+            font-weight: 600;
+            text-decoration: none;
+        }}
+        .summary-item strong a.added {{
+            color: #2ecc71;
+        }}
+        .summary-item strong a.removed {{
+            color: #e74c3c;
+        }}
+        .summary-item strong a.modified {{
+            color: #f39c12;
+        }}
+        .summary-item strong a:hover {{
+            text-decoration: underline;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }}
+        th, td {{
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e5e5e5;
+            font-size: 14px;
+        }}
+        th {{
+            background-color: #f9f9f9;
+            font-weight: 600;
+            color: #333;
+        }}
+        .diff-table {{
+            width: 100%;
+            table-layout: fixed;
+        }}
+        .diff-table td {{
+            vertical-align: top;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-size: 13px;
+            padding: 8px;
+        }}
+        .content {{
+            width: 50%;
+        }}
+        .line-number-prefix {{
+            display: inline-block;
+            width: 40px;
+            text-align: right;
+            padding-right: 10px;
+            color: #666;
+        }}
+        .section {{
+            margin-bottom: 30px;
+        }}
+        footer {{
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            margin-top: 40px;
+        }}
+    </style>
+</head>
+<body>
+    <h1>{old_patch_name} vs {new_patch_name} Comparison Report</h1>
+    
+    <div class="card">
+        <h2>Summary</h2>
+        <div class="summary">
+            <div class="summary-item">
+                <p>Files Added</p>
+                <strong><a href="#added-section" class="added">{len(added)}</a></strong>
+            </div>
+            <div class="summary-item">
+                <p>Files Removed</p>
+                <strong><a href="#removed-section" class="removed">{len(removed)}</a></strong>
+            </div>
+            <div class="summary-item">
+                <p>Files Modified</p>
+                <strong><a href="#modified-section" class="modified">{len(modified)}</a></strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="card section">
+        <p>Total files in {old_patch_name}: {old_file_count}</p>
+        <p>Total files in {new_patch_name}: {new_file_count}</p>
+        <h2>Types of Files in New Patch</h2>
+        <table>
+            <tr><th>Type</th><th>Count</th></tr>
+            {''.join(f'<tr><td>{file_type}</td><td>{count}</td></tr>' for file_type, count in sorted(file_type_counts.items())) if file_type_counts else '<tr><td colspan="2">No files found.</td></tr>'}
+        </table>
+    </div>
+
+    <div class="card section" id="added-section">
+        <h2>Files Added</h2>
+        <table>
+            {''.join(f'<tr><td>{f}</td><td>{human_readable_size(added[f]["size"])}</td></tr>' for f in sorted(added)) if added else '<tr><td colspan="2">No files added.</td></tr>'}
+        </table>
+    </div>
+
+    <div class="card section" id="removed-section">
+        <h2>Files Removed</h2>
+        <table>
+            {''.join(f'<tr><td>{f}</td><td>{human_readable_size(removed[f]["size"])}</td></tr>' for f in sorted(removed)) if removed else '<tr><td colspan="2">No files removed.</td></tr>'}
+        </table>
+    </div>
+
+    <div class="card section" id="modified-section">
+        <h2>Files Modified</h2>
+        <table>
+            {''.join(f'<tr><td>{f}</td><td>{human_readable_size(modified[f]["old_size"])}</td><td>{human_readable_size(modified[f]["new_size"])}</td></tr>' for f in sorted(modified)) if modified else '<tr><td colspan="3">No files modified.</td></tr>'}
+        </table>
+    </div>
+
+    <div class="card section">
+        <h2>Modified Files Details</h2>
+        """
+    for f in sorted(modified_details):
+        if not modified_details[f]:
+            html_content += f'<div><h3>{f}</h3><table class="diff-table"><tr><th class="content">Old Content</th><th class="content">New Content</th></tr><tr><td colspan="2">[Binary or non-text file, no diff available]</td></tr></table></div>'
+        else:
+            html_content += f'<div><h3>{f}</h3><table class="diff-table"><tr><th class="content">Old Content</th><th class="content">New Content</th></tr>'
+            for chunk in modified_details[f]:
+                for line in chunk['lines']:
+                    if line['change_type'] == 'binary':
+                        html_content += f'<tr><td class="content">{line["old_content"]}</td><td class="content">{line["new_content"]}</td></tr>'
+                    elif line['old_content'] or line['new_content']:
+                        old_line_display = f'<span class="line-number-prefix">{line["old_line"] if line["old_line"] else ""}</span> {line["old_content"]}'
+                        new_line_display = f'<span class="line-number-prefix">{line["new_line"] if line["new_line"] else ""}</span> {line["new_content"]}'
+                        html_content += f'<tr><td class="content">{old_line_display}</td><td class="content">{new_line_display}</td></tr>'
+            html_content += '</table></div>'
+    
+    if not modified_details:
+        html_content += '<p>No detailed changes to display.</p>'
+
+    html_content += f"""
+    </div>
+
+    <footer>
+        <p>Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+    </footer>
+</body>
+</html>
+"""
+    return html_content
+
+def compare_folders(old_path, new_path):
+    """Compare two folders and generate comparison report."""
+    temp_extract_dir = "temp_extract"
+    os.makedirs(temp_extract_dir, exist_ok=True)
+    
+    try:
+        old_files, _ = scan_directory(old_path, temp_extract_dir=temp_extract_dir)
+        new_files, new_file_types = scan_directory(new_path, temp_extract_dir=temp_extract_dir)
+        
+        added = {}
+        removed = {}
+        modified = {}
+        modified_details = {}
+        
+        for file in new_files:
+            if file not in old_files:
+                added[file] = {'size': new_files[file]['size']}
+            elif new_files[file]['hash'] != old_files[file]['hash']:
+                modified[file] = {
+                    'old_size': old_files[file]['size'],
+                    'new_size': new_files[file]['size']
+                }
+                diff = compare_files(old_files[file]['abs_path'], new_files[file]['abs_path'])
+                if diff:
+                    modified_details[file] = diff
+        
+        for file in old_files:
+            if file not in new_files:
+                removed[file] = {'size': old_files[file]['size']}
+        
+        html_content = generate_html_report(
+            old_path, new_path,
+            added, removed, modified, modified_details, new_file_types
+        )
+        
+        output_file = f"comparison_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        print(f"Report generated: {output_file}")
+        
+    finally:
+        if os.path.exists(temp_extract_dir):
+            import shutil
+            shutil.rmtree(temp_extract_dir)
+
+def main():
+    """Main function to prompt for paths and run comparison."""
+    old_path = input("Enter old patch path: ").strip()
+    new_path = input("Enter new patch path: ").strip()
+    
+    if not os.path.exists(old_path):
+        print(f"Error: Old path '{old_path}' does not exist")
+        return
+    if not os.path.exists(new_path):
+        print(f"Error: New path '{new_path}' does not exist")
+        return
+    
+    compare_folders(old_path, new_path)
+
+if __name__ == "__main__":
+    main()
