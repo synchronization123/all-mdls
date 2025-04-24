@@ -11,6 +11,7 @@ let _opensct_engagements = [];
 let _opensct_users = [];
 let _opensct_current_page = 1;
 let _opensct_csrf_token = '';
+let _opensct_filtered_engagements = [];
 
 async function _opensct_fetchCsrfToken() {
     try {
@@ -21,7 +22,7 @@ async function _opensct_fetchCsrfToken() {
         const tokenInput = doc.querySelector('input[name="csrfmiddlewaretoken"]');
         _opensct_csrf_token = tokenInput ? tokenInput.value : '';
     } catch (error) {
-        console.error('Error fetching CSRF token:', error);
+        _opensct_showToast('Error fetching CSRF token', 'error');
     }
 }
 
@@ -38,7 +39,7 @@ async function _opensct_fetchUsers() {
             select.appendChild(option);
         });
     } catch (error) {
-        console.error('Error fetching users:', error);
+        _opensct_showToast('Error fetching users', 'error');
     }
 }
 
@@ -47,10 +48,12 @@ async function _opensct_fetchEngagements() {
         const responses = await Promise.all(_opensct_api_urls.map(url => fetch(url)));
         const data = await Promise.all(responses.map(res => res.json()));
         _opensct_engagements = data.flatMap(d => d.results);
+        _opensct_filtered_engagements = [..._opensct_engagements];
         await _opensct_fetchUsers();
-        _opensct_renderTable();
+        _opensct_renderCards();
+        _opensct_showToast('Engagements loaded successfully', 'success');
     } catch (error) {
-        console.error('Error fetching engagements:', error);
+        _opensct_showToast('Error fetching engagements', 'error');
     }
 }
 
@@ -67,7 +70,7 @@ async function _opensct_fetchJiraCounts(engagementId) {
         const nonDoableJiras = pendingJiras - doableJiras;
         return { totalJiras, pendingJiras, doableJiras, nonDoableJiras };
     } catch (error) {
-        console.error('Error fetching Jira counts:', error);
+        _opensct_showToast('Error fetching Jira counts', 'error');
         return { totalJiras: 0, pendingJiras: 0, doableJiras: 0, nonDoableJiras: 0 };
     }
 }
@@ -82,52 +85,69 @@ function _opensct_getUserName(userId) {
     return user ? `${user.first_name} ${user.last_name}` : 'Unknown';
 }
 
-function _opensct_renderTable(filteredEngagements = _opensct_engagements) {
-    const tbody = document.getElementById('_opensct_table_body');
-    tbody.innerHTML = '';
+function _opensct_showToast(message, type) {
+    const toast局面 = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function _opensct_renderCards() {
+    const container = document.getElementById('_opensct_card_container');
+    container.innerHTML = '';
     const start = (_opensct_current_page - 1) * _opensct_page_size;
     const end = start + _opensct_page_size;
-    const paginatedEngagements = filteredEngagements.slice(start, end);
+    const paginatedEngagements = _opensct_filtered_engagements.slice(start, end);
 
     paginatedEngagements.forEach(async engagement => {
         const jiraCounts = await _opensct_fetchJiraCounts(engagement.id);
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${_opensct_formatDate(engagement.created)}</td>
-            <td>${engagement.id}</td>
-            <td>${engagement.name}</td>
-            <td>${jiraCounts.totalJiras}</td>
-            <td>${jiraCounts.pendingJiras}</td>
-            <td>${jiraCounts.doableJiras}</td>
-            <td>${jiraCounts.nonDoableJiras}</td>
-            <td>
-                <select onchange="_opensct_updateStatus(${engagement.id}, 'analyst', this.value)">
-                    <option value="Not Started" ${engagement.status === 'Not Started' ? 'selected' : ''}>Not Started</option>
-                    <option value="In Progress" ${engagement.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                    <option value="On Hold" ${engagement.status === 'On Hold' ? 'selected' : ''}>On Hold</option>
-                    <option value="Completed" ${engagement.status === 'Completed' ? 'selected' : ''}>Completed</option>
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.id = `_opensct_card_${engagement.id}`;
+        card.innerHTML = `
+            <div>${_opensct_formatDate(engagement.created)}</div>
+            <div>${engagement.id}</div>
+            <div>${engagement.name}</div>
+            <div>${jiraCounts.totalJiras}</div>
+            <div>${jiraCounts.pendingJiras}</div>
+            <div>${jiraCounts.doableJiras}</div>
+            <div>${jiraCounts.nonDoableJiras}</div>
+            <div>
+                <select id="_opensct_analyst_${engagement.id}" onchange="_opensct_updateStatus(${engagement.id}, 'analyst', this.value)">
+                    <option value="Not Started" ${engagement.analyst_status === 'Not Started' ? 'selected' : ''}>Not Started</option>
+                    <option value="In Progress" ${engagement.analyst_status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                    <option value="On Hold" ${engagement.analyst_status === 'On Hold' ? 'selected' : ''}>On Hold</option>
+                    <option value="Completed" ${engagement.analyst_status === 'Completed' ? 'selected' : ''}>Completed</option>
                 </select>
-            </td>
-            <td>
-                <select onchange="_opensct_updateStatus(${engagement.id}, 'mentor', this.value)">
-                    <option value="Not Started" ${engagement.status === 'Not Started' ? 'selected' : ''}>Not Started</option>
-                    <option value="In Progress" ${engagement.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                    <option value="On Hold" ${engagement.status === 'On Hold' ? 'selected' : ''}>On Hold</option>
-                    <option value="Completed" ${engagement.status === 'Completed' ? 'selected' : ''}>Completed</option>
+            </div>
+            <div>
+                <select id="_opensct_mentor_${engagement.id}" onchange="_opensct_updateStatus(${engagement.id}, 'mentor', this.value)">
+                    <option value="Not Started" ${engagement.mentor_status === 'Not Started' ? 'selected' : ''}>Not Started</option>
+                    <option value="In Progress" ${engagement.mentor_status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                    <option value="On Hold" ${engagement.mentor_status === 'On Hold' ? 'selected' : ''}>On Hold</option>
+                    <option value="Completed" ${engagement.mentor_status === 'Completed' ? 'selected' : ''}>Completed</option>
                 </select>
-            </td>
-            <td>
-                <select onchange="_opensct_updateStatus(${engagement.id}, 'lead', this.value)">
-                    <option value="Not Started" ${engagement.status === 'Not Started' ? 'selected' : ''}>Not Started</option>
-                    <option value="Approved" ${engagement.status === 'Approved' ? 'selected' : ''}>Approved</option>
-                    <option value="Not Approved" ${engagement.status === 'Not Approved' ? 'selected' : ''}>Not Approved</option>
-                    <option value="Rejected" ${engagement.status === 'Rejected' ? 'selected' : ''}>Rejected</option>
+            </div>
+            <div>
+                <select id="_opensct_lead_status_${engagement.id}" onchange="_opensct_updateStatus(${engagement.id}, 'lead', this.value)">
+                    <option value="Not Started" ${engagement.lead_status === 'Not Started' ? 'selected' : ''}>Not Started</option>
+                    <option value="Approved" ${engagement.lead_status === 'Approved' ? 'selected' : ''}>Approved</option>
+                    <option value="Not Approved" ${engagement.lead_status === 'Not Approved' ? 'selected' : ''}>Not Approved</option>
+                    <option value="Rejected" ${engagement.lead_status === 'Rejected' ? 'selected' : ''}>Rejected</option>
                 </select>
-            </td>
-            <td>${_opensct_getUserName(engagement.lead)}</td>
-            <td>${engagement.version || 'N/A'}</td>
-            <td>${_opensct_formatDate(engagement.target_end)}</td>
-            <td class="action-buttons">
+            </div>
+            <div class="searchable-select">
+                <input type="text" id="_opensct_lead_${engagement.id}" value="${_opensct_getUserName(engagement.lead)}" placeholder="Search user..." oninput="_opensct_filterUsers(${engagement.id}, this.value)">
+                <div class="dropdown" id="_opensct_lead_dropdown_${engagement.id}"></div>
+            </div>
+            <div>${engagement.version || 'N/A'}</div>
+            <div>${_opensct_formatDate(engagement.target_end)}</div>
+            <div class="action-buttons">
                 <button class="close-btn" onclick="_opensct_closeEngagement(${engagement.id})">Close</button>
                 <button class="comment-btn ${engagement.description ? 'red' : ''}" onclick="_opensct_toggleComment(${engagement.id}, this)">Comment</button>
                 <div class="comment-box" id="_opensct_comment_${engagement.id}">
@@ -135,19 +155,43 @@ function _opensct_renderTable(filteredEngagements = _opensct_engagements) {
                     <button onclick="_opensct_saveComment(${engagement.id})">Save</button>
                     <button onclick="_opensct_cancelComment(${engagement.id})">Cancel</button>
                 </div>
-            </td>
+            </div>
         `;
-        tbody.appendChild(row);
+        container.appendChild(card);
+        _opensct_initSearchableDropdown(engagement.id);
     });
 
-    _opensct_renderPagination(filteredEngagements.length);
+    _opensct_renderPagination(_opensct_filtered_engagements.length);
+}
+
+function _opensct_updateCard(engagement) {
+    const card = document.getElementById(`_opensct_card_${engagement.id}`);
+    if (!card) return;
+    const jiraCounts = _opensct_fetchJiraCounts(engagement.id).then(counts => {
+        card.children[3].textContent = counts.totalJiras;
+        card.children[4].textContent = counts.pendingJiras;
+        card.children[5].textContent = counts.doableJiras;
+        card.children[6].textContent = counts.nonDoableJiras;
+    });
+    card.children[0].textContent = _opensct_formatDate(engagement.created);
+    card.children[1].textContent = engagement.id;
+    card.children[2].textContent = engagement.name;
+    card.children[7].querySelector('select').value = engagement.analyst_status || 'Not Started';
+    card.children[8].querySelector('select').value = engagement.mentor_status || 'Not Started';
+    card.children[9].querySelector('select').value = engagement.lead_status || 'Not Started';
+    card.children[10].querySelector('input').value = _opensct_getUserName(engagement.lead);
+    card.children[11].textContent = engagement.version || 'N/A';
+    card.children[12].textContent = _opensct_formatDate(engagement.target_end);
+    const commentBtn = card.querySelector('.comment-btn');
+    commentBtn.className = `comment-btn ${engagement.description ? 'red' : ''}`;
+    card.querySelector('.comment-box textarea').value = engagement.description || '';
 }
 
 function _opensct_renderPagination(totalItems) {
     const totalPages = Math.ceil(totalItems / _opensct_page_size);
     const pagination = document.getElementById('_opensct_pagination');
     pagination.innerHTML = `
-        <button onclick="_opensct_changePage(${_opensct_current_page - 1})" ${ _opensct_current_page === 1 ? 'disabled' : ''}>Previous</button>
+        <button onclick="_opensct_changePage(${_opensct_current_page - 1})" ${_opensct_current_page === 1 ? 'disabled' : ''}>Previous</button>
         <span>Page ${_opensct_current_page} of ${totalPages}</span>
         <button onclick="_opensct_changePage(${_opensct_current_page + 1})" ${_opensct_current_page === totalPages ? 'disabled' : ''}>Next</button>
     `;
@@ -155,7 +199,7 @@ function _opensct_renderPagination(totalItems) {
 
 function _opensct_changePage(page) {
     _opensct_current_page = page;
-    _opensct_renderTable();
+    _opensct_renderCards();
 }
 
 function _opensct_filterTable() {
@@ -163,7 +207,7 @@ function _opensct_filterTable() {
     const assignedFilter = document.getElementById('_opensct_assigned_filter').value;
     const etaFilter = document.getElementById('_opensct_eta_filter').value;
 
-    const filteredEngagements = _opensct_engagements.filter(engagement => {
+    _opensct_filtered_engagements = _opensct_engagements.filter(engagement => {
         const matchesSearch = engagement.name.toLowerCase().includes(searchInput);
         const matchesAssigned = !assignedFilter || engagement.lead === parseInt(assignedFilter);
         const matchesEta = !etaFilter || engagement.target_end.includes(etaFilter);
@@ -171,11 +215,29 @@ function _opensct_filterTable() {
     });
 
     _opensct_current_page = 1;
-    _opensct_renderTable(filteredEngagements);
+    _opensct_renderCards();
+    _opensct_showToast('Filters applied', 'success');
+}
+
+function _opensct_clearFilters() {
+    document.getElementById('_opensct_search_input').value = '';
+    document.getElementById('_opensct_assigned_filter').value = '';
+    document.getElementById('_opensct_eta_filter').value = '';
+    _opensct_filtered_engagements = [..._opensct_engagements];
+    _opensct_current_page = 1;
+    _opensct_renderCards();
+    _opensct_showToast('Filters cleared', 'success');
 }
 
 async function _opensct_updateStatus(engagementId, type, value) {
     const engagement = _opensct_engagements.find(e => e.id === engagementId);
+    if (!engagement) return;
+
+    // Update local state
+    if (type === 'analyst') engagement.analyst_status = value;
+    else if (type === 'mentor') engagement.mentor_status = value;
+    else if (type === 'lead') engagement.lead_status = value;
+
     const updatedEngagement = {
         id: engagement.id,
         name: engagement.name,
@@ -183,12 +245,14 @@ async function _opensct_updateStatus(engagementId, type, value) {
         target_end: engagement.target_end,
         lead: engagement.lead,
         product: engagement.product,
-        status: type === 'analyst' || type === 'mentor' ? value : engagement.status,
-        // Add lead status handling if needed
+        analyst_status: engagement.analyst_status,
+        mentor_status: engagement.mentor_status,
+        lead_status: engagement.lead_status,
+        description: engagement.description
     };
 
     try {
-        await fetch(`https://demo.defectdojo.org/api/v2/engagements/${engagementId}/`, {
+        const response = await fetch(`https://demo.defectdojo.org/api/v2/engagements/${engagementId}/`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -196,24 +260,79 @@ async function _opensct_updateStatus(engagementId, type, value) {
             },
             body: JSON.stringify(updatedEngagement)
         });
-        _opensct_fetchEngagements();
+        if (response.ok) {
+            _opensct_updateCard(engagement);
+            _opensct_showToast(`${engagement.name} status updated`, 'success');
+        } else {
+            _opensct_showToast('Failed to update status', 'error');
+        }
     } catch (error) {
-        console.error('Error updating status:', error);
+        _opensct_showToast('Error updating status', 'error');
+    }
+}
+
+async function _opensct_updateLead(engagementId, userId) {
+    const engagement = _opensct_engagements.find(e => e.id === engagementId);
+    if (!engagement) return;
+
+    engagement.lead = parseInt(userId);
+    const updatedEngagement = {
+        id: engagement.id,
+        name: engagement.name,
+        target_start: engagement.target_start,
+        target_end: engagement.target_end,
+        lead: engagement.lead,
+        product: engagement.product,
+        analyst_status: engagement.analyst_status,
+        mentor_status: engagement.mentor_status,
+        lead_status: engagement.lead_status,
+        description: engagement.description
+    };
+
+    try {
+        const response = await fetch(`https://demo.defectdojo.org/api/v2/engagements/${engagementId}/`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': _opensct_csrf_token
+            },
+            body: JSON.stringify(updatedEngagement)
+        });
+        if (response.ok) {
+            _opensct_updateCard(engagement);
+            _opensct_showToast(`${engagement.name} lead updated`, 'success');
+        } else {
+            _opensct_showToast('Failed to update lead', 'error');
+        }
+    } catch (error) {
+        _opensct_showToast('Error updating lead', 'error');
     }
 }
 
 async function _opensct_closeEngagement(engagementId) {
-    if (!confirm('Are you sure you want to close this engagement?')) return;
+    const engagement = _opensct_engagements.find(e => e.id === engagementId);
+    if (!confirm(`Are you sure you want to close ${engagement.name}?`)) {
+        _opensct_showToast('Close action cancelled', 'warning');
+        return;
+    }
+
     try {
-        await fetch(`https://demo.defectdojo.org/api/v2/engagements/${engagementId}/close/`, {
+        const response = await fetch(`https://demo.defectdojo.org/api/v2/engagements/${engagementId}/close/`, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': _opensct_csrf_token
             }
         });
-        _opensct_fetchEngagements();
+        if (response.ok) {
+            _opensct_engagements = _opensct_engagements.filter(e => e.id !== engagementId);
+            _opensct_filtered_engagements = _opensct_filtered_engagements.filter(e => e.id !== engagementId);
+            _opensct_renderCards();
+            _opensct_showToast(`${engagement.name} closed`, 'success');
+        } else {
+            _opensct_showToast('Failed to close engagement', 'error');
+        }
     } catch (error) {
-        console.error('Error closing engagement:', error);
+        _opensct_showToast('Error closing engagement', 'error');
     }
 }
 
@@ -223,9 +342,11 @@ function _opensct_toggleComment(engagementId, button) {
 }
 
 async function _opensct_saveComment(engagementId) {
+    const engagement = _opensct_engagements.find(e => e.id === engagementId);
     const commentBox = document.getElementById(`_opensct_comment_${engagementId}`);
     const textarea = commentBox.querySelector('textarea');
-    const engagement = _opensct_engagements.find(e => e.id === engagementId);
+    engagement.description = textarea.value;
+
     const updatedEngagement = {
         id: engagement.id,
         name: engagement.name,
@@ -233,11 +354,14 @@ async function _opensct_saveComment(engagementId) {
         target_end: engagement.target_end,
         lead: engagement.lead,
         product: engagement.product,
-        description: textarea.value
+        analyst_status: engagement.analyst_status,
+        mentor_status: engagement.mentor_status,
+        lead_status: engagement.lead_status,
+        description: engagement.description
     };
 
     try {
-        await fetch(`https://demo.defectdojo.org/api/v2/engagements/${engagementId}/`, {
+        const response = await fetch(`https://demo.defectdojo.org/api/v2/engagements/${engagementId}/`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -245,15 +369,53 @@ async function _opensct_saveComment(engagementId) {
             },
             body: JSON.stringify(updatedEngagement)
         });
-        _opensct_fetchEngagements();
+        if (response.ok) {
+            _opensct_updateCard(engagement);
+            commentBox.style.display = 'none';
+            _opensct_showToast(`${engagement.name} comment updated`, 'success');
+        } else {
+            _opensct_showToast('Failed to save comment', 'error');
+        }
     } catch (error) {
-        console.error('Error saving comment:', error);
+        _opensct_showToast('Error saving comment', 'error');
     }
 }
 
 function _opensct_cancelComment(engagementId) {
     const commentBox = document.getElementById(`_opensct_comment_${engagementId}`);
     commentBox.style.display = 'none';
+    _opensct_showToast('Comment cancelled', 'warning');
+}
+
+function _opensct_filterUsers(engagementId, query) {
+    const dropdown = document.getElementById(`_opensct_lead_dropdown_${engagementId}`);
+    dropdown.innerHTML = '';
+    const filteredUsers = _opensct_users.filter(user => 
+        `${user.first_name} ${user.last_name}`.toLowerCase().includes(query.toLowerCase())
+    );
+    filteredUsers.forEach(user => {
+        const div = document.createElement('div');
+        div.textContent = `${user.first_name} ${user.last_name}`;
+        div.onclick = () => {
+            document.getElementById(`_opensct_lead_${engagementId}`).value = div.textContent;
+            dropdown.style.display = 'none';
+            _opensct_updateLead(engagementId, user.id);
+        };
+        dropdown.appendChild(div);
+    });
+    dropdown.style.display = filteredUsers.length > 0 ? 'block' : 'none';
+}
+
+function _opensct_initSearchableDropdown(engagementId) {
+    const input = document.getElementById(`_opensct_lead_${engagementId}`);
+    const dropdown = document.getElementById(`_opensct_lead_dropdown_${engagementId}`);
+    input.addEventListener('focus', () => _opensct_filterUsers(engagementId, input.value));
+    input.addEventListener('click', () => dropdown.style.display = 'block');
+    document.addEventListener('click', e => {
+        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
