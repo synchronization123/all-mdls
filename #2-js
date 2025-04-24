@@ -280,6 +280,19 @@ async function _mcrjiraopen_refreshData() {
     _mcrjiraopen_showToast('Data refreshed', 'success');
 }
 
+async function _mcrjiraopen_fetchTestData(testId) {
+    try {
+        const response = await fetch(`https://demo.defectdojo.org/api/v2/tests/${testId}/`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch test ${testId}: ${response.statusText}`);
+        }
+        return await response.json();
+    } catch (error) {
+        _mcrjiraopen_showToast(`Error fetching test data: ${error.message}`, 'error');
+        return null;
+    }
+}
+
 async function _mcrjiraopen_updateDescription(testId, value) {
     const test = _mcrjiraopen_tests.find(t => t.id === testId);
     if (!test) {
@@ -287,17 +300,25 @@ async function _mcrjiraopen_updateDescription(testId, value) {
         return;
     }
 
+    const testData = await _mcrjiraopen_fetchTestData(testId);
+    if (!testData) return;
+
     test.description = value || null;
     const updatedTest = {
-        id: test.id,
-        title: test.title,
+        id: testData.id,
+        title: testData.title || test.title || 'Untitled',
+        target_start: testData.target_start || new Date().toISOString().split('T')[0],
+        target_end: testData.target_end || new Date(Date.now() + 86400000).toISOString().split('T')[0],
+        engagement: testData.engagement || 1,
+        lead: testData.lead || test.lead || null,
+        test_type: testData.test_type || 1,
+        environment: testData.environment || test.environment || null,
+        test_type_name: testData.test_type_name || 'Unknown',
         description: test.description,
-        version: test.version,
-        branch_tag: test.branch_tag,
-        lead: test.lead,
-        environment: test.environment,
-        commit_hash: test.commit_hash,
-        build_id: test.build_id
+        version: test.version || null,
+        branch_tag: test.branch_tag || 'Pending',
+        commit_hash: test.commit_hash || null,
+        build_id: test.build_id || null
     };
 
     try {
@@ -313,10 +334,11 @@ async function _mcrjiraopen_updateDescription(testId, value) {
             _mcrjiraopen_updateCard(test);
             _mcrjiraopen_showToast(`Test ${test.id} description updated`, 'success');
         } else {
-            _mcrjiraopen_showToast('Failed to update description', 'error');
+            const errorData = await response.json();
+            _mcrjiraopen_showToast(`Failed to update description: ${errorData.message || response.statusText}`, 'error');
         }
     } catch (error) {
-        _mcrjiraopen_showToast('Error updating description', 'error');
+        _mcrjiraopen_showToast(`Error updating description: ${error.message}`, 'error');
     }
 }
 
@@ -327,17 +349,25 @@ async function _mcrjiraopen_updateBranchTag(testId, value) {
         return;
     }
 
+    const testData = await _mcrjiraopen_fetchTestData(testId);
+    if (!testData) return;
+
     test.branch_tag = value;
     const updatedTest = {
-        id: test.id,
-        title: test.title,
-        description: test.description,
-        version: test.version,
+        id: testData.id,
+        title: testData.title || test.title || 'Untitled',
+        target_start: testData.target_start || new Date().toISOString().split('T')[0],
+        target_end: testData.target_end || new Date(Date.now() + 86400000).toISOString().split('T')[0],
+        engagement: testData.engagement || 1,
+        lead: testData.lead || test.lead || null,
+        test_type: testData.test_type || 1,
+        environment: testData.environment || test.environment || null,
+        test_type_name: testData.test_type_name || 'Unknown',
+        description: test.description || null,
+        version: test.version || null,
         branch_tag: test.branch_tag,
-        lead: test.lead,
-        environment: test.environment,
-        commit_hash: test.commit_hash,
-        build_id: test.build_id
+        commit_hash: test.commit_hash || null,
+        build_id: test.build_id || null
     };
 
     try {
@@ -353,10 +383,11 @@ async function _mcrjiraopen_updateBranchTag(testId, value) {
             _mcrjiraopen_updateCard(test);
             _mcrjiraopen_showToast(`Test ${test.id} branch tag updated`, 'success');
         } else {
-            _mcrjiraopen_showToast('Failed to update branch tag', 'error');
+            const errorData = await response.json();
+            _mcrjiraopen_showToast(`Failed to update branch tag: ${errorData.message || response.statusText}`, 'error');
         }
     } catch (error) {
-        _mcrjiraopen_showToast('Error updating branch tag', 'error');
+        _mcrjiraopen_showToast(`Error updating branch tag: ${error.message}`, 'error');
     }
 }
 
@@ -367,17 +398,25 @@ async function _mcrjiraopen_updateLead(testId, userId) {
         return;
     }
 
+    const testData = await _mcrjiraopen_fetchTestData(testId);
+    if (!testData) return;
+
     test.lead = userId ? parseInt(userId) : null;
     const updatedTest = {
-        id: test.id,
-        title: test.title,
-        description: test.description,
-        version: test.version,
-        branch_tag: test.branch_tag,
+        id: testData.id,
+        title: testData.title || test.title || 'Untitled',
+        target_start: testData.target_start || new Date().toISOString().split('T')[0],
+        target_end: testData.target_end || new Date(Date.now() + 86400000).toISOString().split('T')[0],
+        engagement: testData.engagement || 1,
         lead: test.lead,
-        environment: test.environment,
-        commit_hash: test.commit_hash,
-        build_id: test.build_id
+        test_type: testData.test_type || 1,
+        environment: testData.environment || test.environment || null,
+        test_type_name: testData.test_type_name || 'Unknown',
+        description: test.description || null,
+        version: test.version || null,
+        branch_tag: test.branch_tag || 'Pending',
+        commit_hash: test.commit_hash || null,
+        build_id: test.build_id || null
     };
 
     try {
@@ -393,10 +432,11 @@ async function _mcrjiraopen_updateLead(testId, userId) {
             _mcrjiraopen_updateCard(test);
             _mcrjiraopen_showToast(`Test ${test.id} lead updated`, 'success');
         } else {
-            _mcrjiraopen_showToast('Failed to update lead', 'error');
+            const errorData = await response.json();
+            _mcrjiraopen_showToast(`Failed to update lead: ${errorData.message || response.statusText}`, 'error');
         }
     } catch (error) {
-        _mcrjiraopen_showToast('Error updating lead', 'error');
+        _mcrjiraopen_showToast(`Error updating lead: ${error.message}`, 'error');
     }
 }
 
