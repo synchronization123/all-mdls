@@ -1,4 +1,11 @@
 <div class="tab-content" id="mcr-jira-open">
+    <!-- Loading Modal -->
+    <div class="modal" id="_mcrjiraopen_loading_modal">
+        <div class="modal-content">
+            <h3>Loading Data</h3>
+            <p>Please wait while the data is being loaded...</p>
+        </div>
+    </div>
     <div class="search-filter">
         <input type="text" id="_mcrjiraopen_search_input" placeholder="Search by title...">
         <select id="_mcrjiraopen_version_filter">
