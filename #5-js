@@ -1,5 +1,7 @@
 const _createsct_engagements_api = 'https://demo.defectdojo.org/api/v2/engagements/';
+const _createsct_csrf_url = 'https://demo.defectdojo.org/api/key-v2';
 let _createsct_existing_engagements = [];
+let _createsct_csrf_token = '';
 
 function _createsct_showLoadingModal() {
     const modal = document.getElementById('_createsct_loading_modal');
@@ -21,6 +23,23 @@ function _createsct_showToast(message, type) {
         toast.classList.remove('show');
         setTimeout(() => toast.remove(), 300);
     }, 3000);
+}
+
+async function _createsct_fetchCsrfToken() {
+    try {
+        const response = await fetch(_createsct_csrf_url);
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const tokenInput = doc.querySelector('input[name="csrfmiddlewaretoken"]');
+        _createsct_csrf_token = tokenInput ? tokenInput.value : '';
+        if (!_createsct_csrf_token) {
+            throw new Error('CSRF token not found in the response');
+        }
+    } catch (error) {
+        _createsct_showToast('Error fetching CSRF token', 'error');
+        throw error;
+    }
 }
 
 async function _createsct_fetchExistingEngagements() {
@@ -54,6 +73,9 @@ async function _createsct_createEngagements() {
     _createsct_showLoadingModal();
 
     try {
+        // Fetch CSRF token
+        await _createsct_fetchCsrfToken();
+
         // Fetch existing engagements to check for duplicates
         await _createsct_fetchExistingEngagements();
 
@@ -89,20 +111,21 @@ async function _createsct_createEngagements() {
                 const response = await fetch(_createsct_engagements_api, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': _createsct_csrf_token
                     },
                     body: JSON.stringify(engagementData)
                 });
 
                 if (!response.ok) {
-                    throw new Error('Failed to create engagement');
+                    throw new Error(`Failed to create engagement: ${response.statusText}`);
                 }
 
                 const data = await response.json();
                 createdEngagements.push({ id: data.id, name: data.name });
                 _createsct_existing_engagements.push(data); // Update local list to prevent duplicates in future
             } catch (error) {
-                notCreatedEngagements.push({ name, reason: 'Failed to create engagement' });
+                notCreatedEngagements.push({ name, reason: error.message || 'Failed to create engagement' });
             }
         }
 
@@ -160,7 +183,7 @@ function _createsct_renderResults(createdEngagements, notCreatedEngagements) {
                 <div>${engagement.name}</div>
                 <div>${engagement.reason}</div>
             `;
-            createdRows.appendChild(row);
+            notCreatedRows.appendChild(row);
         });
     }
 }
@@ -168,13 +191,13 @@ function _createsct_renderResults(createdEngagements, notCreatedEngagements) {
 document.addEventListener('DOMContentLoaded', () => {
     const tab = document.getElementById('create-sct');
     if (tab && tab.classList.contains('active')) {
-        _createsct_fetchExistingEngagements();
+        _createsct_fetchCsrfToken().then(() => _createsct_fetchExistingEngagements());
     }
 
     document.querySelector('.tab[data-tab="create-sct"]')?.addEventListener('click', () => {
         const tabContent = document.getElementById('create-sct');
         if (tabContent && !_createsct_existing_engagements.length) {
-            _createsct_fetchExistingEngagements();
+            _createsct_fetchCsrfToken().then(() => _createsct_fetchExistingEngagements());
         }
     });
 });
