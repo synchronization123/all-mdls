@@ -1,11 +1,10 @@
 const _mcrjirasummaryopen_tests_api = 'https://demo.defectdojo.org/api/v2/tests/?tags=mcr_jira&limit=10000';
 const _mcrjirasummaryopen_users_api = 'https://demo.defectdojo.org/api/v2/users/';
+const _mcrjirasummaryopen_environments_api = 'https://demo.defectdojo.org/api/v2/development_environments/';
 const _mcrjirasummaryopen_dashboard_url = 'https://demo.defectdojo.org/dashboard';
-const _mcrjirasummaryopen_environments = {
-    CP: 10, // Environment ID for CP
-    Develop: 9 // Environment ID for Develop
-};
+let _mcrjirasummaryopen_tests = [];
 let _mcrjirasummaryopen_users = [];
+let _mcrjirasummaryopen_environments = {};
 let _mcrjirasummaryopen_csrf_token = '';
 
 function _mcrjirasummaryopen_showLoadingModal() {
@@ -24,34 +23,37 @@ async function _mcrjirasummaryopen_fetchCsrfToken() {
         const doc = parser.parseFromString(html, 'text/html');
         const tokenInput = doc.querySelector('input[name="csrfmiddlewaretoken"]');
         _mcrjirasummaryopen_csrf_token = tokenInput ? tokenInput.value : '';
-        console.log('CSRF token fetched:', _mcrjirasummaryopen_csrf_token);
     } catch (error) {
         _mcrjirasummaryopen_showToast('Error fetching CSRF token', 'error');
-        console.error('CSRF token fetch error:', error);
     }
 }
 
 async function _mcrjirasummaryopen_fetchUsers() {
     try {
         const response = await fetch(_mcrjirasummaryopen_users_api);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
         const data = await response.json();
         _mcrjirasummaryopen_users = data.results.sort((a, b) => 
             `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)
         );
-        console.log('Users fetched:', _mcrjirasummaryopen_users.length, 'users');
     } catch (error) {
         _mcrjirasummaryopen_showToast('Error fetching users', 'error');
-        console.error('Users fetch error:', error);
     }
 }
 
-function _mcrjirasummaryopen_getUserName(userId) {
-    const parsedUserId = userId ? parseInt(userId) : null;
-    const user = _mcrjirasummaryopen_users.find(u => u.id === parsedUserId);
-    return user ? `${user.first_name} ${user.last_name}` : 'Unknown';
+async function _mcrjirasummaryopen_fetchEnvironmentName(envId) {
+    if (!envId) return 'N/A';
+    if (_mcrjirasummaryopen_environments[envId]) {
+        return _mcrjirasummaryopen_environments[envId];
+    }
+    try {
+        const response = await fetch(`${_mcrjirasummaryopen_environments_api}${envId}/`);
+        const data = await response.json();
+        _mcrjirasummaryopen_environments[envId] = data.name || 'Unknown';
+        return _mcrjirasummaryopen_environments[envId];
+    } catch (error) {
+        _mcrjirasummaryopen_showToast('Error fetching environment name', 'error');
+        return 'Unknown';
+    }
 }
 
 function _mcrjirasummaryopen_showToast(message, type) {
@@ -70,128 +72,148 @@ async function _mcrjirasummaryopen_fetchTests() {
     try {
         _mcrjirasummaryopen_showLoadingModal();
         const response = await fetch(_mcrjirasummaryopen_tests_api);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
         const data = await response.json();
-        console.log('Raw tests data:', data);
-        const tests = data.results.filter(test => ['Pending', 'On Hold'].includes(test.branch_tag));
-        console.log('Filtered tests:', tests.length, 'tests with branch_tag Pending or On Hold');
-        if (!tests.length) {
-            document.getElementById('_mcrjirasummaryopen_no_data').style.display = 'block';
-            _mcrjirasummaryopen_showToast('No tests found for Pending or On Hold', 'error');
-            return;
-        }
+        _mcrjirasummaryopen_tests = data.results.filter(test => 
+            ['Pending', 'On Hold'].includes(test.branch_tag) && 
+            [9, 10, 11].includes(test.environment)
+        );
+
         await _mcrjirasummaryopen_fetchUsers();
-        if (!_mcrjirasummaryopen_users.length) {
-            _mcrjirasummaryopen_showToast('No users found; lead names may be incorrect', 'error');
-        }
-        await _mcrjirasummaryopen_renderSummary(tests);
+        await _mcrjirasummaryopen_updateEnvironmentHeaders();
+        await _mcrjirasummaryopen_renderTable();
         _mcrjirasummaryopen_showToast('Summary loaded successfully', 'success');
     } catch (error) {
-        document.getElementById('_mcrjirasummaryopen_no_data').style.display = 'block';
-        _mcrjirasummaryopen_showToast(`Error fetching tests: ${error.message}`, 'error');
-        console.error('Tests fetch error:', error);
+        _mcrjirasummaryopen_showToast('Error fetching tests', 'error');
     } finally {
         _mcrjirasummaryopen_hideLoadingModal();
     }
 }
 
-async function _mcrjirasummaryopen_renderSummary(tests) {
+async function _mcrjirasummaryopen_updateEnvironmentHeaders() {
+    const envIds = [9, 10, 11];
+    for (const envId of envIds) {
+        const name = await _mcrjirasummaryopen_fetchEnvironmentName(envId);
+        const header = document.getElementById(`_mcrjirasummaryopen_env_${envId}_name`);
+        if (header) {
+            header.textContent = name;
+        }
+    }
+}
+
+async function _mcrjirasummaryopen_renderTable() {
     const container = document.getElementById('_mcrjirasummaryopen_card_container');
-    const noDataMessage = document.getElementById('_mcrjirasummaryopen_no_data');
     container.innerHTML = '';
-    noDataMessage.style.display = 'none';
 
-    // Validate test data
-    const invalidTests = tests.filter(test => !test.hasOwnProperty('lead') || !test.hasOwnProperty('branch_tag') || !test.hasOwnProperty('environment'));
-    if (invalidTests.length) {
-        console.warn('Invalid tests (missing lead, branch_tag, or environment):', invalidTests);
-        _mcrjirasummaryopen_showToast(`${invalidTests.length} tests have missing fields`, 'error');
-    }
-
-    // Group tests by lead
+    // Aggregate counts by lead, environment, and branch_tag
     const summary = {};
-    tests.forEach(test => {
-        const leadId = test.lead || 'Unknown';
-        if (!summary[leadId]) {
-            summary[leadId] = {
-                cp: { Pending: 0, OnHold: 0 },
-                develop: { Pending: 0, OnHold: 0 }
-            };
-        }
-        const branchTag = test.branch_tag === 'Pending' ? 'Pending' : 'OnHold';
-        if (test.environment === _mcrjirasummaryopen_environments.CP) {
-            summary[leadId].cp[branchTag]++;
-        } else if (test.environment === _mcrjirasummaryopen_environments.Develop) {
-            summary[leadId].develop[branchTag]++;
-        }
-    });
-    console.log('Summary data:', summary);
-
-    // Check if summary is empty
-    if (!Object.keys(summary).length) {
-        noDataMessage.style.display = 'block';
-        _mcrjirasummaryopen_showToast('No data to display after processing', 'error');
-        return;
-    }
-
-    // Calculate totals
     const totals = {
-        cp: { Pending: 0, OnHold: 0 },
-        develop: { Pending: 0, OnHold: 0 },
+        env9_pending: 0,
+        env9_onhold: 0,
+        env10_pending: 0,
+        env10_onhold: 0,
+        env11_pending: 0,
+        env11_onhold: 0,
         total: 0
     };
-    Object.values(summary).forEach(leadData => {
-        totals.cp.Pending += leadData.cp.Pending;
-        totals.cp.OnHold += leadData.cp.OnHold;
-        totals.develop.Pending += leadData.develop.Pending;
-        totals.develop.OnHold += leadData.develop.OnHold;
-    });
-    totals.total = totals.cp.Pending + totals.cp.OnHold + totals.develop.Pending + totals.develop.OnHold;
-    console.log('Totals:', totals);
 
-    // Render rows
-    Object.keys(summary).sort((a, b) => {
-        const nameA = _mcrjirasummaryopen_getUserName(a);
-        const nameB = _mcrjirasummaryopen_getUserName(b);
+    _mcrjirasummaryopen_tests.forEach(test => {
+        const leadId = test.lead || 'unassigned';
+        if (!summary[leadId]) {
+            summary[leadId] = {
+                env9_pending: 0,
+                env9_onhold: 0,
+                env10_pending: 0,
+                env10_onhold: 0,
+                env11_pending: 0,
+                env11_onhold: 0
+            };
+        }
+
+        if (test.environment === 9) {
+            if (test.branch_tag === 'Pending') {
+                summary[leadId].env9_pending++;
+                totals.env9_pending++;
+            } else if (test.branch_tag === 'On Hold') {
+                summary[leadId].env9_onhold++;
+                totals.env9_onhold++;
+            }
+        } else if (test.environment === 10) {
+            if (test.branch_tag === 'Pending') {
+                summary[leadId].env10_pending++;
+                totals.env10_pending++;
+            } else if (test.branch_tag === 'On Hold') {
+                summary[leadId].env10_onhold++;
+                totals.env10_onhold++;
+            }
+        } else if (test.environment === 11) {
+            if (test.branch_tag === 'Pending') {
+                summary[leadId].env11_pending++;
+                totals.env11_pending++;
+            } else if (test.branch_tag === 'On Hold') {
+                summary[leadId].env11_onhold++;
+                totals.env11_onhold++;
+            }
+        }
+    });
+
+    // Calculate totals
+    Object.values(summary).forEach(leadData => {
+        leadData.total = (
+            leadData.env9_pending + leadData.env9_onhold +
+            leadData.env10_pending + leadData.env10_onhold +
+            leadData.env11_pending + leadData.env11_onhold
+        );
+    });
+    totals.total = (
+        totals.env9_pending + totals.env9_onhold +
+        totals.env10_pending + totals.env10_onhold +
+        totals.env11_pending + totals.env11_onhold
+    );
+
+    // Render rows for each lead
+    const sortedLeadIds = Object.keys(summary).sort((a, b) => {
+        const nameA = a === 'unassigned' ? 'Unassigned' : _mcrjirasummaryopen_getUserName(a);
+        const nameB = b === 'unassigned' ? 'Unassigned' : _mcrjirasummaryopen_getUserName(b);
         return nameA.localeCompare(nameB);
-    }).forEach(leadId => {
+    });
+
+    sortedLeadIds.forEach(leadId => {
         const data = summary[leadId];
-        const total = data.cp.Pending + data.cp.OnHold + data.develop.Pending + data.develop.OnHold;
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-            <div>${_mcrjirasummaryopen_getUserName(leadId)}</div>
-            <div class="sub-cell">
-                <div>${data.cp.Pending}</div>
-                <div>${data.cp.OnHold}</div>
-            </div>
-            <div class="sub-cell">
-                <div>${data.develop.Pending}</div>
-                <div>${data.develop.OnHold}</div>
-            </div>
-            <div class="total-cell">${total}</div>
+            <div>${leadId === 'unassigned' ? 'Unassigned' : _mcrjirasummaryopen_getUserName(leadId)}</div>
+            <div>${data.env9_pending}</div>
+            <div>${data.env9_onhold}</div>
+            <div>${data.env10_pending}</div>
+            <div>${data.env10_onhold}</div>
+            <div>${data.env11_pending}</div>
+            <div>${data.env11_onhold}</div>
+            <div class="total-column">${data.total}</div>
         `;
         container.appendChild(card);
     });
 
     // Render total row
-    const totalCard = document.createElement('div');
-    totalCard.className = 'card total-row';
-    totalCard.innerHTML = `
+    const totalRow = document.createElement('div');
+    totalRow.className = 'card total-row';
+    totalRow.innerHTML = `
         <div>Total</div>
-        <div class="sub-cell">
-            <div class="total-cell">${totals.cp.Pending}</div>
-            <div class="total-cell">${totals.cp.OnHold}</div>
-        </div>
-        <div class="sub-cell">
-            <div class="total-cell">${totals.develop.Pending}</div>
-            <div class="total-cell">${totals.develop.OnHold}</div>
-        </div>
-        <div class="total-cell">${totals.total}</div>
+        <div>${totals.env9_pending}</div>
+        <div>${totals.env9_onhold}</div>
+        <div>${totals.env10_pending}</div>
+        <div>${totals.env10_onhold}</div>
+        <div>${totals.env11_pending}</div>
+        <div>${totals.env11_onhold}</div>
+        <div class="total-column">${totals.total}</div>
     `;
-    container.appendChild(totalCard);
+    container.appendChild(totalRow);
+}
+
+function _mcrjirasummaryopen_getUserName(userId) {
+    if (userId === 'unassigned') return 'Unassigned';
+    const user = _mcrjirasummaryopen_users.find(u => u.id === parseInt(userId));
+    return user ? `${user.first_name} ${user.last_name}` : 'Unknown';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -200,6 +222,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.querySelector('.tab[data-tab="mcr-jira-summary-open"]').addEventListener('click', () => {
-        _mcrjirasummaryopen_fetchCsrfToken().then(_mcrjirasummaryopen_fetchTests);
+        if (!_mcrjirasummaryopen_tests.length) {
+            _mcrjirasummaryopen_fetchCsrfToken().then(_mcrjirasummaryopen_fetchTests);
+        }
     });
 });
