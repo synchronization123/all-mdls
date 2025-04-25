@@ -131,10 +131,30 @@ async function _mcrjiraopen_populateDynamicFilters() {
         option.textContent = build;
         buildSelect.appendChild(option);
     });
+
+    // Add Enter key listener to filters
+    const filterElements = [
+        '_mcrjiraopen_search_input',
+        '_mcrjiraopen_version_filter',
+        '_mcrjiraopen_branch_tag_filter',
+        '_mcrjiraopen_lead_filter',
+        '_mcrjiraopen_environment_filter',
+        '_mcrjiraopen_commit_hash_filter',
+        '_mcrjiraopen_build_id_filter'
+    ];
+    filterElements.forEach(id => {
+        const element = document.getElementById(id);
+        element.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                _mcrjiraopen_filterTable();
+            }
+        });
+    });
 }
 
 function _mcrjiraopen_getUserName(userId) {
-    const user = _mcrjiraopen_users.find(u => u.id === parseInt(userId));
+    const parsedUserId = userId ? parseInt(userId) : null;
+    const user = _mcrjiraopen_users.find(u => u.id === parsedUserId);
     return user ? `${user.first_name} ${user.last_name}` : 'Unknown';
 }
 
@@ -289,6 +309,7 @@ async function _mcrjiraopen_fetchTestData(testId) {
         return await response.json();
     } catch (error) {
         _mcrjiraopen_showToast(`Error fetching test data: ${error.message}`, 'error');
+        console.error('Fetch test error:', error);
         return null;
     }
 }
@@ -336,9 +357,11 @@ async function _mcrjiraopen_updateDescription(testId, value) {
         } else {
             const errorData = await response.json();
             _mcrjiraopen_showToast(`Failed to update description: ${errorData.message || response.statusText}`, 'error');
+            console.error('Update description error:', errorData);
         }
     } catch (error) {
         _mcrjiraopen_showToast(`Error updating description: ${error.message}`, 'error');
+        console.error('Update description error:', error);
     }
 }
 
@@ -385,25 +408,40 @@ async function _mcrjiraopen_updateBranchTag(testId, value) {
         } else {
             const errorData = await response.json();
             _mcrjiraopen_showToast(`Failed to update branch tag: ${errorData.message || response.statusText}`, 'error');
+            console.error('Update branch tag error:', errorData);
         }
     } catch (error) {
         _mcrjiraopen_showToast(`Error updating branch tag: ${error.message}`, 'error');
+        console.error('Update branch tag error:', error);
     }
 }
 
 async function _mcrjiraopen_updateLead(testId, userId) {
+    console.log('updateLead called:', { testId, userId, type: typeof userId });
+
     const test = _mcrjiraopen_tests.find(t => t.id === testId);
     if (!test) {
         _mcrjiraopen_showToast('Test not found', 'error');
+        console.error('Test not found:', testId);
         return;
     }
 
     const testData = await _mcrjiraopen_fetchTestData(testId);
-    if (!testData) return;
+    if (!testData) {
+        console.error('No test data fetched for testId:', testId);
+        return;
+    }
+    console.log('Fetched testData:', testData);
 
-    // Update local test object with the new lead value
-    const newLead = userId ? parseInt(userId) : null;
+    // Ensure userId is a number or null
+    const newLead = userId && userId !== '' ? parseInt(userId, 10) : null;
+    if (isNaN(newLead) && userId !== '') {
+        _mcrjiraopen_showToast('Invalid lead ID', 'error');
+        console.error('Invalid userId:', userId);
+        return;
+    }
     test.lead = newLead;
+    console.log('Updated test.lead:', test.lead);
 
     const updatedTest = {
         id: testData.id,
@@ -411,7 +449,7 @@ async function _mcrjiraopen_updateLead(testId, userId) {
         target_start: testData.target_start || new Date().toISOString().split('T')[0],
         target_end: testData.target_end || new Date(Date.now() + 86400000).toISOString().split('T')[0],
         engagement: testData.engagement || 1,
-        lead: newLead, // Use the new lead value
+        lead: newLead, // Use numeric lead
         test_type: testData.test_type || 1,
         environment: testData.environment || test.environment || null,
         test_type_name: testData.test_type_name || 'Unknown',
@@ -421,6 +459,7 @@ async function _mcrjiraopen_updateLead(testId, userId) {
         commit_hash: test.commit_hash || null,
         build_id: test.build_id || null
     };
+    console.log('PUT payload:', updatedTest);
 
     try {
         const response = await fetch(`https://demo.defectdojo.org/api/v2/tests/${testId}/`, {
@@ -434,12 +473,15 @@ async function _mcrjiraopen_updateLead(testId, userId) {
         if (response.ok) {
             _mcrjiraopen_updateCard(test);
             _mcrjiraopen_showToast(`Test ${test.id} lead updated to ${_mcrjiraopen_getUserName(newLead)}`, 'success');
+            console.log('Lead update successful:', newLead);
         } else {
             const errorData = await response.json();
             _mcrjiraopen_showToast(`Failed to update lead: ${errorData.message || response.statusText}`, 'error');
+            console.error('Update lead error:', errorData);
         }
     } catch (error) {
         _mcrjiraopen_showToast(`Error updating lead: ${error.message}`, 'error');
+        console.error('Update lead error:', error);
     }
 }
 
@@ -475,6 +517,7 @@ function _mcrjiraopen_exportToCSV() {
         _mcrjiraopen_showToast('Table exported to CSV', 'success');
     }).catch(error => {
         _mcrjiraopen_showToast(`Error exporting CSV: ${error.message}`, 'error');
+        console.error('Export CSV error:', error);
     });
 }
 
