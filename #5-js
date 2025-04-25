@@ -85,14 +85,14 @@ async function _createsct_createEngagements() {
 
         // Process each name
         for (const name of names) {
-            // Check for duplicate
-            const exists = _createsct_existing_engagements.some(engagement => engagement.name === name);
-            if (exists) {
+            // Check if the engagement name already exists in DefectDojo
+            const isDuplicate = _createsct_existing_engagements.some(engagement => engagement.name === name);
+            if (isDuplicate) {
                 notCreatedEngagements.push({ name, reason: 'Engagement name already exists' });
-                continue; // Skip creation attempt for duplicates
+                continue; // Skip creation for duplicates
             }
 
-            // Create engagement
+            // Create engagement only if it's not a duplicate
             const engagementData = {
                 name: name,
                 target_start: today,
