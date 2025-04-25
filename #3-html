@@ -25,6 +25,7 @@
     border-bottom: 2px solid #cfd8dc;
     font-weight: 600;
     color: #37474f;
+    z-index: 10;
 }
 #mcr-jira-summary-open .main-header {
     padding: 8px;
@@ -54,6 +55,7 @@
     padding: 8px;
     border-right: 1px solid #cfd8dc;
     text-align: center;
+    font-size: 14px;
 }
 #mcr-jira-summary-open .card .sub-cell {
     display: grid;
@@ -72,6 +74,12 @@
 }
 #mcr-jira-summary-open .card:last-child {
     border-bottom: 2px solid #cfd8dc;
+}
+#mcr-jira-summary-open .no-data-message {
+    text-align: center;
+    padding: 20px;
+    color: #37474f;
+    font-size: 16px;
 }
 
 /* Loading Modal */
@@ -104,7 +112,7 @@
     color: #37474f;
 }
 
-/* Toast Styles (for consistency) */
+/* Toast Styles */
 .toast {
     position: fixed;
     bottom: 20px;
@@ -125,7 +133,6 @@
 .toast.error {
     background: #f44336;
 }
-
 
 
 
@@ -156,7 +163,14 @@
             <div class="main-header">Total</div>
         </div>
         <div class="card-container" id="_mcrjirasummaryopen_card_container"></div>
+        <div class="no-data-message" id="_mcrjirasummaryopen_no_data" style="display: none;">
+            No data available for the selected criteria.
+        </div>
     </div>
 </div>
+
+
+
+
 
 
