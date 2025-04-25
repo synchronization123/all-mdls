@@ -1,3 +1,4 @@
+
 <div class="tab-content" id="mcr-jira-open">
     <!-- Loading Modal -->
     <div class="modal" id="_mcrjiraopen_loading_modal">
@@ -52,6 +53,10 @@
 
 
 
+
+
+
+
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -61,7 +66,10 @@
 
 
 
-.card textarea {
+
+
+/* MCR Jira (Open) Table-Specific Styles */
+#mcr-jira-open .card textarea {
     width: 100%;
     padding: 8px;
     border: 1px solid #cfd8dc;
@@ -70,43 +78,61 @@
     resize: vertical;
     background: #fafafa;
 }
-.card div, .card textarea, .card select {
+#mcr-jira-open .card div, 
+#mcr-jira-open .card textarea, 
+#mcr-jira-open .card select {
     white-space: normal;
     overflow: visible;
     text-overflow: unset;
     padding: 8px;
 }
-.table-header, .card {
+#mcr-jira-open .table-header, 
+#mcr-jira-open .card {
     grid-template-columns: repeat(9, 1fr); /* Equal width for 9 columns */
 }
-.table-container {
+#mcr-jira-open .table-container {
     width: 100%;
     overflow-x: auto;
 }
-.search-filter {
+
+/* MCR Jira (Open) Filter Styles */
+#mcr-jira-open .search-filter {
+    display: flex;
     flex-wrap: nowrap;
     overflow-x: auto;
     white-space: nowrap;
+    align-items: center;
+    gap: 8px;
 }
-.search-filter input, .search-filter select {
-    width: 200px;
-    margin-right: 8px;
+#mcr-jira-open .search-filter input,
+#mcr-jira-open .search-filter select,
+#mcr-jira-open .search-filter button {
+    width: 150px; /* Equal width for all filters and buttons */
+    height: 36px;
+    margin: 0;
+    box-sizing: border-box;
 }
-.refresh-btn {
+#mcr-jira-open .search-filter button {
+    padding: 0;
+    font-size: 14px;
+}
+#mcr-jira-open .refresh-btn {
     background: #455a64;
     color: #fff;
 }
-.refresh-btn:hover {
+#mcr-jira-open .refresh-btn:hover {
     background: #37474f;
 }
-.clear-btn {
+#mcr-jira-open .clear-btn {
     background: #78909c;
     color: #fff;
 }
-.clear-btn:hover {
+#mcr-jira-open .clear-btn:hover {
     background: #607d8b;
 }
-.modal {
+
+/* Loading Modal (unchanged, included for completeness) */
+#mcr-jira-open .modal {
     display: none;
     position: fixed;
     top: 0;
@@ -118,21 +144,19 @@
     align-items: center;
     z-index: 1000;
 }
-.modal-content {
+#mcr-jira-open .modal-content {
     background: #fff;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     text-align: center;
 }
-.modal-content h3 {
+#mcr-jira-open .modal-content h3 {
     margin: 0 0 10px;
     color: #455a64;
 }
-.modal-content p {
+#mcr-jira-open .modal-content p {
     margin: 10px 0;
     font-size: 14px;
     color: #37474f;
 }
-
-
