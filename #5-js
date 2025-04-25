@@ -89,7 +89,7 @@ async function _createsct_createEngagements() {
             const exists = _createsct_existing_engagements.some(engagement => engagement.name === name);
             if (exists) {
                 notCreatedEngagements.push({ name, reason: 'Engagement name already exists' });
-                continue;
+                continue; // Skip creation attempt for duplicates
             }
 
             // Create engagement
