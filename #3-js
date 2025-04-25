@@ -1,0 +1,161 @@
+const _mcrjirasummaryopen_tests_api = 'https://demo.defectdojo.org/api/v2/tests/?tags=mcr_jira&limit=10000';
+const _mcrjirasummaryopen_users_api = 'https://demo.defectdojo.org/api/v2/users/';
+const _mcrjirasummaryopen_dashboard_url = 'https://demo.defectdojo.org/dashboard';
+const _mcrjirasummaryopen_environments = {
+    CP: 10, // Environment ID for CP
+    Develop: 9 // Environment ID for Develop
+};
+let _mcrjirasummaryopen_users = [];
+let _mcrjirasummaryopen_csrf_token = '';
+
+function _mcrjirasummaryopen_showLoadingModal() {
+    document.getElementById('_mcrjirasummaryopen_loading_modal').style.display = 'flex';
+}
+
+function _mcrjirasummaryopen_hideLoadingModal() {
+    document.getElementById('_mcrjirasummaryopen_loading_modal').style.display = 'none';
+}
+
+async function _mcrjirasummaryopen_fetchCsrfToken() {
+    try {
+        const response = await fetch(_mcrjirasummaryopen_dashboard_url);
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const tokenInput = doc.querySelector('input[name="csrfmiddlewaretoken"]');
+        _mcrjirasummaryopen_csrf_token = tokenInput ? tokenInput.value : '';
+    } catch (error) {
+        _mcrjirasummaryopen_showToast('Error fetching CSRF token', 'error');
+    }
+}
+
+async function _mcrjirasummaryopen_fetchUsers() {
+    try {
+        const response = await fetch(_mcrjirasummaryopen_users_api);
+        const data = await response.json();
+        _mcrjirasummaryopen_users = data.results.sort((a, b) => 
+            `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${a.last_name}`)
+        );
+    } catch (error) {
+        _mcrjirasummaryopen_showToast('Error fetching users', 'error');
+    }
+}
+
+function _mcrjirasummaryopen_getUserName(userId) {
+    const parsedUserId = userId ? parseInt(userId) : null;
+    const user = _mcrjirasummaryopen_users.find(u => u.id === parsedUserId);
+    return user ? `${user.first_name} ${user.last_name}` : 'Unknown';
+}
+
+function _mcrjirasummaryopen_showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+async function _mcrjirasummaryopen_fetchTests() {
+    try {
+        _mcrjirasummaryopen_showLoadingModal();
+        const response = await fetch(_mcrjirasummaryopen_tests_api);
+        const data = await response.json();
+        const tests = data.results.filter(test => ['Pending', 'On Hold'].includes(test.branch_tag));
+        await _mcrjirasummaryopen_fetchUsers();
+        await _mcrjirasummaryopen_renderSummary(tests);
+        _mcrjirasummaryopen_showToast('Summary loaded successfully', 'success');
+    } catch (error) {
+        _mcrjirasummaryopen_showToast('Error fetching tests', 'error');
+        console.error('Fetch tests error:', error);
+    } finally {
+        _mcrjirasummaryopen_hideLoadingModal();
+    }
+}
+
+async function _mcrjirasummaryopen_renderSummary(tests) {
+    const container = document.getElementById('_mcrjirasummaryopen_card_container');
+    container.innerHTML = '';
+
+    // Group tests by lead
+    const summary = {};
+    tests.forEach(test => {
+        const leadId = test.lead || 'Unknown';
+        if (!summary[leadId]) {
+            summary[leadId] = {
+                cp: { Pending: 0, OnHold: 0 },
+                develop: { Pending: 0, OnHold: 0 }
+            };
+        }
+        if (test.environment === _mcrjirasummaryopen_environments.CP) {
+            summary[leadId].cp[test.branch_tag === 'Pending' ? 'Pending' : 'OnHold']++;
+        } else if (test.environment === _mcrjirasummaryopen_environments.Develop) {
+            summary[leadId].develop[test.branch_tag === 'Pending' ? 'Pending' : 'OnHold']++;
+        }
+    });
+
+    // Calculate totals
+    const totals = {
+        cp: { Pending: 0, OnHold: 0 },
+        develop: { Pending: 0, OnHold: 0 },
+        total: 0
+    };
+    Object.values(summary).forEach(leadData => {
+        totals.cp.Pending += leadData.cp.Pending;
+        totals.cp.OnHold += leadData.cp.OnHold;
+        totals.develop.Pending += leadData.develop.Pending;
+        totals.develop.OnHold += leadData.develop.OnHold;
+    });
+    totals.total = totals.cp.Pending + totals.cp.OnHold + totals.develop.Pending + totals.develop.OnHold;
+
+    // Render rows
+    Object.keys(summary).forEach(leadId => {
+        const data = summary[leadId];
+        const total = data.cp.Pending + data.cp.OnHold + data.develop.Pending + data.develop.OnHold;
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+            <div>${_mcrjirasummaryopen_getUserName(leadId)}</div>
+            <div class="sub-cell">
+                <div>${data.cp.Pending}</div>
+                <div>${data.cp.OnHold}</div>
+            </div>
+            <div class="sub-cell">
+                <div>${data.develop.Pending}</div>
+                <div>${data.develop.OnHold}</div>
+            </div>
+            <div class="total-cell">${total}</div>
+        `;
+        container.appendChild(card);
+    });
+
+    // Render total row
+    const totalCard = document.createElement('div');
+    totalCard.className = 'card total-row';
+    totalCard.innerHTML = `
+        <div>Total</div>
+        <div class="sub-cell">
+            <div class="total-cell">${totals.cp.Pending}</div>
+            <div class="total-cell">${totals.cp.OnHold}</div>
+        </div>
+        <div class="sub-cell">
+            <div class="total-cell">${totals.develop.Pending}</div>
+            <div class="total-cell">${totals.develop.OnHold}</div>
+        </div>
+        <div class="total-cell">${totals.total}</div>
+    `;
+    container.appendChild(totalCard);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('mcr-jira-summary-open').classList.contains('active')) {
+        _mcrjirasummaryopen_fetchCsrfToken().then(_mcrjirasummaryopen_fetchTests);
+    }
+
+    document.querySelector('.tab[data-tab="mcr-jira-summary-open"]').addEventListener('click', () => {
+        _mcrjirasummaryopen_fetchCsrfToken().then(_mcrjirasummaryopen_fetchTests);
+    });
+});
