@@ -1,0 +1,261 @@
+const _mcrjirasummarybyversion_tests_api = 'https://demo.defectdojo.org/api/v2/tests/?tags=mcr_jira&limit=10000';
+const _mcrjirasummarybyversion_environments_api = 'https://demo.defectdojo.org/api/v2/development_environments/';
+const _mcrjirasummarybyversion_engagements_api = 'https://demo.defectdojo.org/api/v2/engagements/';
+let _mcrjirasummarybyversion_tests = [];
+let _mcrjirasummarybyversion_environments = {};
+let _mcrjirasummarybyversion_engagements = [];
+
+function _mcrjirasummarybyversion_showLoadingModal() {
+    const modal = document.getElementById('_mcrjirasummarybyversion_loading_modal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function _mcrjirasummarybyversion_hideLoadingModal() {
+    const modal = document.getElementById('_mcrjirasummarybyversion_loading_modal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function _mcrjirasummarybyversion_fetchEngagements() {
+    try {
+        const response = await fetch(_mcrjirasummarybyversion_engagements_api);
+        const data = await response.json();
+        _mcrjirasummarybyversion_engagements = data.results.filter(engagement => engagement.active);
+        const engagementSelect = document.getElementById('_mcrjirasummarybyversion_engagement_filter');
+        if (engagementSelect) {
+            engagementSelect.innerHTML = '<option value="">All Engagements</option>';
+            _mcrjirasummarybyversion_engagements.forEach(engagement => {
+                const option = document.createElement('option');
+                option.value = engagement.id;
+                option.textContent = engagement.name || `Engagement ${engagement.id}`;
+                engagementSelect.appendChild(option);
+            });
+            engagementSelect.addEventListener('change', async () => {
+                const engagementId = engagementSelect.value;
+                if (engagementId) {
+                    await _mcrjirasummarybyversion_fetchTestsForEngagement(engagementId);
+                } else {
+                    await _mcrjirasummarybyversion_fetchTests();
+                }
+            });
+        }
+    } catch (error) {
+        _mcrjirasummarybyversion_showToast('Error fetching engagements', 'error');
+    }
+}
+
+async function _mcrjirasummarybyversion_fetchEnvironmentName(envId) {
+    if (!envId) return 'N/A';
+    if (_mcrjirasummarybyversion_environments[envId]) {
+        return _mcrjirasummarybyversion_environments[envId];
+    }
+    try {
+        const response = await fetch(`${_mcrjirasummarybyversion_environments_api}${envId}/`);
+        const data = await response.json();
+        _mcrjirasummarybyversion_environments[envId] = data.name || 'Unknown';
+        return _mcrjirasummarybyversion_environments[envId];
+    } catch (error) {
+        _mcrjirasummarybyversion_showToast('Error fetching environment name', 'error');
+        return 'Unknown';
+    }
+}
+
+function _mcrjirasummarybyversion_showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+async function _mcrjirasummarybyversion_fetchTests() {
+    try {
+        _mcrjirasummarybyversion_showLoadingModal();
+        const response = await fetch(_mcrjirasummarybyversion_tests_api);
+        const data = await response.json();
+        _mcrjirasummarybyversion_tests = data.results.filter(test => 
+            ['Pending', 'On Hold'].includes(test.branch_tag) && 
+            [9, 10, 11].includes(test.environment)
+        );
+
+        await _mcrjirasummarybyversion_fetchEngagements();
+        await _mcrjirasummarybyversion_updateEnvironmentHeaders();
+        await _mcrjirasummarybyversion_renderTable();
+        _mcrjirasummarybyversion_showToast('Summary loaded successfully', 'success');
+    } catch (error) {
+        _mcrjirasummarybyversion_showToast('Error fetching tests', 'error');
+    } finally {
+        _mcrjirasummarybyversion_hideLoadingModal();
+    }
+}
+
+async function _mcrjirasummarybyversion_fetchTestsForEngagement(engagementId) {
+    try {
+        _mcrjirasummarybyversion_showLoadingModal();
+        const response = await fetch(`${_mcrjirasummarybyversion_tests_api}&engagement=${engagementId}`);
+        const data = await response.json();
+        _mcrjirasummarybyversion_tests = data.results.filter(test => 
+            ['Pending', 'On Hold'].includes(test.branch_tag) && 
+            [9, 10, 11].includes(test.environment)
+        );
+
+        await _mcrjirasummarybyversion_updateEnvironmentHeaders();
+        await _mcrjirasummarybyversion_renderTable();
+        _mcrjirasummarybyversion_showToast(`Summary loaded for Engagement ${engagementId}`, 'success');
+    } catch (error) {
+        _mcrjirasummarybyversion_showToast('Error fetching tests for engagement', 'error');
+    } finally {
+        _mcrjirasummarybyversion_hideLoadingModal();
+    }
+}
+
+async function _mcrjirasummarybyversion_refreshData() {
+    _mcrjirasummarybyversion_tests = []; // Clear existing data
+    const engagementId = document.getElementById('_mcrjirasummarybyversion_engagement_filter')?.value;
+    if (engagementId) {
+        await _mcrjirasummarybyversion_fetchTestsForEngagement(engagementId);
+    } else {
+        await _mcrjirasummarybyversion_fetchTests();
+    }
+    _mcrjirasummarybyversion_showToast('Data refreshed', 'success');
+}
+
+async function _mcrjirasummarybyversion_updateEnvironmentHeaders() {
+    const envIds = [9, 10, 11];
+    for (const envId of envIds) {
+        const name = await _mcrjirasummarybyversion_fetchEnvironmentName(envId);
+        const header = document.getElementById(`_mcrjirasummarybyversion_env_${envId}_name`);
+        if (header) {
+            header.textContent = name;
+        }
+    }
+}
+
+async function _mcrjirasummarybyversion_renderTable() {
+    const container = document.getElementById('_mcrjirasummarybyversion_card_container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Aggregate counts by version, environment, and branch_tag
+    const summary = {};
+    const totals = {
+        env9_pending: 0,
+        env9_onhold: 0,
+        env10_pending: 0,
+        env10_onhold: 0,
+        env11_pending: 0,
+        env11_onhold: 0,
+        total: 0
+    };
+
+    _mcrjirasummarybyversion_tests.forEach(test => {
+        const version = test.version || 'unassigned';
+        if (!summary[version]) {
+            summary[version] = {
+                env9_pending: 0,
+                env9_onhold: 0,
+                env10_pending: 0,
+                env10_onhold: 0,
+                env11_pending: 0,
+                env11_onhold: 0
+            };
+        }
+
+        if (test.environment === 9) {
+            if (test.branch_tag === 'Pending') {
+                summary[version].env9_pending++;
+                totals.env9_pending++;
+            } else if (test.branch_tag === 'On Hold') {
+                summary[version].env9_onhold++;
+                totals.env9_onhold++;
+            }
+        } else if (test.environment === 10) {
+            if (test.branch_tag === 'Pending') {
+                summary[version].env10_pending++;
+                totals.env10_pending++;
+            } else if (test.branch_tag === 'On Hold') {
+                summary[version].env10_onhold++;
+                totals.env10_onhold++;
+            }
+        } else if (test.environment === 11) {
+            if (test.branch_tag === 'Pending') {
+                summary[version].env11_pending++;
+                totals.env11_pending++;
+            } else if (test.branch_tag === 'On Hold') {
+                summary[version].env11_onhold++;
+                totals.env11_onhold++;
+            }
+        }
+    });
+
+    // Calculate totals
+    Object.values(summary).forEach(versionData => {
+        versionData.total = (
+            versionData.env9_pending + versionData.env9_onhold +
+            versionData.env10_pending + versionData.env10_onhold +
+            versionData.env11_pending + versionData.env11_onhold
+        );
+    });
+    totals.total = (
+        totals.env9_pending + totals.env9_onhold +
+        totals.env10_pending + totals.env10_onhold +
+        totals.env11_pending + totals.env11_onhold
+    );
+
+    // Render rows for each version
+    const sortedVersions = Object.keys(summary).sort((a, b) => {
+        const versionA = a === 'unassigned' ? 'Unassigned' : a;
+        const versionB = b === 'unassigned' ? 'Unassigned' : b;
+        return versionA.localeCompare(versionB);
+    });
+
+    sortedVersions.forEach(version => {
+        const data = summary[version];
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+            <div>${version === 'unassigned' ? 'Unassigned' : version}</div>
+            <div>${data.env9_pending}</div>
+            <div>${data.env9_onhold}</div>
+            <div>${data.env10_pending}</div>
+            <div>${data.env10_onhold}</div>
+            <div>${data.env11_pending}</div>
+            <div>${data.env11_onhold}</div>
+            <div class="total-column">${data.total}</div>
+        `;
+        container.appendChild(card);
+    });
+
+    // Render total row
+    const totalRow = document.createElement('div');
+    totalRow.className = 'card total-row';
+    totalRow.innerHTML = `
+        <div>Total</div>
+        <div>${totals.env9_pending}</div>
+        <div>${totals.env9_onhold}</div>
+        <div>${totals.env10_pending}</div>
+        <div>${totals.env10_onhold}</div>
+        <div>${totals.env11_pending}</div>
+        <div>${totals.env11_onhold}</div>
+        <div class="total-column">${totals.total}</div>
+    `;
+    container.appendChild(totalRow);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const tab = document.getElementById('mcr-jira-summary-by-version');
+    if (tab && tab.classList.contains('active')) {
+        _mcrjirasummarybyversion_fetchTests();
+    }
+
+    document.querySelector('.tab[data-tab="mcr-jira-summary-by-version"]')?.addEventListener('click', () => {
+        const tabContent = document.getElementById('mcr-jira-summary-by-version');
+        if (tabContent && !_mcrjirasummarybyversion_tests.length) {
+            _mcrjirasummarybyversion_fetchTests();
+        }
+    });
+});
