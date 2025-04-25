@@ -2,12 +2,10 @@ const _mcrjirasummaryopen_tests_api = 'https://demo.defectdojo.org/api/v2/tests/
 const _mcrjirasummaryopen_users_api = 'https://demo.defectdojo.org/api/v2/users/';
 const _mcrjirasummaryopen_environments_api = 'https://demo.defectdojo.org/api/v2/development_environments/';
 const _mcrjirasummaryopen_engagements_api = 'https://demo.defectdojo.org/api/v2/engagements/';
-const _mcrjirasummaryopen_dashboard_url = 'https://demo.defectdojo.org/dashboard';
 let _mcrjirasummaryopen_tests = [];
 let _mcrjirasummaryopen_users = [];
 let _mcrjirasummaryopen_environments = {};
 let _mcrjirasummaryopen_engagements = [];
-let _mcrjirasummaryopen_csrf_token = '';
 
 function _mcrjirasummaryopen_showLoadingModal() {
     const modal = document.getElementById('_mcrjirasummaryopen_loading_modal');
@@ -17,19 +15,6 @@ function _mcrjirasummaryopen_showLoadingModal() {
 function _mcrjirasummaryopen_hideLoadingModal() {
     const modal = document.getElementById('_mcrjirasummaryopen_loading_modal');
     if (modal) modal.style.display = 'none';
-}
-
-async function _mcrjirasummaryopen_fetchCsrfToken() {
-    try {
-        const response = await fetch(_mcrjirasummaryopen_dashboard_url);
-        const html = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const tokenInput = doc.querySelector('input[name="csrfmiddlewaretoken"]');
-        _mcrjirasummaryopen_csrf_token = tokenInput ? tokenInput.value : '';
-    } catch (error) {
-        _mcrjirasummaryopen_showToast('Error fetching CSRF token', 'error');
-    }
 }
 
 async function _mcrjirasummaryopen_fetchUsers() {
@@ -261,13 +246,13 @@ function _mcrjirasummaryopen_getUserName(userId) {
 document.addEventListener('DOMContentLoaded', () => {
     const tab = document.getElementById('mcr-jira-summary-open');
     if (tab && tab.classList.contains('active')) {
-        _mcrjirasummaryopen_fetchCsrfToken().then(_mcrjirasummaryopen_fetchTests);
+        _mcrjirasummaryopen_fetchTests();
     }
 
     document.querySelector('.tab[data-tab="mcr-jira-summary-open"]')?.addEventListener('click', () => {
         const tabContent = document.getElementById('mcr-jira-summary-open');
         if (tabContent && !_mcrjirasummaryopen_tests.length) {
-            _mcrjirasummaryopen_fetchCsrfToken().then(_mcrjirasummaryopen_fetchTests);
+            _mcrjirasummaryopen_fetchTests();
         }
     });
 });
