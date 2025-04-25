@@ -6,6 +6,12 @@
             <p>Please wait while the summary data is being loaded...</p>
         </div>
     </div>
+    <div class="filter-row">
+        <select id="_mcrjirasummaryopen_engagement_filter">
+            <option value="">All Engagements</option>
+        </select>
+        <button class="refresh-btn" onclick="_mcrjirasummaryopen_refreshData()">Refresh</button>
+    </div>
     <div class="table-container">
         <div class="table-header">
             <div>Lead</div>
@@ -42,15 +48,45 @@
 
 
 
+
 /* MCR Jira Summary (Open) Table-Specific Styles */
 #mcr-jira-summary-open {
     width: 100%;
     height: 100%;
     box-sizing: border-box;
 }
+#mcr-jira-summary-open .filter-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: #eceff1;
+}
+#mcr-jira-summary-open .filter-row select {
+    width: 200px;
+    height: 36px;
+    padding: 8px;
+    border: 1px solid #cfd8dc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+#mcr-jira-summary-open .refresh-btn {
+    width: 100px;
+    height: 36px;
+    background: #455a64;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+}
+#mcr-jira-summary-open .refresh-btn:hover {
+    background: #37474f;
+}
 #mcr-jira-summary-open .table-container {
     width: 100%;
-    height: 100%;
+    height: calc(100% - 56px); /* Adjust for filter row height */
     overflow-x: auto;
     overflow-y: auto;
 }
@@ -66,10 +102,13 @@
 }
 #mcr-jira-summary-open .sub-header {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr; /* Lead, 6 sub-columns, Total */
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr; /* Lead, 6 sub-columns (Pending/On Hold), Total */
     background: #78909c;
     color: #fff;
     font-weight: 500;
+    position: sticky;
+    top: 48px; /* Adjust based on table-header height */
+    z-index: 9;
 }
 #mcr-jira-summary-open .sub-header-group {
     display: grid;
