@@ -1,0 +1,162 @@
+/* MCR Jira Summary (Open) Table-Specific Styles */
+#mcr-jira-summary-open {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+#mcr-jira-summary-open .table-container {
+    width: 100%;
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: auto;
+}
+#mcr-jira-summary-open .table-header, 
+#mcr-jira-summary-open .card {
+    display: grid;
+    grid-template-columns: 2fr 2fr 2fr 1fr; /* Lead, CP, Develop, Total */
+    width: 100%;
+    min-width: 600px;
+}
+#mcr-jira-summary-open .table-header {
+    position: sticky;
+    top: 0;
+    background: #eceff1;
+    border-bottom: 2px solid #cfd8dc;
+    font-weight: 600;
+    color: #37474f;
+}
+#mcr-jira-summary-open .main-header {
+    padding: 8px;
+    border-right: 1px solid #cfd8dc;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+}
+#mcr-jira-summary-open .cp-header, 
+#mcr-jira-summary-open .develop-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Sub-columns: Pending, On Hold */
+}
+#mcr-jira-summary-open .sub-header {
+    padding: 4px;
+    font-size: 12px;
+    font-weight: 400;
+    border-top: 1px solid #cfd8dc;
+    border-right: 1px solid #cfd8dc;
+}
+#mcr-jira-summary-open .card {
+    border-bottom: 1px solid #cfd8dc;
+    background: #ffffff;
+}
+#mcr-jira-summary-open .card div {
+    padding: 8px;
+    border-right: 1px solid #cfd8dc;
+    text-align: center;
+}
+#mcr-jira-summary-open .card .sub-cell {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Sub-columns: Pending, On Hold */
+}
+#mcr-jira-summary-open .card .sub-cell div {
+    padding: 4px;
+    border-right: 1px solid #cfd8dc;
+}
+#mcr-jira-summary-open .total-row {
+    font-weight: 600;
+    background: #fafafa;
+}
+#mcr-jira-summary-open .total-cell {
+    font-weight: 600;
+}
+#mcr-jira-summary-open .card:last-child {
+    border-bottom: 2px solid #cfd8dc;
+}
+
+/* Loading Modal */
+#mcr-jira-summary-open .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+#mcr-jira-summary-open .modal-content {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+#mcr-jira-summary-open .modal-content h3 {
+    margin: 0 0 10px;
+    color: #455a64;
+}
+#mcr-jira-summary-open .modal-content p {
+    margin: 10px 0;
+    font-size: 14px;
+    color: #37474f;
+}
+
+/* Toast Styles (for consistency) */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    border-radius: 4px;
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 1000;
+}
+.toast.show {
+    opacity: 1;
+}
+.toast.success {
+    background: #4caf50;
+}
+.toast.error {
+    background: #f44336;
+}
+
+
+
+
+
+
+
+<div class="tab-content" id="mcr-jira-summary-open">
+    <!-- Loading Modal -->
+    <div class="modal" id="_mcrjirasummaryopen_loading_modal">
+        <div class="modal-content">
+            <h3>Loading Data</h3>
+            <p>Please wait while the summary data is being loaded...</p>
+        </div>
+    </div>
+    <div class="table-container">
+        <div class="table-header">
+            <div class="main-header">Lead</div>
+            <div class="main-header cp-header">
+                CP
+                <div class="sub-header">Pending</div>
+                <div class="sub-header">On Hold</div>
+            </div>
+            <div class="main-header develop-header">
+                Develop
+                <div class="sub-header">Pending</div>
+                <div class="sub-header">On Hold</div>
+            </div>
+            <div class="main-header">Total</div>
+        </div>
+        <div class="card-container" id="_mcrjirasummaryopen_card_container"></div>
+    </div>
+</div>
+
+
