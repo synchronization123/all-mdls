@@ -36,7 +36,7 @@ async function _mcrjiraopen_fetchUsers() {
         const response = await fetch(_mcrjiraopen_users_api);
         const data = await response.json();
         _mcrjiraopen_users = data.results.sort((a, b) => 
-            `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${a.last_name}`)
+            `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)
         );
         const leadSelect = document.getElementById('_mcrjiraopen_lead_filter');
         leadSelect.innerHTML = '<option value="">Filter by Lead</option>';
@@ -401,24 +401,16 @@ async function _mcrjiraopen_updateLead(testId, userId) {
     const testData = await _mcrjiraopen_fetchTestData(testId);
     if (!testData) return;
 
-    // Convert userId to integer or null, ensuring it's not an empty string
-    const newLeadId = userId && userId !== '' ? parseInt(userId, 10) : null;
-    if (newLeadId !== null && isNaN(newLeadId)) {
-        _mcrjiraopen_showToast('Invalid lead ID', 'error');
-        return;
-    }
+    // Update local test object with the new lead value
+    test.lead = userId ? parseInt(userId) : null;
 
-    // Update local test object
-    test.lead = newLeadId;
-
-    // Construct PUT payload with mandatory fields
     const updatedTest = {
         id: testData.id,
         title: testData.title || test.title || 'Untitled',
         target_start: testData.target_start || new Date().toISOString().split('T')[0],
         target_end: testData.target_end || new Date(Date.now() + 86400000).toISOString().split('T')[0],
         engagement: testData.engagement || 1,
-        lead: test.lead,
+        lead: test.lead, // Use updated lead value
         test_type: testData.test_type || 1,
         environment: testData.environment || test.environment || null,
         test_type_name: testData.test_type_name || 'Unknown',
@@ -438,24 +430,15 @@ async function _mcrjiraopen_updateLead(testId, userId) {
             },
             body: JSON.stringify(updatedTest)
         });
-
         if (response.ok) {
-            // Update UI only after successful API response
             _mcrjiraopen_updateCard(test);
-            _mcrjiraopen_showToast(`Test ${test.id} lead updated to ${_mcrjiraopen_getUserName(newLeadId) || 'None'}`, 'success');
+            _mcrjiraopen_showToast(`Test ${test.id} lead updated`, 'success');
         } else {
-            // Revert local change on failure
-            test.lead = testData.lead || null;
             const errorData = await response.json();
             _mcrjiraopen_showToast(`Failed to update lead: ${errorData.message || response.statusText}`, 'error');
         }
     } catch (error) {
-        // Revert local change on error
-        test.lead = testData.lead || null;
         _mcrjiraopen_showToast(`Error updating lead: ${error.message}`, 'error');
-    } finally {
-        // Ensure selectmenu reflects the current state
-        $(`#_mcrjiraopen_lead_${testId}`).selectmenu('refresh');
     }
 }
 
