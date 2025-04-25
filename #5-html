@@ -1,0 +1,196 @@
+<!-- Tab Navigation (Add this to your existing tab list) -->
+<div class="tab" data-tab="create-sct">Create SCT</div>
+
+<!-- Tab Content -->
+<div class="tab-content" id="create-sct">
+    <!-- Loading Modal -->
+    <div class="modal" id="_createsct_loading_modal">
+        <div class="modal-content">
+            <h3>Creating Engagements</h3>
+            <p>Please wait while the engagements are being created...</p>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="input-container">
+        <label for="_createsct_names_input">Enter Engagement Names (Comma-Separated):</label>
+        <textarea id="_createsct_names_input" placeholder="e.g., Engagement1, Engagement2, Engagement3"></textarea>
+        <div class="button-group">
+            <button class="create-btn" onclick="_createsct_createEngagements()">Create</button>
+            <button class="clear-btn" onclick="_createsct_clearInput()">Clear</button>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="results-container">
+        <h3>Created Engagements</h3>
+        <div class="table-container" id="_createsct_created_table">
+            <div class="table-header">
+                <div>ID</div>
+                <div>Name</div>
+            </div>
+            <div id="_createsct_created_rows"></div>
+        </div>
+
+        <h3>Not Created Engagements</h3>
+        <div class="table-container" id="_createsct_not_created_table">
+            <div class="table-header">
+                <div>Name</div>
+                <div>Reason</div>
+            </div>
+            <div id="_createsct_not_created_rows"></div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+/* Create SCT Tab-Specific Styles */
+#create-sct {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+#create-sct .input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+#create-sct label {
+    font-size: 16px;
+    font-weight: 500;
+    color: #455a64;
+}
+#create-sct textarea {
+    width: 10cm;
+    height: 10cm;
+    padding: 10px;
+    border: 1px solid #cfd8dc;
+    border-radius: 4px;
+    font-size: 14px;
+    resize: none;
+    font-family: 'Inter', sans-serif;
+}
+#create-sct .button-group {
+    display: flex;
+    gap: 10px;
+}
+#create-sct .create-btn,
+#create-sct .clear-btn {
+    width: 100px;
+    height: 36px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+}
+#create-sct .create-btn {
+    background: #455a64;
+    color: #fff;
+}
+#create-sct .create-btn:hover {
+    background: #37474f;
+}
+#create-sct .clear-btn {
+    background: #eceff1;
+    color: #455a64;
+}
+#create-sct .clear-btn:hover {
+    background: #dfe3e8;
+}
+#create-sct .results-container {
+    flex: 1;
+    overflow-y: auto;
+}
+#create-sct .results-container h3 {
+    margin: 10px 0;
+    color: #455a64;
+}
+#create-sct .table-container {
+    width: 100%;
+    margin-bottom: 20px;
+}
+#create-sct .table-header {
+    display: grid;
+    grid-template-columns: 1fr 3fr; /* ID/Name, Name/Reason */
+    background: #455a64;
+    color: #fff;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+#create-sct .table-header > div,
+#create-sct .table-row > div {
+    padding: 12px;
+    text-align: left;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+}
+#create-sct .table-row {
+    display: grid;
+    grid-template-columns: 1fr 3fr;
+    border-bottom: 1px solid #eceff1;
+}
+
+/* Loading Modal */
+#create-sct .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+#create-sct .modal-content {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+#create-sct .modal-content h3 {
+    margin: 0 0 10px;
+    color: #455a64;
+}
+#create-sct .modal-content p {
+    margin: 10px 0;
+    font-size: 14px;
+    color: #37474f;
+}
+
+/* Toast Styles (If not already present) */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 1000;
+}
+.toast.success {
+    background: #4caf50;
+    color: #fff;
+}
+.toast.error {
+    background: #f44336;
+    color: #fff;
+}
+.toast.show {
+    opacity: 1;
+}
