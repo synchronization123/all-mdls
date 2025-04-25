@@ -24,20 +24,27 @@ async function _mcrjirasummaryopen_fetchCsrfToken() {
         const doc = parser.parseFromString(html, 'text/html');
         const tokenInput = doc.querySelector('input[name="csrfmiddlewaretoken"]');
         _mcrjirasummaryopen_csrf_token = tokenInput ? tokenInput.value : '';
+        console.log('CSRF token fetched:', _mcrjirasummaryopen_csrf_token);
     } catch (error) {
         _mcrjirasummaryopen_showToast('Error fetching CSRF token', 'error');
+        console.error('CSRF token fetch error:', error);
     }
 }
 
 async function _mcrjirasummaryopen_fetchUsers() {
     try {
         const response = await fetch(_mcrjirasummaryopen_users_api);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
         const data = await response.json();
         _mcrjirasummaryopen_users = data.results.sort((a, b) => 
-            `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${a.last_name}`)
+            `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)
         );
+        console.log('Users fetched:', _mcrjirasummaryopen_users.length, 'users');
     } catch (error) {
         _mcrjirasummaryopen_showToast('Error fetching users', 'error');
+        console.error('Users fetch error:', error);
     }
 }
 
@@ -63,14 +70,28 @@ async function _mcrjirasummaryopen_fetchTests() {
     try {
         _mcrjirasummaryopen_showLoadingModal();
         const response = await fetch(_mcrjirasummaryopen_tests_api);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
         const data = await response.json();
+        console.log('Raw tests data:', data);
         const tests = data.results.filter(test => ['Pending', 'On Hold'].includes(test.branch_tag));
+        console.log('Filtered tests:', tests.length, 'tests with branch_tag Pending or On Hold');
+        if (!tests.length) {
+            document.getElementById('_mcrjirasummaryopen_no_data').style.display = 'block';
+            _mcrjirasummaryopen_showToast('No tests found for Pending or On Hold', 'error');
+            return;
+        }
         await _mcrjirasummaryopen_fetchUsers();
+        if (!_mcrjirasummaryopen_users.length) {
+            _mcrjirasummaryopen_showToast('No users found; lead names may be incorrect', 'error');
+        }
         await _mcrjirasummaryopen_renderSummary(tests);
         _mcrjirasummaryopen_showToast('Summary loaded successfully', 'success');
     } catch (error) {
-        _mcrjirasummaryopen_showToast('Error fetching tests', 'error');
-        console.error('Fetch tests error:', error);
+        document.getElementById('_mcrjirasummaryopen_no_data').style.display = 'block';
+        _mcrjirasummaryopen_showToast(`Error fetching tests: ${error.message}`, 'error');
+        console.error('Tests fetch error:', error);
     } finally {
         _mcrjirasummaryopen_hideLoadingModal();
     }
@@ -78,7 +99,16 @@ async function _mcrjirasummaryopen_fetchTests() {
 
 async function _mcrjirasummaryopen_renderSummary(tests) {
     const container = document.getElementById('_mcrjirasummaryopen_card_container');
+    const noDataMessage = document.getElementById('_mcrjirasummaryopen_no_data');
     container.innerHTML = '';
+    noDataMessage.style.display = 'none';
+
+    // Validate test data
+    const invalidTests = tests.filter(test => !test.hasOwnProperty('lead') || !test.hasOwnProperty('branch_tag') || !test.hasOwnProperty('environment'));
+    if (invalidTests.length) {
+        console.warn('Invalid tests (missing lead, branch_tag, or environment):', invalidTests);
+        _mcrjirasummaryopen_showToast(`${invalidTests.length} tests have missing fields`, 'error');
+    }
 
     // Group tests by lead
     const summary = {};
@@ -90,12 +120,21 @@ async function _mcrjirasummaryopen_renderSummary(tests) {
                 develop: { Pending: 0, OnHold: 0 }
             };
         }
+        const branchTag = test.branch_tag === 'Pending' ? 'Pending' : 'OnHold';
         if (test.environment === _mcrjirasummaryopen_environments.CP) {
-            summary[leadId].cp[test.branch_tag === 'Pending' ? 'Pending' : 'OnHold']++;
+            summary[leadId].cp[branchTag]++;
         } else if (test.environment === _mcrjirasummaryopen_environments.Develop) {
-            summary[leadId].develop[test.branch_tag === 'Pending' ? 'Pending' : 'OnHold']++;
+            summary[leadId].develop[branchTag]++;
         }
     });
+    console.log('Summary data:', summary);
+
+    // Check if summary is empty
+    if (!Object.keys(summary).length) {
+        noDataMessage.style.display = 'block';
+        _mcrjirasummaryopen_showToast('No data to display after processing', 'error');
+        return;
+    }
 
     // Calculate totals
     const totals = {
@@ -110,9 +149,14 @@ async function _mcrjirasummaryopen_renderSummary(tests) {
         totals.develop.OnHold += leadData.develop.OnHold;
     });
     totals.total = totals.cp.Pending + totals.cp.OnHold + totals.develop.Pending + totals.develop.OnHold;
+    console.log('Totals:', totals);
 
     // Render rows
-    Object.keys(summary).forEach(leadId => {
+    Object.keys(summary).sort((a, b) => {
+        const nameA = _mcrjirasummaryopen_getUserName(a);
+        const nameB = _mcrjirasummaryopen_getUserName(b);
+        return nameA.localeCompare(nameB);
+    }).forEach(leadId => {
         const data = summary[leadId];
         const total = data.cp.Pending + data.cp.OnHold + data.develop.Pending + data.develop.OnHold;
         const card = document.createElement('div');
