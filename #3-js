@@ -43,8 +43,13 @@ async function _mcrjirasummaryopen_fetchEngagements() {
                 option.textContent = engagement.name || `Engagement ${engagement.id}`;
                 engagementSelect.appendChild(option);
             });
-            engagementSelect.addEventListener('change', () => {
-                _mcrjirasummaryopen_renderTable();
+            engagementSelect.addEventListener('change', async () => {
+                const engagementId = engagementSelect.value;
+                if (engagementId) {
+                    await _mcrjirasummaryopen_fetchTestsForEngagement(engagementId);
+                } else {
+                    await _mcrjirasummaryopen_fetchTests();
+                }
             });
         }
     } catch (error) {
@@ -102,9 +107,35 @@ async function _mcrjirasummaryopen_fetchTests() {
     }
 }
 
+async function _mcrjirasummaryopen_fetchTestsForEngagement(engagementId) {
+    try {
+        _mcrjirasummaryopen_showLoadingModal();
+        const response = await fetch(`${_mcrjirasummaryopen_tests_api}&engagement=${engagementId}`);
+        const data = await response.json();
+        _mcrjirasummaryopen_tests = data.results.filter(test => 
+            ['Pending', 'On Hold'].includes(test.branch_tag) && 
+            [9, 10, 11].includes(test.environment)
+        );
+
+        await _mcrjirasummaryopen_fetchUsers();
+        await _mcrjirasummaryopen_updateEnvironmentHeaders();
+        await _mcrjirasummaryopen_renderTable();
+        _mcrjirasummaryopen_showToast(`Summary loaded for Engagement ${engagementId}`, 'success');
+    } catch (error) {
+        _mcrjirasummaryopen_showToast('Error fetching tests for engagement', 'error');
+    } finally {
+        _mcrjirasummaryopen_hideLoadingModal();
+    }
+}
+
 async function _mcrjirasummaryopen_refreshData() {
     _mcrjirasummaryopen_tests = []; // Clear existing data
-    await _mcrjirasummaryopen_fetchTests();
+    const engagementId = document.getElementById('_mcrjirasummaryopen_engagement_filter')?.value;
+    if (engagementId) {
+        await _mcrjirasummaryopen_fetchTestsForEngagement(engagementId);
+    } else {
+        await _mcrjirasummaryopen_fetchTests();
+    }
     _mcrjirasummaryopen_showToast('Data refreshed', 'success');
 }
 
@@ -125,12 +156,6 @@ async function _mcrjirasummaryopen_renderTable() {
 
     container.innerHTML = '';
 
-    // Apply engagement filter
-    const engagementFilter = document.getElementById('_mcrjirasummaryopen_engagement_filter')?.value;
-    const filteredTests = engagementFilter
-        ? _mcrjirasummaryopen_tests.filter(test => test.engagement === parseInt(engagementFilter))
-        : _mcrjirasummaryopen_tests;
-
     // Aggregate counts by lead, environment, and branch_tag
     const summary = {};
     const totals = {
@@ -143,7 +168,7 @@ async function _mcrjirasummaryopen_renderTable() {
         total: 0
     };
 
-    filteredTests.forEach(test => {
+    _mcrjirasummaryopen_tests.forEach(test => {
         const leadId = test.lead || 'unassigned';
         if (!summary[leadId]) {
             summary[leadId] = {
