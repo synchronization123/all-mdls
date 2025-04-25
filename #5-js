@@ -1,6 +1,5 @@
 const _createsct_engagements_api = 'https://demo.defectdojo.org/api/v2/engagements/';
 const _createsct_csrf_url = 'https://demo.defectdojo.org/api/key-v2';
-let _createsct_existing_engagements = [];
 let _createsct_csrf_token = '';
 
 function _createsct_showLoadingModal() {
@@ -42,14 +41,14 @@ async function _createsct_fetchCsrfToken() {
     }
 }
 
-async function _createsct_fetchExistingEngagements() {
+async function _createsct_checkEngagementExists(name) {
     try {
-        const response = await fetch(_createsct_engagements_api);
+        const response = await fetch(`${_createsct_engagements_api}?name=${encodeURIComponent(name)}`);
         const data = await response.json();
-        _createsct_existing_engagements = data.results || [];
+        return data.results && data.results.length > 0; // Returns true if engagement exists
     } catch (error) {
-        _createsct_showToast('Error fetching existing engagements', 'error');
-        throw error;
+        _createsct_showToast(`Error checking existence of ${name}: ${error.message}`, 'error');
+        return false; // Assume it doesn't exist if check fails
     }
 }
 
@@ -76,20 +75,17 @@ async function _createsct_createEngagements() {
         // Fetch CSRF token
         await _createsct_fetchCsrfToken();
 
-        // Fetch existing engagements to check for duplicates
-        await _createsct_fetchExistingEngagements();
-
         const createdEngagements = [];
         const notCreatedEngagements = [];
         const today = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
 
-        // Process each name
+        // Process each name individually
         for (const name of names) {
             // Check if the engagement name already exists in DefectDojo
-            const isDuplicate = _createsct_existing_engagements.some(engagement => engagement.name === name);
-            if (isDuplicate) {
+            const exists = await _createsct_checkEngagementExists(name);
+            if (exists) {
                 notCreatedEngagements.push({ name, reason: 'Engagement name already exists' });
-                continue; // Skip creation for duplicates
+                continue; // Skip creation for existing names
             }
 
             // Create engagement only if it's not a duplicate
@@ -123,7 +119,6 @@ async function _createsct_createEngagements() {
 
                 const data = await response.json();
                 createdEngagements.push({ id: data.id, name: data.name });
-                _createsct_existing_engagements.push(data); // Update local list to prevent duplicates in future
             } catch (error) {
                 notCreatedEngagements.push({ name, reason: error.message || 'Failed to create engagement' });
             }
@@ -191,13 +186,13 @@ function _createsct_renderResults(createdEngagements, notCreatedEngagements) {
 document.addEventListener('DOMContentLoaded', () => {
     const tab = document.getElementById('create-sct');
     if (tab && tab.classList.contains('active')) {
-        _createsct_fetchCsrfToken().then(() => _createsct_fetchExistingEngagements());
+        _createsct_fetchCsrfToken();
     }
 
     document.querySelector('.tab[data-tab="create-sct"]')?.addEventListener('click', () => {
         const tabContent = document.getElementById('create-sct');
-        if (tabContent && !_createsct_existing_engagements.length) {
-            _createsct_fetchCsrfToken().then(() => _createsct_fetchExistingEngagements());
+        if (tabContent) {
+            _createsct_fetchCsrfToken();
         }
     });
 });
