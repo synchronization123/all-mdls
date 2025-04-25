@@ -1,54 +1,3 @@
-<div class="tab-content" id="mcr-jira-summary-open">
-    <!-- Loading Modal -->
-    <div class="modal" id="_mcrjirasummaryopen_loading_modal">
-        <div class="modal-content">
-            <h3>Loading Summary</h3>
-            <p>Please wait while the summary data is being loaded...</p>
-        </div>
-    </div>
-    <div class="filter-row">
-        <select id="_mcrjirasummaryopen_engagement_filter">
-            <option value="">All Engagements</option>
-        </select>
-        <button class="refresh-btn" onclick="_mcrjirasummaryopen_refreshData()">Refresh</button>
-    </div>
-    <div class="table-container">
-        <div class="table-header">
-            <div>Lead</div>
-            <div id="_mcrjirasummaryopen_env_9_name">Environment 9</div>
-            <div id="_mcrjirasummaryopen_env_10_name">Environment 10</div>
-            <div id="_mcrjirasummaryopen_env_11_name">Environment 11</div>
-            <div>Total</div>
-        </div>
-        <div class="sub-header">
-            <div></div>
-            <div class="sub-header-group">
-                <div>Pending</div>
-                <div>On Hold</div>
-            </div>
-            <div class="sub-header-group">
-                <div>Pending</div>
-                <div>On Hold</div>
-            </div>
-            <div class="sub-header-group">
-                <div>Pending</div>
-                <div>On Hold</div>
-            </div>
-            <div></div>
-        </div>
-        <div class="card-container" id="_mcrjirasummaryopen_card_container"></div>
-    </div>
-</div>
-
-
-
-
-
-
-
-
-
-
 /* MCR Jira Summary (Open) Table-Specific Styles */
 #mcr-jira-summary-open {
     width: 100%;
@@ -92,7 +41,7 @@
 }
 #mcr-jira-summary-open .table-header {
     display: grid;
-    grid-template-columns: 1fr 2fr 2fr 2fr 1fr; /* Lead, 3 environments, Total */
+    grid-template-columns: 1fr 2fr 2fr 2fr 1fr; /* Lead, Env 9, Env 10, Env 11, Total */
     background: #455a64;
     color: #fff;
     font-weight: 600;
@@ -102,7 +51,7 @@
 }
 #mcr-jira-summary-open .sub-header {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr; /* Lead, 6 sub-columns (Pending/On Hold), Total */
+    grid-template-columns: 1fr repeat(3, 1fr 1fr) 1fr; /* Lead, (Env 9 Pending, Env 9 On Hold), (Env 10 Pending, Env 10 On Hold), (Env 11 Pending, Env 11 On Hold), Total */
     background: #78909c;
     color: #fff;
     font-weight: 500;
@@ -111,17 +60,23 @@
     z-index: 9;
 }
 #mcr-jira-summary-open .sub-header-group {
-    display: grid;
-    grid-template-columns: 1fr 1fr; /* Pending, On Hold */
+    display: contents; /* Allows children to participate in the parent grid */
+}
+#mcr-jira-summary-open .sub-header-group > div {
+    padding: 12px;
+    text-align: center;
+    border-right: 1px solid #fff; /* Optional: Visual separation */
+}
+#mcr-jira-summary-open .sub-header-group > div:last-child {
+    border-right: none; /* Remove border for the last child */
 }
 #mcr-jira-summary-open .card {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr; /* Match sub-header */
+    grid-template-columns: 1fr repeat(3, 1fr 1fr) 1fr; /* Match sub-header */
     border-bottom: 1px solid #eceff1;
 }
 #mcr-jira-summary-open .table-header > div,
 #mcr-jira-summary-open .sub-header > div,
-#mcr-jira-summary-open .sub-header-group > div,
 #mcr-jira-summary-open .card > div {
     padding: 12px;
     text-align: center;
