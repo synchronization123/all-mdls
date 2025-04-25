@@ -1,85 +1,101 @@
+<div class="tab-content" id="mcr-jira-summary-open">
+    <!-- Loading Modal -->
+    <div class="modal" id="_mcrjirasummaryopen_loading_modal">
+        <div class="modal-content">
+            <h3>Loading Summary</h3>
+            <p>Please wait while the summary data is being loaded...</p>
+        </div>
+    </div>
+    <div class="table-container">
+        <div class="table-header">
+            <div>Lead</div>
+            <div id="_mcrjirasummaryopen_env_9_name">Environment 9</div>
+            <div id="_mcrjirasummaryopen_env_10_name">Environment 10</div>
+            <div id="_mcrjirasummaryopen_env_11_name">Environment 11</div>
+            <div>Total</div>
+        </div>
+        <div class="sub-header">
+            <div></div>
+            <div class="sub-header-group">
+                <div>Pending</div>
+                <div>On Hold</div>
+            </div>
+            <div class="sub-header-group">
+                <div>Pending</div>
+                <div>On Hold</div>
+            </div>
+            <div class="sub-header-group">
+                <div>Pending</div>
+                <div>On Hold</div>
+            </div>
+            <div></div>
+        </div>
+        <div class="card-container" id="_mcrjirasummaryopen_card_container"></div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
 /* MCR Jira Summary (Open) Table-Specific Styles */
 #mcr-jira-summary-open {
     width: 100%;
     height: 100%;
-    display: flex;
-    flex-direction: column;
+    box-sizing: border-box;
 }
 #mcr-jira-summary-open .table-container {
     width: 100%;
-    flex: 1;
+    height: 100%;
     overflow-x: auto;
     overflow-y: auto;
 }
-#mcr-jira-summary-open .table-header, 
-#mcr-jira-summary-open .card {
-    display: grid;
-    grid-template-columns: 2fr 2fr 2fr 1fr; /* Lead, CP, Develop, Total */
-    width: 100%;
-    min-width: 600px;
-}
 #mcr-jira-summary-open .table-header {
+    display: grid;
+    grid-template-columns: 1fr 2fr 2fr 2fr 1fr; /* Lead, 3 environments, Total */
+    background: #455a64;
+    color: #fff;
+    font-weight: 600;
     position: sticky;
     top: 0;
-    background: #eceff1;
-    border-bottom: 2px solid #cfd8dc;
-    font-weight: 600;
-    color: #37474f;
     z-index: 10;
 }
-#mcr-jira-summary-open .main-header {
-    padding: 8px;
-    border-right: 1px solid #cfd8dc;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    text-align: center;
-}
-#mcr-jira-summary-open .cp-header, 
-#mcr-jira-summary-open .develop-header {
-    display: grid;
-    grid-template-columns: 1fr 1fr; /* Sub-columns: Pending, On Hold */
-}
 #mcr-jira-summary-open .sub-header {
-    padding: 4px;
-    font-size: 12px;
-    font-weight: 400;
-    border-top: 1px solid #cfd8dc;
-    border-right: 1px solid #cfd8dc;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr; /* Lead, 6 sub-columns, Total */
+    background: #78909c;
+    color: #fff;
+    font-weight: 500;
+}
+#mcr-jira-summary-open .sub-header-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Pending, On Hold */
 }
 #mcr-jira-summary-open .card {
-    border-bottom: 1px solid #cfd8dc;
-    background: #ffffff;
-}
-#mcr-jira-summary-open .card div {
-    padding: 8px;
-    border-right: 1px solid #cfd8dc;
-    text-align: center;
-    font-size: 14px;
-}
-#mcr-jira-summary-open .card .sub-cell {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* Sub-columns: Pending, On Hold */
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr; /* Match sub-header */
+    border-bottom: 1px solid #eceff1;
 }
-#mcr-jira-summary-open .card .sub-cell div {
-    padding: 4px;
-    border-right: 1px solid #cfd8dc;
-}
-#mcr-jira-summary-open .total-row {
-    font-weight: 600;
-    background: #fafafa;
-}
-#mcr-jira-summary-open .total-cell {
-    font-weight: 600;
-}
-#mcr-jira-summary-open .card:last-child {
-    border-bottom: 2px solid #cfd8dc;
-}
-#mcr-jira-summary-open .no-data-message {
+#mcr-jira-summary-open .table-header > div,
+#mcr-jira-summary-open .sub-header > div,
+#mcr-jira-summary-open .sub-header-group > div,
+#mcr-jira-summary-open .card > div {
+    padding: 12px;
     text-align: center;
-    padding: 20px;
-    color: #37474f;
-    font-size: 16px;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+}
+#mcr-jira-summary-open .card > div:first-child {
+    text-align: left; /* Lead column */
+}
+#mcr-jira-summary-open .total-row,
+#mcr-jira-summary-open .total-column {
+    font-weight: bold;
 }
 
 /* Loading Modal */
@@ -111,66 +127,3 @@
     font-size: 14px;
     color: #37474f;
 }
-
-/* Toast Styles */
-.toast {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 10px 20px;
-    border-radius: 4px;
-    color: #fff;
-    opacity: 0;
-    transition: opacity 0.3s;
-    z-index: 1000;
-}
-.toast.show {
-    opacity: 1;
-}
-.toast.success {
-    background: #4caf50;
-}
-.toast.error {
-    background: #f44336;
-}
-
-
-
-
-
-
-<div class="tab-content" id="mcr-jira-summary-open">
-    <!-- Loading Modal -->
-    <div class="modal" id="_mcrjirasummaryopen_loading_modal">
-        <div class="modal-content">
-            <h3>Loading Data</h3>
-            <p>Please wait while the summary data is being loaded...</p>
-        </div>
-    </div>
-    <div class="table-container">
-        <div class="table-header">
-            <div class="main-header">Lead</div>
-            <div class="main-header cp-header">
-                CP
-                <div class="sub-header">Pending</div>
-                <div class="sub-header">On Hold</div>
-            </div>
-            <div class="main-header develop-header">
-                Develop
-                <div class="sub-header">Pending</div>
-                <div class="sub-header">On Hold</div>
-            </div>
-            <div class="main-header">Total</div>
-        </div>
-        <div class="card-container" id="_mcrjirasummaryopen_card_container"></div>
-        <div class="no-data-message" id="_mcrjirasummaryopen_no_data" style="display: none;">
-            No data available for the selected criteria.
-        </div>
-    </div>
-</div>
-
-
-
-
-
-
