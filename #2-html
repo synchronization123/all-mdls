@@ -1,4 +1,3 @@
-
 <div class="tab-content" id="mcr-jira-open">
     <!-- Loading Modal -->
     <div class="modal" id="_mcrjiraopen_loading_modal">
@@ -32,6 +31,7 @@
         <button onclick="_mcrjiraopen_filterTable()">Go</button>
         <button class="clear-btn" onclick="_mcrjiraopen_clearFilters()">Clear</button>
         <button class="refresh-btn" onclick="_mcrjiraopen_refreshData()">Refresh</button>
+        <button class="export-btn" onclick="_mcrjiraopen_exportToCSV()">Export to CSV</button>
     </div>
     <div class="total-count" id="_mcrjiraopen_total_count">Total Tests: 0</div>
     <div class="table-container">
@@ -50,18 +50,6 @@
     </div>
     <div class="pagination" id="_mcrjiraopen_pagination"></div>
 </div>
-
-
-
-
-
-
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
-
 
 
 
@@ -107,7 +95,7 @@
 #mcr-jira-open .search-filter input,
 #mcr-jira-open .search-filter select,
 #mcr-jira-open .search-filter button {
-    width: 150px; /* Equal width for all filters and buttons */
+    width: 140px; /* Equal width for all filters and buttons */
     height: 36px;
     margin: 0;
     box-sizing: border-box;
@@ -130,8 +118,15 @@
 #mcr-jira-open .clear-btn:hover {
     background: #607d8b;
 }
+#mcr-jira-open .export-btn {
+    background: #0288d1;
+    color: #fff;
+}
+#mcr-jira-open .export-btn:hover {
+    background: #0277bd;
+}
 
-/* Loading Modal (unchanged, included for completeness) */
+/* Loading Modal */
 #mcr-jira-open .modal {
     display: none;
     position: fixed;
