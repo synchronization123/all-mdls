@@ -1,0 +1,180 @@
+const _createsct_engagements_api = 'https://demo.defectdojo.org/api/v2/engagements/';
+let _createsct_existing_engagements = [];
+
+function _createsct_showLoadingModal() {
+    const modal = document.getElementById('_createsct_loading_modal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function _createsct_hideLoadingModal() {
+    const modal = document.getElementById('_createsct_loading_modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function _createsct_showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+async function _createsct_fetchExistingEngagements() {
+    try {
+        const response = await fetch(_createsct_engagements_api);
+        const data = await response.json();
+        _createsct_existing_engagements = data.results || [];
+    } catch (error) {
+        _createsct_showToast('Error fetching existing engagements', 'error');
+        throw error;
+    }
+}
+
+async function _createsct_createEngagements() {
+    const namesInput = document.getElementById('_createsct_names_input');
+    const namesText = namesInput.value.trim();
+
+    // Validation: Check if textarea is blank
+    if (!namesText) {
+        _createsct_showToast('Please enter at least one engagement name', 'error');
+        return;
+    }
+
+    // Parse comma-separated names
+    const names = namesText.split(',').map(name => name.trim()).filter(name => name);
+    if (names.length === 0) {
+        _createsct_showToast('Please enter valid engagement names', 'error');
+        return;
+    }
+
+    _createsct_showLoadingModal();
+
+    try {
+        // Fetch existing engagements to check for duplicates
+        await _createsct_fetchExistingEngagements();
+
+        const createdEngagements = [];
+        const notCreatedEngagements = [];
+        const today = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
+
+        // Process each name
+        for (const name of names) {
+            // Check for duplicate
+            const exists = _createsct_existing_engagements.some(engagement => engagement.name === name);
+            if (exists) {
+                notCreatedEngagements.push({ name, reason: 'Engagement name already exists' });
+                continue;
+            }
+
+            // Create engagement
+            const engagementData = {
+                name: name,
+                target_start: today,
+                target_end: today,
+                status: 'Not Started',
+                engagement_type: 'Interactive',
+                build_id: 'Not Started',
+                commit_hash: 'Not Started',
+                branch_tag: 'Not Started',
+                lead: 2,
+                product: 190,
+                tags: ['sct']
+            };
+
+            try {
+                const response = await fetch(_createsct_engagements_api, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(engagementData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to create engagement');
+                }
+
+                const data = await response.json();
+                createdEngagements.push({ id: data.id, name: data.name });
+                _createsct_existing_engagements.push(data); // Update local list to prevent duplicates in future
+            } catch (error) {
+                notCreatedEngagements.push({ name, reason: 'Failed to create engagement' });
+            }
+        }
+
+        // Render results
+        _createsct_renderResults(createdEngagements, notCreatedEngagements);
+
+        // Show toast based on results
+        if (createdEngagements.length > 0) {
+            _createsct_showToast(`${createdEngagements.length} engagement(s) created successfully`, 'success');
+        }
+        if (notCreatedEngagements.length > 0) {
+            _createsct_showToast(`${notCreatedEngagements.length} engagement(s) failed to create`, 'error');
+        }
+
+    } catch (error) {
+        _createsct_showToast('Error during engagement creation', 'error');
+    } finally {
+        _createsct_hideLoadingModal();
+    }
+}
+
+function _createsct_clearInput() {
+    const namesInput = document.getElementById('_createsct_names_input');
+    namesInput.value = '';
+    const createdRows = document.getElementById('_createsct_created_rows');
+    const notCreatedRows = document.getElementById('_createsct_not_created_rows');
+    if (createdRows) createdRows.innerHTML = '';
+    if (notCreatedRows) notCreatedRows.innerHTML = '';
+    _createsct_showToast('Input cleared', 'success');
+}
+
+function _createsct_renderResults(createdEngagements, notCreatedEngagements) {
+    const createdRows = document.getElementById('_createsct_created_rows');
+    const notCreatedRows = document.getElementById('_createsct_not_created_rows');
+
+    if (createdRows) {
+        createdRows.innerHTML = '';
+        createdEngagements.forEach(engagement => {
+            const row = document.createElement('div');
+            row.className = 'table-row';
+            row.innerHTML = `
+                <div>${engagement.id}</div>
+                <div>${engagement.name}</div>
+            `;
+            createdRows.appendChild(row);
+        });
+    }
+
+    if (notCreatedRows) {
+        notCreatedRows.innerHTML = '';
+        notCreatedEngagements.forEach(engagement => {
+            const row = document.createElement('div');
+            row.className = 'table-row';
+            row.innerHTML = `
+                <div>${engagement.name}</div>
+                <div>${engagement.reason}</div>
+            `;
+            createdRows.appendChild(row);
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const tab = document.getElementById('create-sct');
+    if (tab && tab.classList.contains('active')) {
+        _createsct_fetchExistingEngagements();
+    }
+
+    document.querySelector('.tab[data-tab="create-sct"]')?.addEventListener('click', () => {
+        const tabContent = document.getElementById('create-sct');
+        if (tabContent && !_createsct_existing_engagements.length) {
+            _createsct_fetchExistingEngagements();
+        }
+    });
+});
