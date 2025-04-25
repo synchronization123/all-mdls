@@ -1,0 +1,175 @@
+
+<div class="tab-content" id="mcr-jira-summary-by-version">
+    <!-- Loading Modal -->
+    <div class="modal" id="_mcrjirasummarybyversion_loading_modal">
+        <div class="modal-content">
+            <h3>Loading Summary</h3>
+            <p>Please wait while the summary data is being loaded...</p>
+        </div>
+    </div>
+    <div class="filter-row">
+        <select id="_mcrjirasummarybyversion_engagement_filter">
+            <option value="">All Engagements</option>
+        </select>
+        <button class="refresh-btn" onclick="_mcrjirasummarybyversion_refreshData()">Refresh</button>
+    </div>
+    <div class="table-container">
+        <div class="table-header">
+            <div>Version</div>
+            <div id="_mcrjirasummarybyversion_env_9_name">Environment 9</div>
+            <div id="_mcrjirasummarybyversion_env_10_name">Environment 10</div>
+            <div id="_mcrjirasummarybyversion_env_11_name">Environment 11</div>
+            <div>Total</div>
+        </div>
+        <div class="sub-header">
+            <div></div>
+            <div class="sub-header-group">
+                <div>Pending</div>
+                <div>On Hold</div>
+            </div>
+            <div class="sub-header-group">
+                <div>Pending</div>
+                <div>On Hold</div>
+            </div>
+            <div class="sub-header-group">
+                <div>Pending</div>
+                <div>On Hold</div>
+            </div>
+            <div></div>
+        </div>
+        <div class="card-container" id="_mcrjirasummarybyversion_card_container"></div>
+    </div>
+</div>
+
+
+
+<div class="tab" data-tab="mcr-jira-summary-by-version">MCR Jira Summary (By Version)</div>
+
+
+
+
+
+
+/* MCR Jira Summary (By Version) Table-Specific Styles */
+#mcr-jira-summary-by-version {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+}
+#mcr-jira-summary-by-version .filter-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: #eceff1;
+}
+#mcr-jira-summary-by-version .filter-row select {
+    width: 200px;
+    height: 36px;
+    padding: 8px;
+    border: 1px solid #cfd8dc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+#mcr-jira-summary-by-version .refresh-btn {
+    width: 100px;
+    height: 36px;
+    background: #455a64;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+}
+#mcr-jira-summary-by-version .refresh-btn:hover {
+    background: #37474f;
+}
+#mcr-jira-summary-by-version .table-container {
+    width: 100%;
+    height: calc(100% - 56px); /* Adjust for filter row height */
+    overflow-x: auto;
+    overflow-y: auto;
+}
+#mcr-jira-summary-by-version .table-header {
+    display: grid;
+    grid-template-columns: 1fr 2fr 2fr 2fr 1fr; /* Version, Env 9, Env 10, Env 11, Total */
+    background: #455a64;
+    color: #fff;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+#mcr-jira-summary-by-version .sub-header {
+    display: grid;
+    grid-template-columns: 1fr repeat(3, 1fr 1fr) 1fr; /* Version, (Env 9 Pending, Env 9 On Hold), (Env 10 Pending, Env 10 On Hold), (Env 11 Pending, Env 11 On Hold), Total */
+    background: #78909c;
+    color: #fff;
+    font-weight: 500;
+    position: sticky;
+    top: 48px; /* Adjust based on table-header height */
+    z-index: 9;
+}
+#mcr-jira-summary-by-version .sub-header-group {
+    display: contents; /* Allows children to participate in the parent grid */
+}
+#mcr-jira-summary-by-version .sub-header-group > div {
+    padding: 12px;
+    text-align: center;
+    border-right: 1px solid #fff; /* Optional: Visual separation */
+}
+#mcr-jira-summary-by-version .sub-header-group > div:last-child {
+    border-right: none; /* Remove border for the last child */
+}
+#mcr-jira-summary-by-version .card {
+    display: grid;
+    grid-template-columns: 1fr repeat(3, 1fr 1fr) 1fr; /* Match sub-header */
+    border-bottom: 1px solid #eceff1;
+}
+#mcr-jira-summary-by-version .table-header > div,
+#mcr-jira-summary-by-version .sub-header > div,
+#mcr-jira-summary-by-version .card > div {
+    padding: 12px;
+    text-align: center;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+}
+#mcr-jira-summary-by-version .card > div:first-child {
+    text-align: left; /* Version column */
+}
+#mcr-jira-summary-by-version .total-row,
+#mcr-jira-summary-by-version .total-column {
+    font-weight: bold;
+}
+
+/* Loading Modal */
+#mcr-jira-summary-by-version .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+#mcr-jira-summary-by-version .modal-content {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+#mcr-jira-summary-by-version .modal-content h3 {
+    margin: 0 0 10px;
+    color: #455a64;
+}
+#mcr-jira-summary-by-version .modal-content p {
+    margin: 10px 0;
+    font-size: 14px;
+    color: #37474f;
+}
