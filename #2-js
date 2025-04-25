@@ -134,7 +134,7 @@ async function _mcrjiraopen_populateDynamicFilters() {
 }
 
 function _mcrjiraopen_getUserName(userId) {
-    const user = _mcrjiraopen_users.find(u => u.id === userId);
+    const user = _mcrjiraopen_users.find(u => u.id === parseInt(userId));
     return user ? `${user.first_name} ${user.last_name}` : 'Unknown';
 }
 
@@ -246,7 +246,7 @@ function _mcrjiraopen_filterTable() {
         const matchesVersion = !versionFilter || test.version === versionFilter;
         const matchesBranchTag = !branchTagFilter || test.branch_tag === branchTagFilter;
         const matchesLead = !leadFilter || test.lead === parseInt(leadFilter);
-        const matchesEnv = !envFilter || test.environment === envFilter;
+        const matchesEnv = !envFilter || test.environment === parseInt(envFilter);
         const matchesCommitHash = !commitHashFilter || test.commit_hash === commitHashFilter;
         const matchesBuildId = !buildIdFilter || test.build_id === buildIdFilter;
         return matchesSearch && matchesVersion && matchesBranchTag && matchesLead && matchesEnv && matchesCommitHash && matchesBuildId;
@@ -402,7 +402,8 @@ async function _mcrjiraopen_updateLead(testId, userId) {
     if (!testData) return;
 
     // Update local test object with the new lead value
-    test.lead = userId ? parseInt(userId) : null;
+    const newLead = userId ? parseInt(userId) : null;
+    test.lead = newLead;
 
     const updatedTest = {
         id: testData.id,
@@ -410,7 +411,7 @@ async function _mcrjiraopen_updateLead(testId, userId) {
         target_start: testData.target_start || new Date().toISOString().split('T')[0],
         target_end: testData.target_end || new Date(Date.now() + 86400000).toISOString().split('T')[0],
         engagement: testData.engagement || 1,
-        lead: test.lead, // Use updated lead value
+        lead: newLead, // Use the new lead value
         test_type: testData.test_type || 1,
         environment: testData.environment || test.environment || null,
         test_type_name: testData.test_type_name || 'Unknown',
@@ -432,7 +433,7 @@ async function _mcrjiraopen_updateLead(testId, userId) {
         });
         if (response.ok) {
             _mcrjiraopen_updateCard(test);
-            _mcrjiraopen_showToast(`Test ${test.id} lead updated`, 'success');
+            _mcrjiraopen_showToast(`Test ${test.id} lead updated to ${_mcrjiraopen_getUserName(newLead)}`, 'success');
         } else {
             const errorData = await response.json();
             _mcrjiraopen_showToast(`Failed to update lead: ${errorData.message || response.statusText}`, 'error');
@@ -440,6 +441,41 @@ async function _mcrjiraopen_updateLead(testId, userId) {
     } catch (error) {
         _mcrjiraopen_showToast(`Error updating lead: ${error.message}`, 'error');
     }
+}
+
+function _mcrjiraopen_exportToCSV() {
+    const headers = ['Id', 'Title', 'Description', 'Version', 'Branch Tag', 'Lead', 'Environment', 'Commit Hash', 'Build ID'];
+    const rows = _mcrjiraopen_filtered_tests.map(async test => {
+        const envName = await _mcrjiraopen_fetchEnvironmentName(test.environment);
+        return [
+            test.id,
+            `"${(test.title || 'N/A').replace(/"/g, '""')}"`,
+            `"${(test.description || '').replace(/"/g, '""')}"`,
+            test.version || 'N/A',
+            test.branch_tag || 'Pending',
+            _mcrjiraopen_getUserName(test.lead),
+            envName,
+            test.commit_hash || 'N/A',
+            test.build_id || 'N/A'
+        ].join(',');
+    });
+
+    Promise.all(rows).then(resolvedRows => {
+        const csvContent = [
+            headers.join(','),
+            ...resolvedRows
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'mcr_jira_open_tests.csv';
+        link.click();
+        URL.revokeObjectURL(link.href);
+        _mcrjiraopen_showToast('Table exported to CSV', 'success');
+    }).catch(error => {
+        _mcrjiraopen_showToast(`Error exporting CSV: ${error.message}`, 'error');
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
