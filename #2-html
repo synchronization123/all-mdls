@@ -1,3 +1,5 @@
+
+
 <div class="tab-content" id="mcr-jira-open">
     <!-- Loading Modal -->
     <div class="modal" id="_mcrjiraopen_loading_modal">
@@ -28,7 +30,7 @@
         <select id="_mcrjiraopen_build_id_filter">
             <option value="">Filter by Build ID</option>
         </select>
-        <button onclick="_mcrjiraopen_filterTable()">Go</button>
+        <button id="_mcrjiraopen_go_btn" onclick="_mcrjiraopen_filterTable()">Go</button>
         <button class="clear-btn" onclick="_mcrjiraopen_clearFilters()">Clear</button>
         <button class="refresh-btn" onclick="_mcrjiraopen_refreshData()">Refresh</button>
         <button class="export-btn" onclick="_mcrjiraopen_exportToCSV()">Export to CSV</button>
@@ -50,7 +52,6 @@
     </div>
     <div class="pagination" id="_mcrjiraopen_pagination"></div>
 </div>
-
 
 
 
