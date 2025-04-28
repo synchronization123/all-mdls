@@ -1,0 +1,72 @@
+import hashlib
+import os
+import datetime
+
+def calculate_sha256(file_path):
+    """Calculate SHA256 checksum of a file."""
+    sha256_hash = hashlib.sha256()
+    try:
+        with open(file_path, "rb") as f:
+            # Read file in chunks to handle large files efficiently
+            for byte_block in iter(lambda: f.read(4096), b""):
+                sha256_hash.update(byte_block)
+        return sha256_hash.hexdigest()
+    except FileNotFoundError:
+        return None
+    except Exception as e:
+        return str(e)
+
+def generate_html(file_path, checksum):
+    """Generate HTML file with checksum and file details."""
+    file_name = os.path.basename(file_path)
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # HTML content
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHA256 Checksum</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 40px; }}
+        h1 {{ color: #333; }}
+        .info {{ background-color: #f4f4f4; padding: 20px; border-radius: 5px; }}
+        .error {{ color: red; }}
+    </style>
+</head>
+<body>
+    <h1>SHA256 Checksum Result</h1>
+    <div class="info">
+        <p><strong>File Name:</strong> {file_name}</p>
+        <p><strong>File Path:</strong> {file_path}</p>
+        <p><strong>SHA256 Checksum:</strong> {checksum if checksum else "N/A"}</p>
+        <p><strong>Generated On:</strong> {timestamp}</p>
+        {'<p class="error">Error: File not found or inaccessible.</p>' if not checksum else ''}
+    </div>
+</body>
+</html>
+"""
+    # Write to HTML file
+    output_file = "checksum_result.html"
+    with open(output_file, "w") as f:
+        f.write(html_content)
+    print(f"HTML file generated: {output_file}")
+
+def main():
+    # Prompt for file path
+    file_path = input("Enter the path to the .zip file: ").strip()
+    
+    # Validate file extension
+    if not file_path.lower().endswith('.zip'):
+        print("Error: Please provide a .zip file.")
+        return
+    
+    # Calculate checksum
+    checksum = calculate_sha256(file_path)
+    
+    # Generate HTML
+    generate_html(file_path, checksum)
+
+if __name__ == "__main__":
+    main()
